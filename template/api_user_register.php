@@ -2,8 +2,8 @@
 	if (!isset($_POST['ID']) || !isset($_POST['Password']))
 		throw new BW_ClientError('Missing POST field: "ID", "Password"', 400);
 
-	if (!check('UserID', $_POST['ID']))
-		throw new BW_ClientError('User ID in bad format: A-Za-z0-9_-', 400);
+	if (!check('UserID', $_POST['ID']) || !check('UserPassword', $_POST['Password']))
+		throw new BW_ClientError('Bad user ID and/or password format', 400);
 	
 	$user = new Bearweb_User($_POST['ID'], $_POST['Password']); #If fail, this will throw an error and terminate the current script
 
