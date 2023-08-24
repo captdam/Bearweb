@@ -554,9 +554,10 @@
 		*/
 		public function __construct(string $url) {
 			if (!self::$db) {
-				$this->session = self::$DEFAULT_SESSION;
-				$this->user = self::$DEFAULT_USER;
-				$this->transaction = self::$TRANSACTION;
+				$this->session = self::DEFAULT_SESSION;
+				$this->user = self::DEFAULT_USER;
+				$this->transaction = self::DEFAULT_TRANSACTION;
+				return;
 			}
 
 			try {
@@ -610,7 +611,7 @@
 					$id = '';
 					$key = base64_encode(random_bytes(96));
 					$sql = self::$db->prepare('INSERT INTO `Session` (`ID`, `Create`, `LastUse`, `User`, `Key`) VALUES (?,?,?,?,?) RETURNING `ID`, `Create`, `User`');
-					$sql->bindParam(	1,	$session['ID'],		PDO::PARAM_STR	); #By reference
+					$sql->bindParam(	1,	$id,				PDO::PARAM_STR	); #By reference
 					$sql->bindValue(	2,	$_SERVER['REQUEST_TIME'],	PDO::PARAM_INT	);
 					$sql->bindValue(	3,	$_SERVER['REQUEST_TIME'],	PDO::PARAM_INT	);
 					$sql->bindValue(	4,	'',				PDO::PARAM_STR	); #New session is always issused to new user, it can only be changed by login API with existed SID
@@ -619,8 +620,8 @@
 						try {
 							$id = base64_encode(random_bytes(96));
 							$sql->execute(); # Retry if fail
-							$sql->closeCursor();
 							$session = $sql->fetch();
+							$sql->closeCursor();
 							break;
 						} catch(Exception $e) {
 							if ( strpos($e->getMessage(), 'UNIQUE') === false || $try < 0 ) # Catch and retry if UNIQUE constraint fails within retry times limit
@@ -644,7 +645,6 @@
 					'ID' =>			'',
 					'IP' =>			$_SERVER['REMOTE_ADDR']
 				);
-				if (!self::$db) throw new Exception();
 				$sql = self::$db->prepare('INSERT INTO `Request` (`ID`, `URL`, `Time`, `IP`, `SID`, `State`, `Log`) VALUES (?,?,?,?,?,?,?)');
 				$sql->bindParam(	1,	$transaction['ID'],		PDO::PARAM_STR	); #By reference
 				$sql->bindValue(	2,	$url,				PDO::PARAM_STR	);
@@ -672,10 +672,11 @@
 				self::$db->commit();
 			} catch (Exception $e) {
 				self::$db->rollBack();
+				error_log('Session control fail: '.$e);
 
-				$this->session = self::$DEFAULT_SESSION;
-				$this->user = self::$DEFAULT_USER;
-				$this->transaction = self::$TRANSACTION;
+				$this->session = self::DEFAULT_SESSION;
+				$this->user = self::DEFAULT_USER;
+				$this->transaction = self::DEFAULT_TRANSACTION;
 			}
 		}
 
