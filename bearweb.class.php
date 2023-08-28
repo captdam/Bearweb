@@ -14,14 +14,11 @@
 	class BW_ClientError extends BW_Error {}
 
 	class Bearweb {
-		private ?Bearweb_User $user = null;
-		private ?Bearweb_Session $session = null;
-		private ?Bearweb_Site $site = null;
 
 		/** Connect to a database. 
 		 * @param string $dir Dabatabe file dir
 		 * @return PDO Database connection
-		 * @throws BW_DatabaseServerError Fail to connectto database
+		 * @throws BW_DatabaseServerError Fail to connect to database
 		 */
 		public static function db_connect(string $dir): PDO {
 			try {
@@ -47,13 +44,11 @@
 					return $data === '' || ( strlen($data) <= 128 && ctype_alnum( str_replace(['-', '_', ':', '/', '.'], '', $data) ) );
 
 				case 'UserID':
-					return strlen($data) >= 6 && strlen($data) <= 16 && ctype_alnum( str_replace(['-', '_'], '', $data) );
+					return strlen($data) >= 6 && strlen($data) <= 16 && ctype_alnum( str_replace(['-', '_'], '', $data) ); # Return false for guest ('')
 				case 'UserName':
-					return strlen($data) < 16;
+					return strlen($data) >= 2 && strlen($data) < 16;
 				case 'UserPassword':
-					return check('MD5', $data);
-				case 'UserAvatar':
-					return true;
+					return self::check('MD5', $data);
 				default:
 					return false;
 			}
@@ -64,12 +59,8 @@
 		 */
 		private static ?array $error = null;
 
-		/** Get error info set by Bearweb::setError(). 
-		 * @return ?array [string Error name, string Detail description of the error], null if no error
-		 */
-		public static function getError(): ?array { return self::$error; }
-
 		/** Setup an error. 
+		 * Note: Template should throw error instead of using this function. 
 		 * @param string $title Error name
 		 * @param string $detail Detail description of the error
 		 * @param int $code If not 0, HTTP code will be set and send to client
@@ -79,13 +70,23 @@
 			self::$error = [$title, $detail];
 		}
 
+		/** Get error info set by Bearweb::setError(). 
+		 * @return ?array [string Error name, string Detail description of the error], null if no error
+		 */
+		public static function getError(): ?array { return self::$error; }
+
+		private ?Bearweb_Session $session = null;
+		private ?Bearweb_Site $site = null;
+
 		/** Use Bearweb to server a resource. 
-		 * @param string $url Request URL given by front-end server
+		 * This function will init the Site module and the Session module. 
+		 * This function will invoke the error template if the given URL fail the URL format check or upon error in framework and template execution.
+		 * @param string $url Request URL given by client
 		 */
 		public function __construct(string $url) {
 			$BW = $this;
 
-			header('X-Powered-By: Bearweb 7.0.230822');
+			header('X-Powered-By: Bearweb 7.0.230827');
 			try { Bearweb_Site::init(Bearweb_Site_SiteDB); } catch (Exception $e) {
 				error_log('[BW] Fatal error: Bearweb_Site module init failed!');
 				http_response_code(500);
@@ -99,7 +100,7 @@
 					throw new BW_ClientError('Bad URL', 400);
 				
 				$this->session = new Bearweb_Session($url); //Fallback to default if disabled or error
-				$this->site = new Bearweb_Site($url, array('ID'=>'', 'group'=>[]), true);
+				$this->site = new Bearweb_Site($url, $this->session->user, true);
 				
 				$template = Bearweb_Site_TemplateDir.$this->site->template[0].'.php';
 				if (!file_exists($template))
@@ -110,18 +111,17 @@
 				if ($e instanceof BW_ClientError) {
 					Bearweb::setError($e->getCode().' - Client Error', $e->getMessage(), $e->getCode());
 				} else if ($e instanceof BW_ServerError) {
-					error_log('[BW] Server Error: '.$e->getMessage());
+					error_log('[BW] Server Error: '.$e);
 					if (Bearweb_Site_HideServerError)
 						Bearweb::setError('500 - Internal Error', 'Server-side internal error.', 500);
 					else
 						Bearweb::setError($e->getCode().' - Server Error', $e->getMessage(), $e->getCode());
 				} else {
-					error_log('[BW] Unknown Error: '.$e->getMessage());
+					error_log('[BW] Unknown Error: '.$e);
 					if (Bearweb_Site_HideServerError)
 						Bearweb::setError('500 - Internal Error', 'Server-side internal error.', 500);
 					else
 						Bearweb::setError('500 - Unknown Error', $e->getMessage(), 500);
-					error_log($e);
 				}
 				$template = Bearweb_Site_TemplateDir.'page.php';
 				include $template;
@@ -139,28 +139,28 @@
 		private static ?PDO $db = null;		# Sitemap DB
 
 		/** Init Bearweb sitemap module. 
-		 * Synopsis for reference ONLY! Do NOT call this routine. This routine should only be called by Bearweb framework. 
 		 * This routine must be called before creating any instance. This routine is required for subsequent site operations. 
 		 * If this routine failed, the framework will prepare an error template. 
+		 * Note: Do NOT call this routine. This routine should only be called by Bearweb framework. 
 		 * @param string $dir Sitemap DB file dir
 		 * @throws BW_DatabaseServerError Fail to open sitemap db: Since Bearweb_Site module is mandatory, this is a critical error. Should retry or terminate!
 		 */
 		public static function init(string $dir): void { self::$db = Bearweb::db_connect($dir); }
 
-		/** Creat a new resource. THIS ROUTINE WRITES DATABASE. 
-		 * Use NAMED ARGUMENT to pass value. Leave a field null to use default value. 
-		 * @param string	$url		Resource URL, Mandatory, PK, must not bu null
-		 * @param string	$category	Resource category, for manegement use; Default ''
-		 * @param array		$template	Array of string indicates the templates to process the resource; Default ['page', 'error'] to use error page template
-		 * @param string	$owner		Owner of the resource who can modify the resource, see BW_User ID; Default '' means system
-		 * @param int		$create		Resource create timestamp; Default -1 to use current time, special time 0 means no actual time (mostly for generated resource)
-		 * @param int		$modify		Resource modify timestamp; Default -1 to use current time, special time 0 means no actual time (mostly for generated resource)
-		 * @param string	$title		Title of the resource, see HTML meta; Default ''
-		 * @param string	$keywords	Keywords of the resource, see HTML meta; Default ''
-		 * @param string	$description	Description of the resource, see HTML meta; Default ''
-		 * @param string	$state		State of the resource, for access control; Default 'P' for pending (open to owner and admin only)
-		 * @param string	$content	Content of the resource, this should be the main content of the resource and should be output with minimal processing; Default ''
-		 * @param string	$aux		Aux data of the resource other than content, template may use it; Default ''
+		/** Creat a new resource. 
+		 * Use NAMED ARGUMENT to pass value. Skip an argument to use default value. 
+		 * @param string	$url		Resource URL: PK, Unique, Not Null
+		 * @param string	$category	Resource category, for management purpose; Default ''
+		 * @param array		$template	Template used to process the given resource; Default ['page', 'error'] for error page
+		 * @param string	$owner		Owner's user ID of the given resource; Only the owner and user in "ADMIN" group can modify this resource; Default '' for system-owned
+		 * @param int		$create		Create timestamp, use 0 if there is no create-time, such as generated resource; Default -1 for current time
+		 * @param int		$modify		Modify timestamp, use 0 if there is no create-time, such as generated resource; Default -1 for current time
+		 * @param string	$title		Resource HTML meta info: title; Default ''
+		 * @param string	$keywords	Resource HTML meta info: keywords; Default ''
+		 * @param string	$description	Resource HTML meta info: description; Default ''
+		 * @param string	$state		State of the given resource; Default 'P' pending (locked to public)
+		 * @param string	$content	Resource content, the content should be directly output to reduce server process load; Default ''
+		 * @param string	$aux		Resource auxiliary data, the template decide how to use it, such as extra info or a JSON data; Default ''
 		 * @throws BW_DatabaseServerError Fail to insert into sitemap db
 		 */
 		public static function create(
@@ -173,7 +173,7 @@
 			string	$title		= '',
 			string	$keywords	= '',
 			string	$description	= '',
-			string	$state		= 'S',
+			string	$state		= 'P',
 			string	$content	= '',
 			string	$aux		= ''
 		): void {
@@ -207,43 +207,26 @@
 			} catch (Exception $e) { throw new BW_DatabaseServerError('Cannot insert into sitemap database: '.$e->getMessage(), 500); }
 		}
 
-		/** Delete a resource. 
-		 * @param string $url Resource URL, Mandatory, PK, must not bu null
-		 * @throws BW_DatabaseServerError Fail to delete from sitemap db
-		 */
-		public static function delete(string $url): void {
-			try {
-				$sql = self::$db->prepare('DELETE FROM `Sitemap` WHERE `URL` = ?');
-				$sql->bindValue(1,	$url,	PDO::PARAM_STR	);
-				$sql->execute();
-				$sql->closeCursor();
-			} catch (Exception $e) {
-				throw new BW_DatabaseServerError('Cannot delete from sitemap database: '.$e->getMessage(), 500);
-			}
-		}
-
-		public readonly string	$url;				# Resource URL, Mandatory, PK, must not be null
-		public readonly string	$category;			# Resource category, for manegement use; Default ''
-		public readonly array	$template;	# Array of string indicates the templates to process the resource; Default ['page', 'error'] to use error page template
-		public readonly string	$owner;			# Owner of the resource who can modify the resource, see BW_User ID; Default '' means system
-		public readonly int	$create;			# Resource create timestamp; Default time 0 means no actual time (mostly for generated resource)
-		public readonly int	$modify;			# Resource modify timestamp; Default time 0 means no actual time (mostly for generated resource)
-		public readonly string	$title;		# Title of the resource, see HTML meta; Default 'ERROR' for error page
-		public readonly string	$keywords;			# Keywords of the resource, see HTML meta; Default ''
-		public readonly string	$description;		# Description of the resource, see HTML meta; Default value gives error detail
-		public readonly string	$state;			# State of the resource, for access control; Default 'S' for special pages (error page is a special page), open to public but should not be indexed by search engine
-		public readonly string	$content;			# Content of the resource, this should be the main content of the resource and should be output with minimal processing; Default ''
-		public readonly string	$aux;			# Aux data of the resource other than content, template may use it; Default ''
+		public readonly string	$url;				# Resource URL, PK, Unique, Not Null
+		public readonly string	$category;			# Resource category, for management purpose; Default '' No category
+		public readonly array	$template;			# Template used to process the given resource; Default ['page', 'error'] for error page
+		public readonly string	$owner;				# Owner's user ID of the given resource; Only the owner and user in "ADMIN" group can modify this resource; Default '' for system-owned
+		public readonly int	$create;			# Create timestamp, use 0 if there is no create-time, such as generated resource; Default 0
+		public readonly int	$modify;			# Modify timestamp, use 0 if there is no create-time, such as generated resource; Default 0
+		public readonly string	$title;				# Resource HTML meta info: title; Default ''
+		public readonly string	$keywords;			# Resource HTML meta info: keywords; Default ''
+		public readonly string	$description;			# Resource HTML meta info: description; Default ''
+		public readonly string	$state;				# State of the given resource; Default 'S' special (open to public, SEO no index)
+		public readonly string	$content;			# Resource content, the content should be directly output to reduce server process load; Default ''
+		public readonly string	$aux;				# Resource auxiliary data, the template decide how to use it, such as extra info or a JSON data; Default ''
 
 		/** Constructor. 
-		 * Fetch resource from site db (except content and aux data which are too large at this moment, deferred fetch). 
-		 * If DB access fail or no record found, a dummy error resource supplied that can be feed to page/error template. 
-		 * Note: Data in DB is volatile, instance only reflects the data at time of DB fetch, it may be changed by other process. 
-		 * @param string	$url	Page URL
+		 * Note: Data in DB is volatile, instance only reflects the data at time of DB fetch, it may be changed by another transaction (e.g. Resource modify API) and other process. 
+		 * @param string	$url	Resource URL
 		 * @param ?array	$user	Pass a non-null user info [string ID, array Group] for access control, this throws BW_ClientError if user has no access to the resource
-		 * @param bool		$http	True to process the HTTP headers: 301/302 redirect, Last-modify, E-tag, Cache-Control, this throws dummy BW_ClientError to stop processing
+		 * @param bool		$http	True to process the HTTP headers: 301/302 redirect, Last-modify, E-tag, Cache-Control, this throws dummy BW_ClientError to stop processing in case of redirect
 		 * @throws BW_DatabaseServerError Cannot read sitemap DB
-		 * @throws BW_ClientError Not found
+		 * @throws BW_ClientError Resource not found in sitemap DB (HTTP 404)
 		 * @throws BW_ClientError Access control fail (when $user is not null)
 		 * @throws BW_ClientError Dummy exception to stop processing when state = redirect (when $http is true)
 		*/
@@ -282,10 +265,10 @@
 			$stateFlag = substr($this->state, 0, 1);
 			$stateInfo = substr($this->state, 1);
 			
-			// Access control on A and P resources, and when $uid or $ugroup given
+			// Access control on A and P resources
 			if ( $user && in_array($stateFlag,  ['A', 'P']) ) {
-				if ( !$user['ID'] || ($user['ID'] != $this->owner && in_array('ADMIN', $user['group'])) ) { # Check on guest and (non-owner and non-admin)
-					if ( $stateFlag == 'A' && !count(array_intersect( $user['group'] , explode(',', $stateInfo) )) ) {
+				if ( !$user['ID'] || ($user['ID'] != $this->owner && in_array('ADMIN', $user['Group'])) ) { # Check on guest and (non-owner and non-admin)
+					if ( $stateFlag == 'A' && !count(array_intersect( $user['Group'] , explode(',', $stateInfo) )) ) {
 						if (Bearweb_Site_HideAuth)
 							throw new BW_ClientError('Not found', 404);
 						else
@@ -322,20 +305,20 @@
 			}
 		}
 
-		/** Modify this resource. THIS ROUTINE WRITES DATABASE. 
-		 * Use NAMED ARGUMENT to pass value. Leave a field null to use the orginal value. Special rules applied to some fileds. 
+		/** Modify this resource. 
+		 * Use NAMED ARGUMENT to pass value. Skip an argument or leave it null to use orginal value. 
 		 * Note: DB is volatile and can be modified by other process other than this script at the time. Reload this instance to refresh to the most up-to-date value. 
-		 * @param ?string	$category	Resource category, for manegement use; Leave null to use orginal value
-		 * @param ?array	$template	Array of string indicates the templates to process the resource; Leave null to use orginal value
-		 * @param ?string	$owner		Owner of the resource who can modify the resource, see BW_User ID; Leave null to use orginal value
-		 * @param ?int		$create		Resource create timestamp; Leave null to use orginal value, use -1 to use current time, special time 0 means no actual time (mostly for generated resource)
-		 * @param ?int		$modify		Resource modify timestamp; Leave null to use orginal value, use -1 to use current time, special time 0 means no actual time (mostly for generated resource)
-		 * @param ?string	$title		Title of the resource, see HTML meta; Leave null to use orginal value
-		 * @param ?string	$keywords	Keywords of the resource, see HTML meta; Leave null to use orginal value
-		 * @param ?string	$description	Description of the resource, see HTML meta; Leave null to use orginal value
-		 * @param ?string	$state		State of the resource, for access control; Leave null to use orginal value
-		 * @param ?string	$content	Content of the resource, this should be the main content of the resource and should be output with minimal processing; Leave null to use orginal value
-		 * @param ?string	$aux		Aux data of the resource other than content, template may use it; Leave null to use orginal value
+		 * @param ?string	$category	Resource category, for manegement purpose; Skip or use null for orginal value
+		 * @param ?array	$template	Template used to process the given resource; Skip or use null for orginal value
+		 * @param ?string	$owner		Owner's user ID of the given resource; Only the owner and user in "ADMIN" group can modify this resource; Skip or use null for orginal value
+		 * @param ?int		$create		Create timestamp, use 0 if there is no create-time, such as generated resource; Skip or use null for orginal value
+		 * @param ?int		$modify		Modify timestamp, use 0 if there is no create-time, such as generated resource; Skip or use null for orginal value
+		 * @param ?string	$title		Resource HTML meta info: title; Skip or use null for orginal value
+		 * @param ?string	$keywords	Resource HTML meta info: keywords; Skip or use null for orginal value
+		 * @param ?string	$description	Resource HTML meta info: description, see HTML meta; Skip or use null for orginal value
+		 * @param ?string	$state		State of the given resource; Skip or use null for orginal value
+		 * @param ?string	$content	Resource content, the content should be directly output to reduce server process load; Skip or use null for orginal value
+		 * @param ?string	$aux		Resource auxiliary data, the template decide how to use it, such as extra info or a JSON data; Skip or use null for orginal value
 		 * @throws BW_DatabaseServerError Fail to update sitemap db
 		 */
 		public function set(
@@ -384,22 +367,45 @@
 				$sql->closeCursor();
 			} catch (Exception $e) { throw new BW_DatabaseServerError('Cannot update sitemap database: '.$e->getMessage(), 500); }
 		}
+
+		/** Delete this resource. 
+		 * @throws BW_DatabaseServerError Fail to delete from sitemap db
+		 */
+		public function delete(): void {
+			try {
+				$sql = self::$db->prepare('DELETE FROM `Sitemap` WHERE `URL` = ?');
+				$sql->bindValue(1,	$this->url,	PDO::PARAM_STR	);
+				$sql->execute();
+				$sql->closeCursor();
+			} catch (Exception $e) {
+				throw new BW_DatabaseServerError('Cannot delete from sitemap database: '.$e->getMessage(), 500);
+			}
+		}
 	}
 
 	/** Session control ********************************************************************
-	 * A session is a set of request made by the same user (session id and key). With
+	 * A session is a set of requests made by the same user (session id and key). With
 	 * session control enabled, the Session ID (auto-generated unique ID) is recorded with 
 	 * following info: 
-	 *   - Create time and last use time (session automatically expire after a period), 
-	 *   - Key (an invisible cookie to client-side js script, server use it verify session). 
+	 *   - Create time and last use time. Session automatically expire after a period after 
+	 * 	the last use time (inactive time); 
+	 *   - User ID for which user is bind to this session; 
+	 *   - Key (an invisible cookie to client-side js script, server uses it to verify SID). 
 	 * With session control enabled, each time a request is received, the Request ID 
 	 * (auto-generated unique ID) is recorded with following info: 
-	 *   - Request URL, 
-	 *   - Timestamp when the request is received on server side, 
-	 *   - Client IP, 
-	 *   - Assoicated session ID, 
-	 *   - State (response HTTP code sent to client), 
+	 *   - Request URL; 
+	 *   - Timestamp when the request is received on server side; 
+	 *   - Client IP (IPv4 or v6; in case of VPN, records VPN's IP instead of user's IP); 
+	 *   - Assoicated session ID; 
+	 *   - State (response HTTP code sent to client); 
 	 *   - Server log (for debug use). 
+	 * A session can be bind to an user's ID. A table is used to store user's profile with 
+	 * the user ID (unique ID) and:
+	 *   - Name (nickname); 
+	 *   - Hashed password, use PHP's built-in password hash; 
+	 *   - Register time; 
+	 *   - Group (An array of groups, giving user access to some controlled resources); 
+	 *   - Data (Any extra info stored in JSON)
 	 * Using session control needs access to a db. This db will grow, it may get too big and 
 	 * too slow at some day. Admin should delete out-of-date records periodically. 
 	 * ************************************************************************************/
@@ -409,14 +415,15 @@
 		private static $db = null;
 
 		/** Init and enable Bearweb session module. 
-		 * This routine must be called before creating any instance. This routine prepares the required for subsequent session operations. 
+		 * This routine must be called before creating any instance. This routine is required for subsequent session operations. 
 		 * If this routine is not called, session control will be disabled. Default session data will be served. 
 		 * @param string $db Session DB file dir
-		 * @throws BW_DatabaseServerError Fail to open session db: User may catch and ignore this error and process without session control (use default session)
+		 * @throws BW_DatabaseServerError Fail to open session db: Framework may catch and ignore this error and process without session control (use default session)
 		 */
 		public static function init(string $dir): void { self::$db = bearweb::db_connect($dir); }
 
 		/** Create a user. 
+		 * Internal has is applied to password before write to DB. 
 		 * @param string	$id		User ID
 		 * @param string	$name		Name
 		 * @param string	$password	Password
@@ -445,13 +452,13 @@
 		/** Get a user. 
 		 * If $password is given, also verify the password. 
 		 * @param string	$id		User ID
-		 * @param string	$password	If not '' or any false string, verify the password
-		 * @return array User info: string ID, string name, int register time, array group, array data
+		 * @param string	$password	If supplied, verify password
+		 * @return array	User info: [string ID, string name, int register time, array group, array data]
 		 * @throws BW_ClientError User not found
-		 * @throws BW_ClientError Wrong password
+		 * @throws BW_ClientError Wrong password (if $password is given)
 		 * @throws BW_DatabaseServerError Fail to read user from DB
 		 */
-		public static function getUser(string $id, string $password = ''): mixed {
+		public static function getUser(string $id, string $password = ''): array {
 			try {
 				$sql = self::$db->prepare('SELECT `ID`, `Name`, `Password`, `RegisterTime`, `Group`, `Data` FROM `User` WHERE `ID` = ?');
 				$sql->bindValue(	1,	$id,	PDO::PARAM_STR	);
@@ -484,7 +491,7 @@
 					'Name' =>		$user['Name'],
 					'RegisterTime' =>	$user['RegisterTime'] ?? 0,
 					'Group' =>		$user['Group'] ? explode(',', $user['Group']) : [],
-					'Data' =>		json_decode($user['Data'] ? $user['Data'] : '{}', true) # Nate: ?? only checks for null, json_decode('' ?? '{}') gives json_decode('') gives null
+					'Data' =>		json_decode($user['Data'] ? $user['Data'] : '{}', true) # Note: ?? only checks for null, json_decode('' ?? '{}') gives json_decode('') gives null instead of empty array []
 				);
 			} catch (BW_ClientError $e) {
 				throw $e;
@@ -494,12 +501,13 @@
 		}
 
 		/** Update user data. 
+		 * This function throws BW_DatabaseServerError if there is no such user. The template should make sure the user existed. 
 		 * @param string	$id		User ID
 		 * @param ?string	$name		Name; pass null to use orginal value
 		 * @param ?array	$group		An array of string representing group; pass null to use orginal value
-		 * @param ?array	$data		Data in key-array; pass null to use orginal value
+		 * @param ?mixed	$data		Any data except null (use false as a workaround); pass null to use orginal value
 		 * @param ?string	$password	Password; pass null to use orginal value
-		 * @throws BW_DatabaseServerError Failed to update user DB
+		 * @throws BW_DatabaseServerError Failed to update user DB (server error or no such user)
 		 */
 		public static function setUser(string $id, ?string $name, ?array $group, ?array $data, ?string $password): void {
 			$group =	is_null($group) ?	null : implode(',', $group);
@@ -525,14 +533,18 @@
 		}
 
 		public readonly array	$session;	# ID, Create (create time), User
-		public readonly array	$transaction;	# ID, 
+		public readonly array	$transaction;	# ID, Client IP
 		public readonly array	$user;		# ID, Name, RegisterTime, Group, Data
-		private string	$log = '';		# Cached log (to minimize DB transaction)
+		private string	$log = '';		# Cached log (to minimize DB transaction) Will be synch to DB at the end of script.
 
 		private const	DEFAULT_SESSION = array(
 			'ID' =>			'',
 			'Create' =>		0,
 			'User' =>		''
+		);
+		private const	DEFAULT_TRANSACTION = array(
+			'ID' =>			'',
+			'IP' =>			''
 		);
 		private const	DEFAULT_USER = array(
 			'ID' =>			'',
@@ -541,14 +553,10 @@
 			'Group' =>		[],
 			'data' =>		[]
 		);
-		private const	DEFAULT_TRANSACTION = array(
-			'ID' =>			'',
-			'IP' =>			''
-		);
 
 		/** Constructor. 
 		 * If session control disabled, this function does nothing; otherwise, this function will automatically read client-side cookies, create/bind session, 
-		 * record transaction, write cookie to client, with built-in data user-supplied check. 
+		 * record transaction, write cookie to client, with built-in user-supplied data check. 
 		 * In case of error or session control disabled, this routine fallback silently and uses default values ('' or 0 or [], all gives false). 
 		 * @param string $url Request URL
 		*/
@@ -585,26 +593,24 @@
 
 				// Session found and valid: read user info
 				if ($session) {
-					$sql = self::$db->prepare('SELECT `ID`, `Name`, `RegisterTime`, `Group` FROM `User` WHERE `ID` = ?');
-					$sql->bindValue(	1,	$session['User'],	PDO::PARAM_STR	);
-					$sql->execute();
-					$user = $sql->fetch();
-					$sql->closeCursor();
-
-					if ($user) {
-						$user['RegisterTime'] = $user['RegisterTime'] ?? 0;
-						$user['Group'] = explode(',', $user['Group']);
-						$user['Data'] = $user['Data'] ?? [];
+					if ($session['User']) { # User is not '' (guest)
+						$sql = self::$db->prepare('SELECT `ID`, `Name`, `RegisterTime`, `Group` FROM `User` WHERE `ID` = ?');
+						$sql->bindValue(	1,	$session['User'],	PDO::PARAM_STR	);
+						$sql->execute();
+						$user = $sql->fetch();
+						$sql->closeCursor();
+						if ($user) {
+							$user['RegisterTime'] = $user['RegisterTime'] ?? 0;
+							$user['Group'] = explode(',', $user['Group']);
+							$user['Data'] = $user['Data'] ?? [];
+						} else {
+							error_log('[BW] Broken forgine key in User DB: '.$session['User'].' (SID: '.$session['ID'].')');
+							$user = self::DEFAULT_USER;
+						}
 					} else {
-						error_log('[BW] Broken forgine key in User DB: '.$session['User']);
-						$user = array(
-							'ID' =>			'',
-							'Name' =>		'',
-							'RegisterTime' =>	0,
-							'Group' =>		[],
-							'data' =>		[]
-						);
+						$user = self::DEFAULT_USER;
 					}
+					
 
 				// Create a new session
 				} else {
@@ -651,7 +657,7 @@
 				$sql->bindValue(	3,	$_SERVER['REQUEST_TIME'],	PDO::PARAM_INT	);
 				$sql->bindValue(	4,	$transaction['IP'],		PDO::PARAM_STR	);
 				$sql->bindValue(	5,	$session['ID'],			PDO::PARAM_STR	);
-				$sql->bindValue(	6,	-1,				PDO::PARAM_INT	);
+				$sql->bindValue(	6,	0,				PDO::PARAM_INT	);
 				$sql->bindValue(	7,	'',				PDO::PARAM_STR	);
 				for ($try = 5; ; $try--) {
 					try {
@@ -680,14 +686,37 @@
 			}
 		}
 
+		/** Destructor. 
+		 * If session control disabled, this function does nothing; otherwise, it: 
+		 * - Sets response state code (HTTP code) at the end of the request. 
+		 * - Syncs the transaction log to DB. 
+		 * Error is sliently ignored. 
+		 */
+		public function __destruct() {
+			if (!self::$db) return;
+
+			try {
+				$sql = self::$db->prepare('UPDATE Request SET `State` = ?, `Log` = `Log` || ? WHERE ID = ?');
+				$sql->bindValue(	1,	http_response_code(),		PDO::PARAM_INT	);
+				$sql->bindValue(	2,	$this->log,			PDO::PARAM_STR	);
+				$sql->bindValue(	3,	$this->transaction['ID'],	PDO::PARAM_STR	);
+				$sql->execute();
+				$sql->closeCursor();
+			} catch (Exception $e) {
+				error_log('[BW] Cannot sync session info to DB at the end of transaction: '.$e->getMessage());
+			}
+		}
+
 		/** Bind a user to the session. 
-		 * After this call, current session data will be out-of-date and should be abort. 
+		 * Does nothing if session disabled. 
+		 * In effect in next transaction. 
 		 * @param string $uid User ID
 		 * @throws BW_DatabaseServerError Failed to write the user ID into session DB
 		 */
 		public function bindUser(string $uid) {
+			if (!self::$db) return;
+
 			try {
-				if (!self::$db) throw new Exception('Session control disabled');
 				$sql = self::$db->prepare('UPDATE `Session` SET `User` = ? WHERE ID = ?');
 				$sql->bindValue(	1,	$uid,			PDO::PARAM_STR	);
 				$sql->bindValue(	2,	$this->session['ID'],	PDO::PARAM_STR	);
@@ -699,54 +728,34 @@
 			}
 		}
 
-		/** Write log to transaction record. 
-		 * This function will append the given log to the cached log in this instance. If $db is set to true, it will attempt to write the cached log to DB. 
-		 * Log will be write to the DB at the end of transaction (in the destructor). 
-		 * User may write a series of intermediate log during an operation, and sync them at the end of that operation by using $db, to minimize DB transaction. 
-		 * If this DB operation failed or session control is disabled, the cached log will be updated, but the log in DB remains unchanged. This error can be sliently ignored (no throw). 
+		/** Append log to transaction record. 
+		 * Does nothing if session control disabled, and returns false in all cases. 
+		 * This function will append the given log to the cached log in this instance. If $db is set to true, it will also attempt to write the cached log to DB. 
+		 * Furthermore, log will be write to the DB at the end of transaction (in the destructor); however, there is a slight chance that will fail. 
+		 * User may write a series of intermediate log during an operation, and synch them at the end of that operation by using $db, to minimize DB transaction. 
 		 * @param string $log Log to append
 		 * @param bool $db If set to true, will attemp to write the log into database
 		 * @return bool True if success, false if DB write failed
 		 */
 		public function log(string $log, $db = false) {
+			if (!self::$db) return false;
+
 			$this->log .= $s;
-			
-			if (!$db)
-				return true;
-			if (!self::$db)
-				return false;
+
+			if (!$db) return true; # Synch not required
+			if (!$this->log) return true; # No need to synch empty cache
 
 			try {
-				$sql = self::$db->prepare('UPDATE `Request` SET `Log` = ? WHERE ID = ?');
+				$sql = self::$db->prepare('UPDATE `Request` SET `Log` = `Log` || ? WHERE ID = ?');
 				$sql->bindValue(	1,	$this->cached[self::FIELD_TLOG],	PDO::PARAM_STR	);
 				$sql->bindValue(	2,	$this->cached[self::FIELD_SID],		PDO::PARAM_STR	);
 				$sql->execute();
 				$sql->closeCursor();
+				$this->log = '';
 				return true;
 			} catch (Exception $e) {
 				error_log('[BW] Cannot write transaction log into DB: '.$e->getMessage());
 				return false;
-			}
-		}
-
-		/** Destructor. 
-		 * If session control disabled, this function does nothing; otherwise, it: 
-		 * - Set response state code (HTTP code) at the end of the request. 
-		 * - Sync the transaction log to DB. 
-		 * Error is sliently ignored. 
-		 */
-		public function __destruct() {
-			if (!self::$db) return;
-
-			try {
-				$sql = self::$db->prepare('UPDATE Request SET `State` = ?, `Log` = ? WHERE ID = ?');
-				$sql->bindValue(	1,	http_response_code(),		PDO::PARAM_INT	);
-				$sql->bindValue(	2,	$this->log,			PDO::PARAM_STR	);
-				$sql->bindValue(	3,	$this->transaction['ID'],	PDO::PARAM_STR	);
-				$sql->execute();
-				$sql->closeCursor();
-			} catch (Exception $e) {
-				error_log('[BW] Cannot sync session info to DB at the end of transaction: '.$e->getMessage());
 			}
 		}
 	}
