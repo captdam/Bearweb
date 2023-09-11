@@ -86,7 +86,7 @@
 		public function __construct(string $url) {
 			$BW = $this;
 
-			header('X-Powered-By: Bearweb 7.0.230827');
+			header('X-Powered-By: Bearweb 7.0.230910');
 			try { Bearweb_Site::init(Bearweb_Site_SiteDB); } catch (Exception $e) {
 				error_log('[BW] Fatal error: Bearweb_Site module init failed!');
 				http_response_code(500);
@@ -100,8 +100,50 @@
 					throw new BW_ClientError('Bad URL', 400);
 				
 				$this->session = new Bearweb_Session($url); //Fallback to default if disabled or error
-				$this->site = new Bearweb_Site($url, $this->session->user, true);
+				$this->site = new Bearweb_Site($url);
+				$stateFlag = substr($this->site->state, 0, 1);
+				$stateInfo = substr($this->site->state, 1);
+
+				// Access control
+				if (!$this->site->access($this->session->user)) {
+					if ($stateFlag == 'A') {
+						if (Bearweb_Site_HideAuth)
+							throw new BW_ClientError('Not found', 404);
+						else
+							throw new BW_ClientError('Unauthorized: Controlled resource. Cannot access, please login first', 401);
+					} else if ($stateFlag == 'P') {
+						if (Bearweb_Site_HideAuth)
+							throw new BW_ClientError('Not found', 404);
+						else
+							throw new BW_ClientError('Forbidden: Locked resource. Access denied', 403);
+					}
+					throw new BW_ClientError('Access denied', 403);
+				}
+
+				// Redirect resource
+				if ( $stateFlag == 'R' ) {
+					header('Location: /'.$stateInfo);
+					throw new BW_ClientError('301 - Moved Permanently: Resource has been moved permanently to: '.$stateInfo, 301); # To terminate the resource processing
+				}
+				if ( $stateFlag == 'r' ) {
+					header('Location: /'.$stateInfo);
+					throw new BW_ClientError('302 - Moved Temporarily: Resource has been moved temporarily to: '.$stateInfo, 302);
+				}
+
+				// E-tag
+				if ($this->site->modify == 0) { # Create E-tag for content and auto generated content (and error page), for client-side cache
+					header('Last-Modified: '.date('D, j M Y G:i:s').' GMT');
+					header('Etag: '.base64_encode(random_bytes(48))); 
+					header('Cache-Control: no-store');
+				} else if ( $_SERVER['HTTP_IF_NONE_MATCH'] ?? false && $_SERVER['HTTP_IF_NONE_MATCH'] == base64_encode($this->site->url).':'.base64_encode($this->site->modify) ) { # Client cache is good
+					throw new BW_ClientError('304 - Not Modified', 304);
+				} else {
+					header('Last-Modified: '.date('D, j M Y G:i:s', $this->site->modify).' GMT');
+					header('Etag: '.base64_encode($this->site->url).':'.base64_encode($this->site->modify));
+					header('Cache-Control: private, max-age=3600');
+				}
 				
+				// Invoke template
 				$template = Bearweb_Site_TemplateDir.$this->site->template[0].'.php';
 				if (!file_exists($template))
 					throw new BW_ServerError('Template not found: '.$this->site->get(Bearweb_Site::FIELD_TEMPLATE)[0], 500);
@@ -223,14 +265,10 @@
 		/** Constructor. 
 		 * Note: Data in DB is volatile, instance only reflects the data at time of DB fetch, it may be changed by another transaction (e.g. Resource modify API) and other process. 
 		 * @param string	$url	Resource URL
-		 * @param ?array	$user	Pass a non-null user info [string ID, array Group] for access control, this throws BW_ClientError if user has no access to the resource
-		 * @param bool		$http	True to process the HTTP headers: 301/302 redirect, Last-modify, E-tag, Cache-Control, this throws dummy BW_ClientError to stop processing in case of redirect
 		 * @throws BW_DatabaseServerError Cannot read sitemap DB
 		 * @throws BW_ClientError Resource not found in sitemap DB (HTTP 404)
-		 * @throws BW_ClientError Access control fail (when $user is not null)
-		 * @throws BW_ClientError Dummy exception to stop processing when state = redirect (when $http is true)
 		*/
-		public function __construct(string $url, ?array $user = null, bool $http = false) {
+		public function __construct(string $url) {
 			$this->url = $url;
 
 			// Sitemap lookup
@@ -261,49 +299,29 @@
 			$this->state =		$site['State'] ??	'S';
 			$this->content =	$site['Content'] ??	'';
 			$this->aux =		$site['Aux'] ??		'';
+		}
+
+		/** Get user access privilege level. 
+		 * @param array $user An array conatins user info in [string ID, array Group], this can be directly feed from Bearweb_Session->user.
+		 * @return int 0 = No access; 1 = read/execute; -1 = read/execute/write (owner/admin)
+		 */
+		public function access($user): int {
+			if (
+				in_array('ADMIN', $user['Group']) ||			# Admin always has the right
+				( $user['ID'] != '' && $user['ID'] == $this->owner )	# Owner of resource (Note: '' means guest in session control but system in sitemap)
+			) return -1;
 
 			$stateFlag = substr($this->state, 0, 1);
 			$stateInfo = substr($this->state, 1);
-			
-			// Access control on A and P resources
-			if ( $user && in_array($stateFlag,  ['A', 'P']) ) {
-				if ( !$user['ID'] || ($user['ID'] != $this->owner && in_array('ADMIN', $user['Group'])) ) { # Check on guest and (non-owner and non-admin)
-					if ( $stateFlag == 'A' && !count(array_intersect( $user['Group'] , explode(',', $stateInfo) )) ) {
-						if (Bearweb_Site_HideAuth)
-							throw new BW_ClientError('Not found', 404);
-						else
-							throw new BW_ClientError('Unauthorized: Controlled resource. Cannot access, please login first', 401);
-					} else if ($stateFlag == 'P') {
-						if (Bearweb_Site_HideAuth)
-							throw new BW_ClientError('Not found', 404);
-						else
-							throw new BW_ClientError('Forbidden: Locked resource. Access denied', 403);
-					}
-				}
-			}
+			$groups = explode(',', $stateInfo);
+			if (
+				$stateFlag == 'P' ||								# Pending resource: owner only
+				( $stateFlag == 'A' && !count(array_intersect( $user['Group'] , $groups )) )	# Auth control: check user groups against privilege groups
+			) return 0;
 
-			// Process HTTP header
-			if ($http) {
-				if ( $stateFlag == 'R' ) {
-					header('Location: /'.$stateInfo);
-					throw new BW_ClientError('301 - Moved Permanently: Resource has been moved permanently to: '.$stateInfo, 301); # To terminate the resource processing
-				} else if ( $stateFlag == 'r' ) {
-					header('Location: /'.$stateInfo);
-					throw new BW_ClientError('302 - Moved Temporarily: Resource has been moved temporarily to: '.$stateInfo, 302);
-				} else {
-					if ($this->modify == 0) { # Create E-tag for content and auto generated content (and error page), for client-side cache
-						header('Last-Modified: '.date('D, j M Y G:i:s').' GMT');
-						header('Etag: '.base64_encode(random_bytes(24))); 
-						header('Cache-Control: no-store');
-					}
-					else {
-						header('Last-Modified: '.date('D, j M Y G:i:s', $this->modify).' GMT');
-						header('Etag: '.base64_encode($this->modify));
-						header('Cache-Control: private, max-age=3600');
-					}
-				}
-			}
+			return 1;
 		}
+
 
 		/** Modify this resource. 
 		 * Use NAMED ARGUMENT to pass value. Skip an argument or leave it null to use orginal value. 
@@ -311,8 +329,8 @@
 		 * @param ?string	$category	Resource category, for manegement purpose; Skip or use null for orginal value
 		 * @param ?array	$template	Template used to process the given resource; Skip or use null for orginal value
 		 * @param ?string	$owner		Owner's user ID of the given resource; Only the owner and user in "ADMIN" group can modify this resource; Skip or use null for orginal value
-		 * @param ?int		$create		Create timestamp, use 0 if there is no create-time, such as generated resource; Skip or use null for orginal value
-		 * @param ?int		$modify		Modify timestamp, use 0 if there is no create-time, such as generated resource; Skip or use null for orginal value
+		 * @param ?int		$create		Create timestamp, use 0 if there is no create-time, such as generated resource; Skip or use null for orginal value, -1 for current time
+		 * @param ?int		$modify		Modify timestamp, use 0 if there is no create-time, such as generated resource; Skip or use null for orginal value, -1 for current time
 		 * @param ?string	$title		Resource HTML meta info: title; Skip or use null for orginal value
 		 * @param ?string	$keywords	Resource HTML meta info: keywords; Skip or use null for orginal value
 		 * @param ?string	$description	Resource HTML meta info: description, see HTML meta; Skip or use null for orginal value
@@ -551,7 +569,7 @@
 			'Name' =>		'',
 			'RegisterTime' =>	0,
 			'Group' =>		[],
-			'data' =>		[]
+			'Data' =>		[]
 		);
 
 		/** Constructor. 
@@ -642,7 +660,7 @@
 						'Name' =>		'',
 						'RegisterTime' =>	0,
 						'Group' =>		[],
-						'data' =>		[]
+						'Data' =>		[]
 					);
 				}
 
