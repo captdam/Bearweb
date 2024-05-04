@@ -1,35 +1,6 @@
-<?php
-	set_error_handler(function($no, $str, $file, $line){ if (error_reporting() == 0) { return false; } throw new ErrorException($str, 0, $no, $file, $line); });
-	/** Base Bearweb error */
-	class BW_Error extends Exception { function __construct(string $msg, int $code) { parent::__construct( get_class($this).' - '.$msg , $code ); } }
-	/** Base server-end error */
-	class BW_ServerError extends BW_Error {}
-	/** Server-side front-end error: PHP script error */
-	class BW_WebServerError extends BW_ServerError{}
-	/** Server-side back-end error:	Database (local) error */
-	class BW_DatabaseServerError extends BW_ServerError{}
-	/** Server-side cloud-end error: External server error, such as token server, object storage server... */
-	class BW_ExternalServerError extends BW_ServerError{}
-	/** Client-side error: Bad request from client */
-	class BW_ClientError extends BW_Error {}
+<?php	header('X-Powered-By: Bearweb 7.1.240502');
 
 	class Bearweb {
-
-		/** Connect to a database. 
-		 * @param string $dir Dabatabe file dir
-		 * @return PDO Database connection
-		 * @throws BW_DatabaseServerError Fail to connect to database
-		 */
-		public static function db_connect(string $dir): PDO {
-			try {
-				$db = new PDO($dir);
-				$db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-				$db->setAttribute(PDO::ATTR_TIMEOUT, 10); #10s waiting time should be far more than enough
-				$db->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
-				return $db;
-			} catch (Exception $e) { throw new BW_DatabaseServerError('Fail to open DB: '.$e->getMessage(), 500); }
-		}
-	
 		/** User supplied data format check. 
 		 * @param string $type Data type
 		 * @param string $data User supplied data
@@ -37,46 +8,19 @@
 		 */
 		public static function check(string $type, string $data): bool {
 			switch ($type) {
-				case 'MD5':
-					return strlen($data) == 32 && ctype_xdigit($data);
-	
-				case 'URL':
-					return $data === '' || ( strlen($data) <= 128 && ctype_alnum( str_replace(['-', '_', ':', '/', '.'], '', $data) ) );
+				case 'MD5':		return strlen($data) == 32 && ctype_xdigit($data);
+			
+				case 'URL':		return $data === '' || ( strlen($data) <= 128 && ctype_alnum( str_replace(['-', '_', ':', '/', '.'], '', $data) ) );
 
-				case 'UserID':
-					return strlen($data) >= 6 && strlen($data) <= 16 && ctype_alnum( str_replace(['-', '_'], '', $data) ); # Return false for guest ('')
-				case 'UserName':
-					return strlen($data) >= 2 && strlen($data) < 16;
-				case 'UserPassword':
-					return self::check('MD5', $data);
-				default:
-					return false;
+				case 'UserID':		return strlen($data) >= 6 && strlen($data) <= 16 && ctype_alnum( str_replace(['-', '_'], '', $data) ); # Return false for guest ('')
+				case 'UserName':	return strlen($data) >= 2 && strlen($data) < 16;
+				case 'UserPassword':	return self::check('MD5', $data);
+				default:		return false;
 			}
 		}
 
-		/** Transaction error. 
-		 * If not null, error has ooccured. This value will be served to the error template. 
-		 */
-		private static ?array $error = null;
-
-		/** Setup an error. 
-		 * Note: Template should throw error instead of using this function. 
-		 * @param string $title Error name
-		 * @param string $detail Detail description of the error
-		 * @param int $code If not 0, HTTP code will be set and send to client
-		 */
-		public static function setError(string $title, string $detail, int $code = 0): void {
-			if ($code) http_response_code($code);
-			self::$error = [$title, $detail];
-		}
-
-		/** Get error info set by Bearweb::setError(). 
-		 * @return ?array [string Error name, string Detail description of the error], null if no error
-		 */
-		public static function getError(): ?array { return self::$error; }
-
 		private ?Bearweb_Session $session = null;
-		private ?Bearweb_Site $site = null;
+		private Bearweb_Site $site;
 
 		/** Use Bearweb to server a resource. 
 		 * This function will init the Site module and the Session module. 
@@ -85,34 +29,25 @@
 		 */
 		public function __construct(string $url) {
 			$BW = $this;
-
-			header('X-Powered-By: Bearweb 7.0.230910');
-			try { Bearweb_Site::init(Bearweb_Site_SiteDB); } catch (Exception $e) {
-				error_log('[BW] Fatal error: Bearweb_Site module init failed!');
-				http_response_code(500);
-				exit('500 - Server Fatal Error!');
-			}
-			
-			if (defined('Bearweb_Session_SessionDB')) { try { Bearweb_Session::init(Bearweb_Session_SessionDB); } catch (Exception $e) {} }
 			
 			try { ob_start();
 				if (!Bearweb::check('URL', $url))
 					throw new BW_ClientError('Bad URL', 400);
 				
 				$this->session = new Bearweb_Session($url); //Fallback to default if disabled or error
-				$this->site = new Bearweb_Site($url);
+				$this->site = Bearweb_Site::queue($url);
 				$stateFlag = substr($this->site->state, 0, 1);
 				$stateInfo = substr($this->site->state, 1);
 
 				// Access control
 				if (!$this->site->access($this->session->user)) {
 					if ($stateFlag == 'A') {
-						if (Bearweb_Site_HideAuth)
+						if (BW_Config['Site_HideAuthError'])
 							throw new BW_ClientError('Not found', 404);
 						else
 							throw new BW_ClientError('Unauthorized: Controlled resource. Cannot access, please login first', 401);
 					} else if ($stateFlag == 'P') {
-						if (Bearweb_Site_HideAuth)
+						if (BW_Config['Site_HideAuthError'])
 							throw new BW_ClientError('Not found', 404);
 						else
 							throw new BW_ClientError('Forbidden: Locked resource. Access denied', 403);
@@ -135,8 +70,8 @@
 					header('Last-Modified: '.date('D, j M Y G:i:s').' GMT');
 					header('Etag: '.base64_encode(random_bytes(48))); 
 					header('Cache-Control: no-store');
-				} else if ( $_SERVER['HTTP_IF_NONE_MATCH'] ?? false && $_SERVER['HTTP_IF_NONE_MATCH'] == base64_encode($this->site->url).':'.base64_encode($this->site->modify) ) { # Client cache is good
-					throw new BW_ClientError('304 - Not Modified', 304);
+				/*} else if ( $_SERVER['HTTP_IF_NONE_MATCH'] ?? false && $_SERVER['HTTP_IF_NONE_MATCH'] == base64_encode($this->site->url).':'.base64_encode($this->site->modify) ) { # Client cache is good
+					throw new BW_ClientError('304 - Not Modified', 304);*/
 				} else {
 					header('Last-Modified: '.date('D, j M Y G:i:s', $this->site->modify).' GMT');
 					header('Etag: '.base64_encode($this->site->url).':'.base64_encode($this->site->modify));
@@ -144,28 +79,28 @@
 				}
 				
 				// Invoke template
-				$template = Bearweb_Site_TemplateDir.$this->site->template[0].'.php';
+				$template = BW_Config['Site_TemplateDir'].$this->site->template[0].'.php';
 				if (!file_exists($template))
-					throw new BW_ServerError('Template not found: '.$this->site->get(Bearweb_Site::FIELD_TEMPLATE)[0], 500);
+					throw new BW_ServerError('Template not found: '.$this->site->template[0], 500);
 				include $template;
 
 			} catch (Exception $e) { ob_clean(); ob_start();
 				if ($e instanceof BW_ClientError) {
-					Bearweb::setError($e->getCode().' - Client Error', $e->getMessage(), $e->getCode());
+					$this->site = Bearweb_Site::createErrorPage($e->getCode().' - Client Error', $e->getMessage(), $e->getCode()); //Bearweb::setError($e->getCode().' - Client Error', $e->getMessage(), $e->getCode());
 				} else if ($e instanceof BW_ServerError) {
 					error_log('[BW] Server Error: '.$e);
-					if (Bearweb_Site_HideServerError)
-						Bearweb::setError('500 - Internal Error', 'Server-side internal error.', 500);
+					if (BW_Config['Site_HideServerError'])
+						$this->site = Bearweb_Site::createErrorPage('500 - Internal Error', 'Server-side internal error.', 500); //Bearweb::setError('500 - Internal Error', 'Server-side internal error.', 500);
 					else
-						Bearweb::setError($e->getCode().' - Server Error', $e->getMessage(), $e->getCode());
+						$this->site = Bearweb_Site::createErrorPage($e->getCode().' - Server Error', $e->getMessage(), $e->getCode()); //Bearweb::setError($e->getCode().' - Server Error', $e->getMessage(), $e->getCode());
 				} else {
 					error_log('[BW] Unknown Error: '.$e);
-					if (Bearweb_Site_HideServerError)
-						Bearweb::setError('500 - Internal Error', 'Server-side internal error.', 500);
+					if (BW_Config['Site_HideServerError'])
+						$this->site = Bearweb_Site::createErrorPage('500 - Internal Error', 'Server-side internal error.', 500); //Bearweb::setError('500 - Internal Error', 'Server-side internal error.', 500);
 					else
-						Bearweb::setError('500 - Unknown Error', $e->getMessage(), 500);
+						$this->site = Bearweb_Site::createErrorPage('500 - Unknown Error', $e->getMessage(), 500); //Bearweb::setError('500 - Unknown Error', $e->getMessage(), 500);
 				}
-				$template = Bearweb_Site_TemplateDir.'page.php';
+				$template = BW_Config['Site_TemplateDir'].'page.php';
 				include $template;
 			}
 			
@@ -177,51 +112,110 @@
 	 * resource is in fact fetching data from the database, with access control and some 
 	 * data manipulation. This DB is called Sitemap because the table is a map of website. 
 	 * ************************************************************************************/
-	class Bearweb_Site {
-		private static ?PDO $db = null;		# Sitemap DB
+	class Bearweb_Site { use Bearweb_DatabaseBacked;
+		const TIME_CURRENT = -1;	# Pass this parameter to let Bearweb use current timestamp
+		const TIME_NULL = 0;		# Some resource (like auto generated one) has no create / modify time
 
-		/** Init Bearweb sitemap module. 
-		 * This routine must be called before creating any instance. This routine is required for subsequent site operations. 
-		 * If this routine failed, the framework will prepare an error template. 
-		 * Note: Do NOT call this routine. This routine should only be called by Bearweb framework. 
-		 * @param string $dir Sitemap DB file dir
-		 * @throws BW_DatabaseServerError Fail to open sitemap db: Since Bearweb_Site module is mandatory, this is a critical error. Should retry or terminate!
+		private function __construct(
+			public readonly string	$url,					# Resource URL, PK, Unique, Not Null
+			public readonly ?string	$category	= '',			# Resource category, for management purpose; Default '' No category
+			public readonly ?array	$template	= ['object', 'blob'],	# Template used to process the given resource; Default ['object', 'blob'] for plain text file object
+			public readonly ?string	$owner		= '',			# Owner's user ID of the given resource; Only the owner and user in "ADMIN" group can modify this resource; Default '' for system-owned
+			public readonly ?int	$create		= self::TIME_NULL,	# Create timestamp; Default TIME_NULL for no actual time
+			public readonly ?int	$modify		= self::TIME_NULL,	# Modify timestamp; Default TIME_NULL for no actual time
+			public readonly ?string	$title		= '',			# Resource HTML meta info: title; Default ''
+			public readonly ?string	$keywords	= '',			# Resource HTML meta info: keywords; Default ''
+			public readonly ?string	$description	= '',			# Resource HTML meta info: description; Default ''
+			public readonly ?string	$state		= 'S',			# State of the given resource; Default 'S' special (open to public, SEO no index)
+			public readonly ?string	$content	= '',			# Resource content, the content should be directly output to reduce server process load; Default ''
+			public readonly ?string	$aux		= 'text/plain'		# Resource auxiliary data, the template decide how to use it, such as extra info or a JSON data; Default 'text/plain' for object template MIME type
+		) {}
+
+		/** Constructe an error page template. 
+		 * This method is for Bearweb framework. 
+		 * @param string $title		Error page title
+		 * @param string $detail	Detail info about the error
+		 * @param int $code		If not 0, HTTP code will be set and send to client
+		*/
+		public static function createErrorPage(string $title, string $detail, int $code = 0): static {
+			return new static(url: '', template: ['page', 'error'], title: $title, description: $detail, content: $detail, aux: '');
+		}
+
+		/** Queue a resource from sitemap db. 
+		 * Note: Data in DB is volatile, instance only reflects the data at time of DB fetch, it may be changed by another transaction (e.g. Resource modify API) and other process. 
+		 * @param string	$url	Resource URL
+		 * @throws BW_DatabaseServerError Cannot read sitemap DB
+		 * @throws BW_ClientError Resource not found in sitemap DB (HTTP 404)
+		*/
+		public static function queue(string $url): static {
+			$site = null;
+			try {
+				$sql = self::$db->prepare('SELECT `Category`, `Template`, `Owner`, `Create`, `Modify`, `Title`, `Keywords`, `Description`, `State`, `Content`, `Aux` FROM `Sitemap` WHERE URL = ?');
+				$sql->bindValue(	1,	$url,	PDO::PARAM_STR	);
+				$sql->execute();
+				$site = $sql->fetch();
+				$sql->closeCursor();
+			} catch (Exception $e) {
+				error_log('[BW] Cannot read sitemap DB: '.$e->getMessage());
+				throw new BW_DatabaseServerError('Cannot read sitemap database: '.$e->getMessage(), 500);
+			}
+			if (!$site) {
+				throw new BW_ClientError('Not Found', 404);
+			}
+
+			return new static(
+				url:		$url,
+				category:	$site['Category']	?? '',
+				template:	$site['Template']	?  explode('/', $site['Template'])	: ['object', 'blob'],
+				owner:		$site['Owner']		?? '',
+				create:		$site['Create']		?? self::TIME_NULL,
+				modify:		$site['Modify']		?? self::TIME_NULL,
+				title:		$site['Title']		?? '',
+				keywords:	$site['Keywords']	?? '',
+				description:	$site['Description']	?? '',
+				state:		$site['State']		?? 'S',
+				content:	$site['Content']	?? '',
+				aux:		$site['Aux']		?? ''
+			);
+		}
+
+		/** Test user access privilege level. 
+		 * @param array $user An array conatins user info in [string ID, array Group], this can be directly feed from Bearweb_Session->user.
+		 * @return int 0 = No access; 1 = read/execute; -1 = read/execute/write (owner/admin)
 		 */
-		public static function init(string $dir): void { self::$db = Bearweb::db_connect($dir); }
+		public function access(array $user): int {
+			if (
+				in_array('ADMIN', $user['Group']) ||			# Admin always has the right
+				( $user['ID'] != '' && $user['ID'] == $this->owner )	# Owner of resource (Note: '' means guest in session control, but '' means system in sitemap)
+			) return -1;
 
-		/** Creat a new resource. 
-		 * Use NAMED ARGUMENT to pass value. Skip an argument to use default value. 
-		 * @param string	$url		Resource URL: PK, Unique, Not Null
-		 * @param string	$category	Resource category, for management purpose; Default ''
-		 * @param array		$template	Template used to process the given resource; Default ['page', 'error'] for error page
-		 * @param string	$owner		Owner's user ID of the given resource; Only the owner and user in "ADMIN" group can modify this resource; Default '' for system-owned
-		 * @param int		$create		Create timestamp, use 0 if there is no create-time, such as generated resource; Default -1 for current time
-		 * @param int		$modify		Modify timestamp, use 0 if there is no create-time, such as generated resource; Default -1 for current time
-		 * @param string	$title		Resource HTML meta info: title; Default ''
-		 * @param string	$keywords	Resource HTML meta info: keywords; Default ''
-		 * @param string	$description	Resource HTML meta info: description; Default ''
-		 * @param string	$state		State of the given resource; Default 'P' pending (locked to public)
-		 * @param string	$content	Resource content, the content should be directly output to reduce server process load; Default ''
-		 * @param string	$aux		Resource auxiliary data, the template decide how to use it, such as extra info or a JSON data; Default ''
+			$stateFlag = substr($this->state, 0, 1);
+			$stateInfo = substr($this->state, 1);
+			$groups = explode(',', $stateInfo);
+			if (
+				$stateFlag == 'P' ||								# Pending resource: owner only
+				( $stateFlag == 'A' && !count(array_intersect( $user['Group'] , $groups )) )	# Auth control: check user groups against privilege groups
+			) return 0;
+
+			return 1;
+		}
+
+		/** Insert this resource into sitemap db.
 		 * @throws BW_DatabaseServerError Fail to insert into sitemap db
 		 */
-		public static function create(
-			string	$url,
-			string	$category	= '',
-			array	$template	= ['page', 'error'],
-			string	$owner		= '',
-			int	$create		= -1,
-			int	$modify		= -1,
-			string	$title		= '',
-			string	$keywords	= '',
-			string	$description	= '',
-			string	$state		= 'P',
-			string	$content	= '',
-			string	$aux		= ''
-		): void {
-			$template = $template ? implode('/', $template) : null;
-			$create = $create == -1 ? $_SERVER['REQUEST_TIME'] : $create;
-			$modify = $modify == -1 ? $_SERVER['REQUEST_TIME'] : $modify;
+		public function insert(): void {
+			$url =		$this->url;
+			$category =	$this->category ?? '';
+			$template =	implode('/', $this->template ?? ['object', 'blob']);
+			$owner =	$this->owner ?? '';
+			$create =	self::__vmap($this->create, [[null, $_SERVER['REQUEST_TIME']], [self::TIME_CURRENT, $_SERVER['REQUEST_TIME']]]);
+			$modify =	self::__vmap($this->modify, [[null, $_SERVER['REQUEST_TIME']], [self::TIME_CURRENT, $_SERVER['REQUEST_TIME']]]);
+			$title =	$this->title ?? '';
+			$keywords =	$this->keywords ?? '';
+			$description =	$this->description ?? '';
+			$state =	$this->state ?? 'S';
+			$content =	$this->content ?? '';
+			$aux =		$this->aux ?? 'text/plain';
 			try {
 				$sql = self::$db->prepare('INSERT INTO `Sitemap` (
 					`URL`, `Category`, `Template`,
@@ -249,112 +243,23 @@
 			} catch (Exception $e) { throw new BW_DatabaseServerError('Cannot insert into sitemap database: '.$e->getMessage(), 500); }
 		}
 
-		public readonly string	$url;				# Resource URL, PK, Unique, Not Null
-		public readonly string	$category;			# Resource category, for management purpose; Default '' No category
-		public readonly array	$template;			# Template used to process the given resource; Default ['page', 'error'] for error page
-		public readonly string	$owner;				# Owner's user ID of the given resource; Only the owner and user in "ADMIN" group can modify this resource; Default '' for system-owned
-		public readonly int	$create;			# Create timestamp, use 0 if there is no create-time, such as generated resource; Default 0
-		public readonly int	$modify;			# Modify timestamp, use 0 if there is no create-time, such as generated resource; Default 0
-		public readonly string	$title;				# Resource HTML meta info: title; Default ''
-		public readonly string	$keywords;			# Resource HTML meta info: keywords; Default ''
-		public readonly string	$description;			# Resource HTML meta info: description; Default ''
-		public readonly string	$state;				# State of the given resource; Default 'S' special (open to public, SEO no index)
-		public readonly string	$content;			# Resource content, the content should be directly output to reduce server process load; Default ''
-		public readonly string	$aux;				# Resource auxiliary data, the template decide how to use it, such as extra info or a JSON data; Default ''
-
-		/** Constructor. 
-		 * Note: Data in DB is volatile, instance only reflects the data at time of DB fetch, it may be changed by another transaction (e.g. Resource modify API) and other process. 
-		 * @param string	$url	Resource URL
-		 * @throws BW_DatabaseServerError Cannot read sitemap DB
-		 * @throws BW_ClientError Resource not found in sitemap DB (HTTP 404)
-		*/
-		public function __construct(string $url) {
-			$this->url = $url;
-
-			// Sitemap lookup
-			$site = null;
-			try {
-				$sql = self::$db->prepare('SELECT `Category`, `Template`, `Owner`, `Create`, `Modify`, `Title`, `Keywords`, `Description`, `State`, `Content`, `Aux` FROM `Sitemap` WHERE URL = ?');
-				$sql->bindValue(	1,	$url,	PDO::PARAM_STR	);
-				$sql->execute();
-				$site = $sql->fetch();
-				$sql->closeCursor();
-			} catch (Exception $e) {
-				error_log('[BW] Cannot read sitemap DB: '.$e->getMessage());
-				throw new BW_DatabaseServerError('Cannot read sitemap database: '.$e->getMessage(), 500);
-			}
-			if (!$site) {
-				throw new BW_ClientError('Not Found', 404);
-			}
-
-			// Decode data
-			$this->category =	$site['Category'] ??	'';
-			$this->template =	$site['Template'] ?	explode('/', $site['Template']) : ['page', 'error'];
-			$this->owner =		$site['Owner'] ??	'';
-			$this->create =		$site['Create'] ??	0;
-			$this->modify =		$site['Modify'] ??	0;
-			$this->title =		$site['Title'] ??	'';
-			$this->keywords =	$site['Keywords'] ??	'';
-			$this->description =	$site['Description'] ??	'';
-			$this->state =		$site['State'] ??	'S';
-			$this->content =	$site['Content'] ??	'';
-			$this->aux =		$site['Aux'] ??		'';
-		}
-
-		/** Get user access privilege level. 
-		 * @param array $user An array conatins user info in [string ID, array Group], this can be directly feed from Bearweb_Session->user.
-		 * @return int 0 = No access; 1 = read/execute; -1 = read/execute/write (owner/admin)
-		 */
-		public function access($user): int {
-			if (
-				in_array('ADMIN', $user['Group']) ||			# Admin always has the right
-				( $user['ID'] != '' && $user['ID'] == $this->owner )	# Owner of resource (Note: '' means guest in session control but system in sitemap)
-			) return -1;
-
-			$stateFlag = substr($this->state, 0, 1);
-			$stateInfo = substr($this->state, 1);
-			$groups = explode(',', $stateInfo);
-			if (
-				$stateFlag == 'P' ||								# Pending resource: owner only
-				( $stateFlag == 'A' && !count(array_intersect( $user['Group'] , $groups )) )	# Auth control: check user groups against privilege groups
-			) return 0;
-
-			return 1;
-		}
-
-
-		/** Modify this resource. 
-		 * Use NAMED ARGUMENT to pass value. Skip an argument or leave it null to use orginal value. 
-		 * Note: DB is volatile and can be modified by other process other than this script at the time. Reload this instance to refresh to the most up-to-date value. 
-		 * @param ?string	$category	Resource category, for manegement purpose; Skip or use null for orginal value
-		 * @param ?array	$template	Template used to process the given resource; Skip or use null for orginal value
-		 * @param ?string	$owner		Owner's user ID of the given resource; Only the owner and user in "ADMIN" group can modify this resource; Skip or use null for orginal value
-		 * @param ?int		$create		Create timestamp, use 0 if there is no create-time, such as generated resource; Skip or use null for orginal value, -1 for current time
-		 * @param ?int		$modify		Modify timestamp, use 0 if there is no create-time, such as generated resource; Skip or use null for orginal value, -1 for current time
-		 * @param ?string	$title		Resource HTML meta info: title; Skip or use null for orginal value
-		 * @param ?string	$keywords	Resource HTML meta info: keywords; Skip or use null for orginal value
-		 * @param ?string	$description	Resource HTML meta info: description, see HTML meta; Skip or use null for orginal value
-		 * @param ?string	$state		State of the given resource; Skip or use null for orginal value
-		 * @param ?string	$content	Resource content, the content should be directly output to reduce server process load; Skip or use null for orginal value
-		 * @param ?string	$aux		Resource auxiliary data, the template decide how to use it, such as extra info or a JSON data; Skip or use null for orginal value
+		/** Update this resource in sitemap db. 
+		 * It is not necessary to queue this resource, create a dummy resource with url and fields to modify (leave other field null). 
 		 * @throws BW_DatabaseServerError Fail to update sitemap db
 		 */
-		public function set(
-			?string	$category	= null,
-			?array	$template	= null,
-			?string	$owner		= null,
-			?int	$create		= null,
-			?int	$modify		= null,
-			?string	$title		= null,
-			?string	$keywords	= null,
-			?string	$description	= null,
-			?string	$state		= null,
-			?string	$content	= null,
-			?string	$aux		= null
-		): void {
-			$template = $template ? implode('/', $template) : null;
-			$create = $create == -1 ? $_SERVER['REQUEST_TIME'] : $create;
-			$modify = $modify == -1 ? $_SERVER['REQUEST_TIME'] : $modify;
+		public function update(): void {
+			$url =		$this->url;
+			$category =	$this->category;
+			$template =	$this->template === null ? null : implode('/', $this->template);
+			$owner =	$this->owner;
+			$create =	self::__vmap($this->create, [[null, null], [self::TIME_CURRENT, $_SERVER['REQUEST_TIME']]]);
+			$modify =	self::__vmap($this->modify, [[null, null], [self::TIME_CURRENT, $_SERVER['REQUEST_TIME']]]);
+			$title =	$this->title;
+			$keywords =	$this->keywords;
+			$description =	$this->description;
+			$state =	$this->state;
+			$content =	$this->content;
+			$aux =		$this->aux;
 			try {
 				$sql = self::$db->prepare('UPDATE `Sitemap` SET
 					`Category` =	IFNULL(?, `Category`),
@@ -380,13 +285,14 @@
 				$sql->bindValue(9,	$state,		PDO::PARAM_STR	);
 				$sql->bindValue(10,	$content,	PDO::PARAM_STR	);
 				$sql->bindValue(11,	$aux,		PDO::PARAM_STR	);
-				$sql->bindValue(12,	$this->url,	PDO::PARAM_STR	);
+				$sql->bindValue(12,	$url,		PDO::PARAM_STR	);
 				$sql->execute();
 				$sql->closeCursor();
 			} catch (Exception $e) { throw new BW_DatabaseServerError('Cannot update sitemap database: '.$e->getMessage(), 500); }
 		}
 
 		/** Delete this resource. 
+		 * It is not necessary to queue this resource, create a dummy resource with url to specify resource in sitemap db. 
 		 * @throws BW_DatabaseServerError Fail to delete from sitemap db
 		 */
 		public function delete(): void {
@@ -398,6 +304,14 @@
 			} catch (Exception $e) {
 				throw new BW_DatabaseServerError('Cannot delete from sitemap database: '.$e->getMessage(), 500);
 			}
+		}
+
+		private static function __vmap(mixed $value, array $map): mixed {
+			foreach ($map as [$src, $dest]) {
+				if ($value === $src)
+					return $dest;
+			}
+			return $value;
 		}
 	}
 
@@ -428,17 +342,7 @@
 	 * too slow at some day. Admin should delete out-of-date records periodically. 
 	 * ************************************************************************************/
 
-	class Bearweb_Session {
-
-		private static $db = null;
-
-		/** Init and enable Bearweb session module. 
-		 * This routine must be called before creating any instance. This routine is required for subsequent session operations. 
-		 * If this routine is not called, session control will be disabled. Default session data will be served. 
-		 * @param string $db Session DB file dir
-		 * @throws BW_DatabaseServerError Fail to open session db: Framework may catch and ignore this error and process without session control (use default session)
-		 */
-		public static function init(string $dir): void { self::$db = bearweb::db_connect($dir); }
+	class Bearweb_Session { use Bearweb_DatabaseBacked;
 
 		/** Create a user. 
 		 * Internal has is applied to password before write to DB. 
@@ -504,13 +408,12 @@
 					} // else, password check pass, no action to perform
 				}
 
-				return array(
-					'ID' =>			$user['ID'],
-					'Name' =>		$user['Name'],
+				return [
+					'ID' => $user['ID'], 'Name' => $user['Name'],
 					'RegisterTime' =>	$user['RegisterTime'] ?? 0,
 					'Group' =>		$user['Group'] ? explode(',', $user['Group']) : [],
 					'Data' =>		json_decode($user['Data'] ? $user['Data'] : '{}', true) # Note: ?? only checks for null, json_decode('' ?? '{}') gives json_decode('') gives null instead of empty array []
-				);
+				];
 			} catch (BW_ClientError $e) {
 				throw $e;
 			} catch (Exception $e) {
@@ -555,22 +458,22 @@
 		public readonly array	$user;		# ID, Name, RegisterTime, Group, Data
 		private string	$log = '';		# Cached log (to minimize DB transaction) Will be synch to DB at the end of script.
 
-		private const	DEFAULT_SESSION = array(
+		private const	DEFAULT_SESSION = [
 			'ID' =>			'',
 			'Create' =>		0,
 			'User' =>		''
-		);
-		private const	DEFAULT_TRANSACTION = array(
+		];
+		private const	DEFAULT_TRANSACTION = [
 			'ID' =>			'',
 			'IP' =>			''
-		);
-		private const	DEFAULT_USER = array(
+		];
+		private const	DEFAULT_USER = [
 			'ID' =>			'',
 			'Name' =>		'',
 			'RegisterTime' =>	0,
 			'Group' =>		[],
 			'Data' =>		[]
-		);
+		];
 
 		/** Constructor. 
 		 * If session control disabled, this function does nothing; otherwise, this function will automatically read client-side cookies, create/bind session, 
@@ -594,16 +497,16 @@
 
 				// Update session if cookie valid and session found and matched in db
 				if (
-					isset($_COOKIE[Bearweb_Session_CookieSID]) &&
-					isset($_COOKIE[Bearweb_Session_CookieKey]) &&
-					strlen(base64_decode($_COOKIE[Bearweb_Session_CookieSID], true)) == 96 && #strict mode, return false if not base64, then strlen will be 0
-					strlen(base64_decode($_COOKIE[Bearweb_Session_CookieKey], true)) == 96
+					isset($_COOKIE[ BW_Config['Session_CookieSID'] ]) &&
+					isset($_COOKIE[ BW_Config['Session_CookieKey'] ]) &&
+					strlen(base64_decode($_COOKIE[ BW_Config['Session_CookieSID'] ], true)) == 96 && #strict mode, return false if not base64, then strlen will be 0
+					strlen(base64_decode($_COOKIE[ BW_Config['Session_CookieKey'] ], true)) == 96
 				) {
 					$sql = self::$db->prepare('UPDATE `Session` SET `LastUse` = ? WHERE `ID` = ? AND `Key` = ? AND `LastUse` > ? RETURNING `ID`, `Create`, `User`');
 					$sql->bindValue(	1,	$_SERVER['REQUEST_TIME'],				PDO::PARAM_INT	);
-					$sql->bindValue(	2,	$_COOKIE[Bearweb_Session_CookieSID],			PDO::PARAM_STR	);
-					$sql->bindValue(	3,	$_COOKIE[Bearweb_Session_CookieKey],			PDO::PARAM_STR	);
-					$sql->bindValue(	4,	$_SERVER['REQUEST_TIME'] - Bearweb_Session_Expire,	PDO::PARAM_INT	);
+					$sql->bindValue(	2,	$_COOKIE[ BW_Config['Session_CookieSID'] ],		PDO::PARAM_STR	);
+					$sql->bindValue(	3,	$_COOKIE[ BW_Config['Session_CookieKey'] ],		PDO::PARAM_STR	);
+					$sql->bindValue(	4,	$_SERVER['REQUEST_TIME'] - BW_Config['Session_Expire'],	PDO::PARAM_INT	);
 					$sql->execute();
 					$session = $sql->fetch();
 					$sql->closeCursor();
@@ -655,20 +558,20 @@
 					setcookie(Bearweb_Session_CookieSID, $id, 0, '/', '', true, true );
 					setcookie(Bearweb_Session_CookieKey, $key, 0, '/', '', true, false );
 
-					$user = array( # New session has no user bind
+					$user = [ # New session has no user bind
 						'ID' =>			'',
 						'Name' =>		'',
 						'RegisterTime' =>	0,
 						'Group' =>		[],
 						'Data' =>		[]
-					);
+				];
 				}
 
 				// Record transaction
-				$transaction = array(
+				$transaction = [
 					'ID' =>			'',
 					'IP' =>			$_SERVER['REMOTE_ADDR']
-				);
+				];
 				$sql = self::$db->prepare('INSERT INTO `Request` (`ID`, `URL`, `Time`, `IP`, `SID`, `State`, `Log`) VALUES (?,?,?,?,?,?,?)');
 				$sql->bindParam(	1,	$transaction['ID'],		PDO::PARAM_STR	); #By reference
 				$sql->bindValue(	2,	$url,				PDO::PARAM_STR	);
@@ -775,6 +678,35 @@
 				error_log('[BW] Cannot write transaction log into DB: '.$e->getMessage());
 				return false;
 			}
+		}
+	}
+
+	
+	set_error_handler(function($no, $str, $file, $line){ if (error_reporting() == 0) { return false; } throw new ErrorException($str, 0, $no, $file, $line); });
+	class BW_Error extends Exception { function __construct(string $msg, int $code) { parent::__construct( get_class($this).' - '.$msg , $code ); } } // Base Bearweb error
+	class BW_ServerError extends BW_Error {} // Base server-end error
+	class BW_WebServerError extends BW_ServerError{} // Server-side front-end error: PHP script error
+	class BW_DatabaseServerError extends BW_ServerError{} // Server-side back-end error: Database (local) error
+	class BW_ExternalServerError extends BW_ServerError{} // Server-side cloud-end error: External server error, such as token server, object storage server...
+	class BW_ClientError extends BW_Error {} // Client-side error: Bad request from client
+	
+	try { Bearweb_Site::init(BW_Config['Site_DB']); } catch (Exception $e) { error_log('[BW] Fatal error: Bearweb_Site module init failed!'); http_response_code(500); exit('500 - Server Fatal Error!'); }
+	try { if (array_key_exists('Session_DB', BW_Config)) Bearweb_Session::init(BW_Config['Session_DB']); } catch (Exception $e) { error_log('[BW] Cannot connect to Session DB'); }
+	trait Bearweb_DatabaseBacked{
+		/** Database connection resource, null if DB is not ready (should use fallback methods). 
+		*/
+		public static ?PDO $db = null;
+
+		/** Init Bearweb sitemap module. Do NOT call this routine. This routine should only be called by Bearweb framework for each module at the loading time. 
+		 * @param string $dsn Data source name
+		 * @throws BW_DatabaseServerError Fail to open sitemap db: Since Bearweb_Site module is mandatory, this is a critical error. Should retry or terminate!
+		 */
+		public static function init(string $dsn): void {
+			try { self::$db = new PDO($dsn, null, null, [
+				PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+				PDO::ATTR_TIMEOUT => 10, #10s waiting time should be far more than enough
+				PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC
+			]); } catch (Exception $e) { throw new BW_DatabaseServerError('Fail to open DB: '.$e->getMessage(), 500); }
 		}
 	}
 ?>
