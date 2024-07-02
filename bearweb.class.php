@@ -19,10 +19,6 @@
 				case 'MD5':		return strlen($data) == 32 && ctype_xdigit($data);
 			
 				case 'URL':		return $data === '' || ( strlen($data) <= 128 && ctype_alnum( str_replace(['-', '_', ':', '/', '.'], '', $data) ) );
-
-				case 'UserID':		return strlen($data) >= 6 && strlen($data) <= 16 && ctype_alnum( str_replace(['-', '_'], '', $data) ); # Return false for guest ('')
-				case 'UserName':	return strlen($data) >= 2 && strlen($data) < 16;
-				case 'UserPassword':	return self::check('MD5', $data);
 				default:		return false;
 			}
 		}
@@ -37,21 +33,19 @@
 		 * @param string $url Request URL given by client
 		 */
 		public function __construct(string $url) { $url = Bearweb::check('URL', $url) ? $url : '';
-			$BW = $this;
-
 			try {
 				Bearweb_Site::init(BW_Config::Site_DB);
 				Bearweb_User::init(BW_Config::User_DB);
 				Bearweb_Session::init(BW_Config::Session_DB);
 				$this->session = new Bearweb_Session($url);
+				$this->user = Bearweb_User::query($this->session->sUser);
 			} catch (Exception $e) {
 				error_log('[BW] Fatal error: Module init failed - Cannot connect to DB: '.$e->getMessage());
 				http_response_code(500); exit('500 - Server Fatal Error!');
 			}
 			
 			try { ob_start();
-				$this->user = Bearweb_User::query($this->session->sUser);
-				$this->site = Bearweb_Site::query($url);
+				$this->site = Bearweb_Site::query($url) ?? throw new BW_ClientError('Not found', 404);
 				[$stateFlag, $stateInfo] = [substr($this->site->state, 0, 1), substr($this->site->state, 1)];
 
 				// Access control
@@ -87,10 +81,7 @@
 				}
 				
 				// Invoke template
-				$template = BW_Config::Site_TemplateDir.$this->site->template[0].'.php';
-				if (!file_exists($template))
-					throw new BW_ServerError('Template not found: '.$this->site->template[0], 500);
-				include $template;
+				self::invokeTemplate($this);
 
 			} catch (Exception $e) { ob_clean(); ob_start();
 				if ($e instanceof BW_ClientError) {
@@ -100,9 +91,37 @@
 					$this->site = BW_Config::Site_HideServerError ? Bearweb_Site::createErrorPage('500 - Internal Error', 'Server-side internal error.', 500) : Bearweb_Site::createErrorPage($e->getCode().' - Server Error', $e->getMessage(), $e->getCode());
 				} else {
 					error_log('[BW] Unknown Error: '.$e);
-					$this->site = BW_Config::Site_HideServerError ? $this->site = Bearweb_Site::createErrorPage('500 - Internal Error', 'Server-side internal error.', 500) : $this->site = Bearweb_Site::createErrorPage('500 - Unknown Error', $e->getMessage(), 500);
+					$this->site = BW_Config::Site_HideServerError ? Bearweb_Site::createErrorPage('500 - Internal Error', 'Server-side internal error.', 500) : Bearweb_Site::createErrorPage('500 - Unknown Error', $e->getMessage(), 500);
 				}
-				$template = BW_Config::Site_TemplateDir.'page.php';
+				self::invokeTemplate($this);
+			}
+		}
+
+		private static function invokeTemplate(Bearweb $BW) {
+			if ($BW->site->template[0] == 'object') {
+				header('Content-Type: '.($BW->site->meta[0] ? $BW->site->meta[0] : 'text/plain'));
+				if ($BW->site->template[1] == 'blob') {
+					echo $BW->site->content;
+				} else if ($BW->site->template[1] == 'local') {
+					$resource = BW_Config::Site_ResourceDir.$BW->site->content;
+					if (!file_exists($resource)) throw new BW_WebServerError('Resource not found: '.$resource, 500);
+					echo file_get_contents($resource);
+				} else {
+					$template = BW_Config::Site_TemplateDir.'object_'.$BW->site->template[1].'.php';
+					if (!file_exists($template)) throw new BW_WebServerError('Secondary object template not found: '.$BW->site->template[1], 500);
+					include $template;
+				}
+			} else if ($BW->site->template[0] == 'api') {
+				header('Content-Type: application/json');
+				$template = BW_Config::Site_TemplateDir.'api_'.$BW->site->template[1].'.php';
+				if (!file_exists($template)) throw new BW_WebServerError('Secondary object template not found: '.$BW->site->template[1], 500);
+				$data = include $template;
+				$data['BW_Session'] = ['sID' => $BW->session->sID, 'tID' => $BW->session->tID, 'sUser' => $BW->session->sUser, 'http' => http_response_code()];
+				echo json_encode($data);
+			} else {
+				$template = BW_Config::Site_TemplateDir.$BW->site->template[0].'.php';
+				if (!file_exists($template))
+					throw new BW_WebServerError('Template not found: '.$BW->site->template[0], 500);
 				include $template;
 			}
 		}
@@ -120,9 +139,7 @@
 			public readonly ?string	$owner		= null,	# Owner's user ID of the given resource; Only the owner and user in "ADMIN" group can modify this resource
 			public readonly ?int	$create		= null,	# Create timestamp
 			public readonly ?int	$modify		= null,	# Modify timestamp
-			public readonly ?string	$title		= null,	# Resource HTML meta info: title
-			public readonly ?string	$keywords	= null,	# Resource HTML meta info: keywords
-			public readonly ?string	$description	= null,	# Resource HTML meta info: description
+			public readonly ?array	$meta		= null,	# Meta data
 			public readonly ?string	$state		= null,	# State of the given resource
 			public readonly ?string	$content	= null,	# Resource content, the content should be directly output to reduce server process load
 			public readonly ?array	$aux		= null	# Resource auxiliary data, template defined data array
@@ -140,7 +157,8 @@
 			return new static(
 				url: '', category: '', template: ['page', 'error'],
 				owner: '', create: self::TIME_NULL, modify: self::TIME_NULL,
-				title: $title, keywords: '', description: $detail, state: 'S', content: $detail, aux: []
+				meta: [$title, '', $detail], 
+				state: 'S', content: $detail, aux: []
 			);
 		}
 
@@ -149,38 +167,29 @@
 		 * @param string $url			Resource URL
 		 * @return Bearweb_Site			A Bearweb site resource
 		 * @throws BW_DatabaseServerError	Cannot read sitemap DB
-		 * @throws BW_ClientError		Resource not found in sitemap DB (HTTP 404)
 		*/
-		public static function query(string $url): static {
+		public static function query(string $url): ?static {
 			$site = null;
 			try {
-				$sql = self::$db->prepare('SELECT `Category`, `Template`, `Owner`, `Create`, `Modify`, `Title`, `Keywords`, `Description`, `State`, `Content`, `Aux` FROM `Sitemap` WHERE URL = ?');
+				$sql = self::$db->prepare('SELECT `Category`, `Template`, `Owner`, `Create`, `Modify`, `Meta`, `State`, `Content`, `Aux` FROM `Sitemap` WHERE URL = ?');
 				$sql->bindValue(	1,	$url,	PDO::PARAM_STR	);
 				$sql->execute();
 				$site = $sql->fetch();
 				$sql->closeCursor();
-			} catch (Exception $e) {
-				error_log('[BW] Cannot read sitemap DB: '.$e->getMessage());
-				throw new BW_DatabaseServerError('Cannot read sitemap database: '.$e->getMessage(), 500);
-			}
-			if (!$site) {
-				throw new BW_ClientError('Not Found', 404);
-			}
+			} catch (Exception $e) { throw new BW_DatabaseServerError('Cannot read sitemap database: '.$e->getMessage(), 500); }
 
-			return new static(
+			return $site ? new static(
 				url:		$url,
 				category:	$site['Category']	?? '',
 				template:	$site['Template']	?  explode('/', $site['Template'])	: ['object', 'blob'],
 				owner:		$site['Owner']		?? '',
 				create:		$site['Create']		?? self::TIME_NULL,
 				modify:		$site['Modify']		?? self::TIME_NULL,
-				title:		$site['Title']		?? '',
-				keywords:	$site['Keywords']	?? '',
-				description:	$site['Description']	?? '',
+				meta:		explode("\n", $site['Meta'] ?? ''),
 				state:		$site['State']		?? 'S',
 				content:	$site['Content']	?? '',
 				aux:		json_decode($site['Aux'] ?? '{}', true) ?? []
-			);
+			) : null;
 		}
 
 		/** Test user access privilege level. 
@@ -203,21 +212,19 @@
 			$current = $_SERVER['REQUEST_TIME'];
 			$sql = self::$db->prepare('INSERT INTO `Sitemap` (
 				`URL`, `Category`, `Template`,
-				`Owner`, `Create`, `Modify`, `Title`, `Keywords`, `Description`,
+				`Owner`, `Create`, `Modify`, `Meta`,
 				`State`, `Content`, `Aux`
-			) VALUES (	?, ?, ?,	?, ?, ?, ?, ?, ?,	?, ?, ?)');
+			) VALUES (	?, ?, ?,	?, ?, ?, ?,	?, ?, ?)');
 			$sql->bindValue(1,	$this->url,										PDO::PARAM_STR	);	
 			$sql->bindValue(2,	$this->category			?? '',							PDO::PARAM_STR	);
 			$sql->bindValue(3,	implode('/', $this->template ?? ['object', 'blob']),					PDO::PARAM_STR	);
 			$sql->bindValue(4,	$this->owner			?? '',							PDO::PARAM_STR	);
 			$sql->bindValue(5,	self::__vmap($this->create, [[null, $current], [self::TIME_CURRENT, $current]]),	PDO::PARAM_INT	);
 			$sql->bindValue(6,	self::__vmap($this->modify, [[null, $current], [self::TIME_CURRENT, $current]]),	PDO::PARAM_INT	);
-			$sql->bindValue(7,	$this->title			?? '',							PDO::PARAM_STR	);
-			$sql->bindValue(8,	$this->keywords			?? '',							PDO::PARAM_STR	);
-			$sql->bindValue(9,	$this->description		?? '',							PDO::PARAM_STR	);
-			$sql->bindValue(10,	$this->state			?? 'S',							PDO::PARAM_STR	);
-			$sql->bindValue(11,	$this->content			?? '',							PDO::PARAM_STR	);
-			$sql->bindValue(12,	$this->aux			?? '{"mime":"text/plain"}',				PDO::PARAM_STR	);
+			$sql->bindValue(7,	$this->meta ? implode("\n", $this->meta) : 'text/plain',				PDO::PARAM_STR	);
+			$sql->bindValue(8,	$this->state			?? 'S',							PDO::PARAM_STR	);
+			$sql->bindValue(9,	$this->content			?? '',							PDO::PARAM_STR	);
+			$sql->bindValue(10,	$this->aux			?? '{}',						PDO::PARAM_STR	);
 			$sql->execute();
 			$sql->closeCursor();
 		} catch (Exception $e) { throw new BW_DatabaseServerError('Cannot insert into sitemap database: '.$e->getMessage(), 500); } }
@@ -234,9 +241,7 @@
 				`Owner` =	IFNULL(?, `Owner`),
 				`Create` =	IFNULL(?, `Create`),
 				`Modify` =	IFNULL(?, `Modify`),
-				`Title` =	IFNULL(?, `Title`),
-				`Keywords` =	IFNULL(?, `Keywords`),
-				`Description` =	IFNULL(?, `Description`),
+				`Meta` =	IFNULL(?, `Meta`),
 				`State` =	IFNULL(?, `State`),
 				`Content` =	IFNULL(?, `Content`),
 				`Aux` =		IFNULL(?, `Aux`)
@@ -246,13 +251,11 @@
 			$sql->bindValue(3,	$this->owner,									PDO::PARAM_STR	);
 			$sql->bindValue(4,	self::__vmap($this->create, [[null, null], [self::TIME_CURRENT, $current]]),	PDO::PARAM_INT	);
 			$sql->bindValue(5,	self::__vmap($this->modify, [[null, null], [self::TIME_CURRENT, $current]]),	PDO::PARAM_INT	);
-			$sql->bindValue(6,	$this->title,									PDO::PARAM_STR	);
-			$sql->bindValue(7,	$this->keywords,								PDO::PARAM_STR	);
-			$sql->bindValue(8,	$this->description,								PDO::PARAM_STR	);
-			$sql->bindValue(9,	$this->state,									PDO::PARAM_STR	);
-			$sql->bindValue(10,	$this->content,									PDO::PARAM_STR	);
-			$sql->bindValue(11,	is_null($this->aux) ? null : json_encode($this->aux),				PDO::PARAM_STR	);
-			$sql->bindValue(12,	$this->url,									PDO::PARAM_STR	);
+			$sql->bindValue(6,	is_null($this->meta) ? null : implode("\n", $this->meta),			PDO::PARAM_STR	);
+			$sql->bindValue(7,	$this->state,									PDO::PARAM_STR	);
+			$sql->bindValue(8,	$this->content,									PDO::PARAM_STR	);
+			$sql->bindValue(9,	is_null($this->aux) ? null : json_encode($this->aux),				PDO::PARAM_STR	);
+			$sql->bindValue(10,	$this->url,									PDO::PARAM_STR	);
 			$sql->execute();
 			$sql->closeCursor();
 		} catch (Exception $e) { throw new BW_DatabaseServerError('Cannot update sitemap database: '.$e->getMessage(), 500); } }
@@ -271,67 +274,49 @@
 
 
 	class Bearweb_User { use Bearweb_DatabaseBacked;
+		const TIME_CURRENT = -1;	# Pass this parameter to let Bearweb use current timestamp
+		const TIME_NULL = 0;		# Some resource (like auto generated one) has no create / modify time
+
 		public function __construct(
 			public readonly string	$id,
 			public readonly ?string	$name		= null,
+			public readonly ?string	$salt		= null,
 			public readonly ?string	$password	= null,
 			public readonly ?int	$registerTime	= null,
+			public readonly ?int	$lastActive	= null,
 			public readonly ?array	$group		= null,
-			public readonly mixed	$data		= null
+			public readonly ?array	$data		= null,
+			public readonly ?string	$avatar		= null
 		) {}
 
 		/** Query a user. 
-		 * In case of error or user control disabled, or the user ID is default value (''), this routine fallback silently and uses default values ('' or 0 or [], all gives false). 
-		 * If error, it will be write to system log. 
 		 * @param string	$id	User ID
-		 * @return Bearweb_User	A Bearweb_User instance
+		 * @return ?Bearweb_User	A Bearweb_User instance, or null if user not existed
+		 * @throws BW_DatabaseServerError Fail to query user info
 		 */
-		public static function query(string $id): static {
-			if (!self::$db || !$id) return new static(id: '', name: '', password: '', registerTime: 0, group: [], data: []);
+		public static function query(string $id): ?static {
+			if (!$id) return new static(id: '', name: 'Guest', salt: '', password: '', registerTime: self::TIME_NULL, lastActive: self::TIME_NULL, group: [], data: [], avatar: null);
 
 			$user = null;
 			try {
-				$sql = self::$db->prepare('SELECT `ID`, `Name`, `Password`, `RegisterTime`, `Group`, `Data` FROM `User` WHERE `ID` = ?');
+				$sql = self::$db->prepare('SELECT `ID`, `Name`, `Salt`, `Password`, `RegisterTime`, `LastActive`, `Group`, `Data`, `Avatar` FROM `User` WHERE `ID` = ?');
 				$sql->bindValue(	1,	$id,	PDO::PARAM_STR	);
 				$sql->execute();
 				$user = $sql->fetch();
 				$sql->closeCursor();
-			} catch (Exception $e) {
-				error_log('[BW] Cannot query user from DB: '.$e->getMessage());
-				return new static(id: '', name: '', password: '', registerTime: 0, group: [], data: []);
-			}
-			if (!$user) return new static(id: '', name: '', password: '', registerTime: 0, group: [], data: []);
-
-			return new static(
-				id:		$id,
-				name:		$user['Name']		?? '',
-				password:	$user['Password']	?? '',
-				registerTime:	$user['RegisterTime']	?? 0,
-				group:		explode(',', $user['Group'] ?? ''),
-				data:		json_decode($user['Data'] ?? '{}', true)
-			);
-		}
-
-		/** Verify user supplied password. 
-		 * If user control is disabled or not ready, or the user ID is default value (''), this method does nothing and returns false. 
-		 * This method will try to upgrade password hash if required. DB access error is silently ignored. This error will be write to system log. 
-		 * @param string	$uPass	User supplied password
-		 * @return bool		True for correct password, false for incorrect
-		 */
-		public function checkPassword(string $uPass): bool {
-			if (!self::$db || !$this->id || !self::passCheck($uPass, $this->password)) return false;
+			} catch (Exception $e) { throw new BW_DatabaseServerError('Cannot query user from DB: '.$e->getMessage(), 500); }
 			
-			if (self::passNeedRehash($this->password)) {
-				try {
-					$sql = self::$db->prepare('UPDATE `User` SET `Password` = ? WHERE `ID` = ?');
-					$sql->bindValue(	1,	self::passHash($uPass),	PDO::PARAM_STR	);
-					$sql->bindValue(	2,	$this->id,		PDO::PARAM_STR	);
-					$sql->execute();
-					$sql->closeCursor();
-				} catch (Exception $e) { error_log('[BW] Fail to update password rehash, retry next time: '.$e->getMessage()); }
-			}
-
-			return true;
+			return $user ? new static(
+				id:		$user['ID'],
+				name:		$user['Name']		?? $user['ID'],
+				salt:		$user['Salt']		?? '',
+				password:	$user['Password']	?? '',
+				registerTime:	$user['RegisterTime']	?? self::TIME_NULL,
+				lastActive:	$user['LastActive']	?? self::TIME_NULL,
+				group:		explode(',', $user['Group'] ?? ''),
+				data:		json_decode($user['Data'] ?? '{}', true),
+				avatar:		$user['Avatar']
+			) : null;
 		}
 
 		/** Create a new user. 
@@ -340,13 +325,17 @@
 		 * @throws BW_DatabaseServerError Fail to write user into DB
 		 */
 		public function insert(): void { try {
-			$sql = self::$db->prepare('INSERT INTO `User` (`ID`, `Name`, `Password`, `RegisterTime`, `Group`, `Data`) VALUES (?, ?, ?, ?, ?, ?)');
-			$sql->bindValue(1,	$this->id,						PDO::PARAM_STR	);
-			$sql->bindValue(2,	$this->name ?? $this->id,				PDO::PARAM_STR	);
-			$sql->bindValue(3,	self::passHash($$this->password	 ?? ''),		PDO::PARAM_STR	);
-			$sql->bindValue(4,	$this->registerTime ?? $_SERVER['REQUEST_TIME'],	PDO::PARAM_INT	);
-			$sql->bindValue(5,	implode(',', $this->group ?? []),			PDO::PARAM_STR	);
-			$sql->bindValue(6,	json_encode($this->group ?? []),			PDO::PARAM_STR	);
+			$current = $_SERVER['REQUEST_TIME'];
+			$sql = self::$db->prepare('INSERT INTO `User` (`ID`, `Name`, `Salt`, `Password`, `RegisterTime`, `LastActive`, `Group`, `Data`, `Avatar`) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)');
+			$sql->bindValue(1,	$this->id,										PDO::PARAM_STR	);
+			$sql->bindValue(2,	$this->name		?? $this->id,							PDO::PARAM_STR	);
+			$sql->bindValue(3,	$this->salt		?? ':',								PDO::PARAM_STR	);
+			$sql->bindValue(4,	$this->password		?? ':',								PDO::PARAM_STR	);
+			$sql->bindValue(5,	self::__vmap($this->registerTime, [[null, $current], [self::TIME_CURRENT, $current]]),	PDO::PARAM_INT	);
+			$sql->bindValue(6,	self::__vmap($this->lastActive, [[null, $current], [self::TIME_CURRENT, $current]]),	PDO::PARAM_INT	);
+			$sql->bindValue(7,	implode(',', $this->group ?? []),							PDO::PARAM_STR	);
+			$sql->bindValue(8,	json_encode($this->group ?? []),							PDO::PARAM_STR	);
+			$sql->bindValue(9,	$this->avatar,										PDO::PARAM_LOB	);
 			$sql->execute();
 			$sql->closeCursor();
 		} catch (Exception $e) { throw strpos($e->getMessage(), 'UNIQUE') ? new BW_ClientError('User ID has been used', 409) : new BW_DatabaseServerError('Cannot insert new user into DB: '.$e->getMessage(), 500); } }
@@ -356,34 +345,41 @@
 		 * @throws BW_DatabaseServerError Failed to update user DB (server error or no such user)
 		 */
 		public function update(): void { try {
+			$current = $_SERVER['REQUEST_TIME'];
 			$sql = self::$db->prepare('UPDATE `User` SET
 				`Name` =		IFNULL(?, `Name`),
+				`Salt` =		IFNULL(?, `Salt`),
 				`Password` =		IFNULL(?, `Password`),
 				`RegisterTime` =	IFNULL(?, `RegisterTime`),
+				`LastActive` =		IFNULL(?, `LastActive`),
 				`Group` =		IFNULL(?, `Group`),
 				`Data` =		IFNULL(?, `Data`),
+				`Avatar` =		IFNULL(?, `Avatar`)
 			WHERE `ID` = ?');
-			$sql->bindValue(1,	$this->name,									PDO::PARAM_STR	);
-			$sql->bindValue(2,	is_null($this->password)	? null	: self::passHash($this->password),	PDO::PARAM_STR	);
-			$sql->bindValue(3,	$this->registerTime,								PDO::PARAM_INT	);
-			$sql->bindValue(4,	is_null($this->group)		? null	: implode(',', $this->group),		PDO::PARAM_STR	);
-			$sql->bindValue(5,	is_null($this->data)		? null	: json_encode($this->data),		PDO::PARAM_STR	);
-			$sql->bindValue(6,	$this->id,									PDO::PARAM_STR	);
+			$sql->bindValue(1,	$this->name,										PDO::PARAM_STR	);
+			$sql->bindValue(2,	is_null($this->salt)		? null	: $this->salt,					PDO::PARAM_STR	);
+			$sql->bindValue(3,	is_null($this->password)	? null	: $this->password,				PDO::PARAM_STR	);
+			$sql->bindValue(4,	self::__vmap($this->registerTime, [[null, null], [self::TIME_CURRENT, $current]]),	PDO::PARAM_INT	);
+			$sql->bindValue(5,	self::__vmap($this->lastActive, [[null, null], [self::TIME_CURRENT, $current]]),	PDO::PARAM_INT	);
+			$sql->bindValue(6,	is_null($this->group)		? null	: implode(',', $this->group),			PDO::PARAM_STR	);
+			$sql->bindValue(7,	is_null($this->data)		? null	: json_encode($this->data),			PDO::PARAM_STR	);
+			$sql->bindValue(8,	$this->avatar,										PDO::PARAM_LOB	);
+			$sql->bindValue(9,	$this->id,										PDO::PARAM_STR	);
 			$sql->execute();
 			$sql->closeCursor();
 		} catch (Exception $e) { throw new BW_DatabaseServerError('Fail to update user in DB: '.$e->getMessage(), 500); } }
 
 		public function isAdmin(): bool { return in_array('ADMIN', $this->group); }
 		public function isGuest(): bool { return !$this->id; }
-
-		private function passHash(string $plain): string { return password_hash($plain, PASSWORD_DEFAULT); }
-		private function passCheck(string $plain, string $coded): bool { return password_verify($plain, $coded); }
-		private function passNeedRehash(string $coded): bool { return password_needs_rehash($coded, PASSWORD_DEFAULT); }
 	}
 
 
 	class Bearweb_Session { use Bearweb_DatabaseBacked;
+		const TIME_CURRENT = -1;	# Pass this parameter to let Bearweb use current timestamp
+		const TIME_NULL = 0;		# Some resource (like auto generated one) has no create / modify time
+
 		public readonly string	$sID;		# Session ID
+		public readonly string	$sKey;		# Session key for client-side JS
 		public readonly int	$sCreate;	# Session create time
 		public readonly string	$sUser;		# Session user ID
 		public readonly string	$tID;		# Transaction ID
@@ -393,7 +389,7 @@
 
 		const KEY_LENGTH = 48; # 64 char
 		private static function keygen(): string { return base64_encode(random_bytes(self::KEY_LENGTH)); }
-		private static function keycheck(string|array $data, string $key = ''): bool { return strlen(base64_decode( is_array($data) ? ($data[$key] ?? '') : $data , true)) == self::KEY_LENGTH; }
+		private static function keycheck(string|array $data, string $key = ''): bool { return strlen(base64_decode( is_array($data) ? ($data[$key] ?? '') : ($data ?? '') , true)) == self::KEY_LENGTH; }
 
 		/** Constructor. 
 		 * Do NOT use! This method is for Bearweb framework use ONLY. 
@@ -402,10 +398,10 @@
 		 * @throws BW_DatabaseServerError Cannot write session / transaction into DB
 		*/
 		public function __construct(string $url) {
-			$this->tID = self::keygen(); # There may be collision in very low chance. TID may be helpful when tracking a transaction manually. Bearweb never uses TID other than records it to log.
-			$this->tCreate = $_SERVER['REQUEST_TIME'];
-			$this->tIP = $_SERVER['REMOTE_ADDR'];
-			$this->tURL = $url;
+			$this->tID	= self::keygen(); # There may be collision in very low chance. TID may be helpful when tracking a transaction manually. Bearweb never uses TID other than records it to log.
+			$this->tCreate	= $_SERVER['REQUEST_TIME'];
+			$this->tIP	= $_SERVER['REMOTE_ADDR'];
+			$this->tURL	= $url;
 			apache_setenv('BW_TID', $this->tID);
 			apache_setenv('BW_LOG', '');
 
@@ -413,7 +409,7 @@
 
 			// Update session if session cookies are valid, found and matched in db
 			if ( self::keycheck($_COOKIE, BW_Config::Session_CookieSID) && self::keycheck($_COOKIE, BW_Config::Session_CookieKey) ) {
-				$sql = self::$db->prepare('UPDATE `Session` SET `LastUse` = ? WHERE `ID` = ? AND `Key` = ? AND `LastUse` > ? RETURNING `ID`, `Create`, `User`');
+				$sql = self::$db->prepare('UPDATE `Session` SET `LastUse` = ? WHERE `ID` = ? AND `Key` = ? AND `LastUse` > ? RETURNING `ID`, `Key`, `Create`, `User`');
 				$sql->bindValue(	1,	$this->tCreate,					PDO::PARAM_INT	);
 				$sql->bindValue(	2,	$_COOKIE[ BW_Config::Session_CookieSID ],	PDO::PARAM_STR	);
 				$sql->bindValue(	3,	$_COOKIE[ BW_Config::Session_CookieKey ],	PDO::PARAM_STR	);
@@ -427,11 +423,11 @@
 			if (!$session) {
 				$sid = '';
 				$key = self::keygen();
-				$sql = self::$db->prepare('INSERT INTO `Session` (`ID`, `Create`, `LastUse`, `User`, `Key`) VALUES (?,?,?,?,?) RETURNING `ID`, `Create`, `User`');
+				$sql = self::$db->prepare('INSERT INTO `Session` (`ID`, `Create`, `LastUse`, `User`, `Key`) VALUES (?,?,?,?,?) RETURNING `ID`, `Key`, `Create`, `User`');
 				$sql->bindParam(	1,	$sid,		PDO::PARAM_STR	); #By reference
 				$sql->bindValue(	2,	$this->tCreate,	PDO::PARAM_INT	);
 				$sql->bindValue(	3,	$this->tCreate,	PDO::PARAM_INT	);
-				$sql->bindValue(	4,	'',		PDO::PARAM_STR	); #New session is always issused to new user, it can only be changed by login API with existed SID
+				$sql->bindValue(	4,	'',		PDO::PARAM_STR	); #New session is always issused to new user, it can only be changed by User Login API with existed SID
 				$sql->bindValue(	5,	$key,		PDO::PARAM_STR	);
 				for ($try = 5; ; $try--) {
 					try {
@@ -448,8 +444,11 @@
 				setcookie(BW_Config::Session_CookieSID, $sid, 0, '/', '', true, true );
 				setcookie(BW_Config::Session_CookieKey, $key, 0, '/', '', true, false );
 			}
-			
-			['ID' => $this->sID, 'Create' => $this->sCreate, 'User' => $this->sUser] = $session;
+
+			$this->sID	= $session['ID'];
+			$this->sKey	= $session['Key'];
+			$this->sCreate	= $session['Create'];
+			$this->sUser	= $session['User'];
 			apache_setenv('BW_UID', $this->sUser);
 			apache_setenv('BW_SID', $this->sID);
 		}
@@ -472,6 +471,23 @@
 				$sql->execute();
 				$sql->closeCursor();
 			} catch (Exception $e) { throw new BW_DatabaseServerError('Cannot update session user in DB: '.$e->getMessage(), 500); }
+		}
+
+		/** Update session key on both server-side and client-side. Effects next transaction. 
+		 * @return string	New session key
+		 * @throws BW_DatabaseServerError Cannot update session key in DB
+		 */
+		public function updateKey(): string {
+			$key = self::keygen();
+			try {
+				$sql = self::$db->prepare('UPDATE `Session` SET `Key` = ? WHERE ID = ?');
+				$sql->bindValue(	1,	$key,		PDO::PARAM_STR	);
+				$sql->bindValue(	2,	$this->sID,	PDO::PARAM_STR	);
+				$sql->execute();
+				$sql->closeCursor();
+			} catch (Exception $e) { throw new BW_DatabaseServerError('Cannot update session user in DB: '.$e->getMessage(), 500); }
+			setcookie(BW_Config::Session_CookieKey, $key, 0, '/', '', true, false );
+			return $key;
 		}
 	}
 
