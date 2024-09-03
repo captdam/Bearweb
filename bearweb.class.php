@@ -1,28 +1,6 @@
-<?php	header('X-Powered-By: Bearweb 7.1.240609');
+<?php	header('X-Powered-By: Bearweb 7.1.240831');
 
 	class Bearweb {
-		/** User supplied data format check. 
-		 * @param string $type Data type
-		 * @param string|array $data User supplied data
-		 * @param string $key If $data is an array, select the element using this key
-		 * @return bool True if format OK, false is bad format or required key not in data array
-		 */
-		public static function check(string $type, string|array $data, string $key = ''): bool {
-			if (is_array($data)) {
-				$data = $data[$key] ?? null; # Get null if not exist and return null on is_string
-				if (!is_string($data)) return false;
-			}
-			switch ($type) {
-				case 'Always':		return true;
-				case 'Never':		return false;
-
-				case 'MD5':		return strlen($data) == 32 && ctype_xdigit($data);
-			
-				case 'URL':		return $data === '' || ( strlen($data) <= 128 && ctype_alnum( str_replace(['-', '_', ':', '/', '.'], '', $data) ) );
-				default:		return false;
-			}
-		}
-
 		private Bearweb_Session $session;
 		private Bearweb_User $user;
 		private Bearweb_Site $site;
@@ -32,7 +10,7 @@
 		 * This function will invoke the error template if the given URL fail the URL format check or upon error in framework and template execution.
 		 * @param string $url Request URL given by client
 		 */
-		public function __construct(string $url) { $url = Bearweb::check('URL', $url) ? $url : '';
+		public function __construct(string $url) {
 			try {
 				Bearweb_Site::init(BW_Config::Site_DB);
 				Bearweb_User::init(BW_Config::User_DB);
@@ -116,7 +94,7 @@
 				$template = BW_Config::Site_TemplateDir.'api_'.$BW->site->template[1].'.php';
 				if (!file_exists($template)) throw new BW_WebServerError('Secondary object template not found: '.$BW->site->template[1], 500);
 				$data = include $template;
-				$data['BW_Session'] = ['sID' => $BW->session->sID, 'tID' => $BW->session->tID, 'sUser' => $BW->session->sUser, 'http' => http_response_code()];
+				//$data['BW_Session'] = ['sID' => $BW->session->sID, 'tID' => $BW->session->tID, 'sUser' => $BW->session->sUser, 'http' => http_response_code()];
 				echo json_encode($data);
 			} else {
 				$template = BW_Config::Site_TemplateDir.$BW->site->template[0].'.php';
@@ -144,6 +122,8 @@
 			public readonly ?string	$content	= null,	# Resource content, the content should be directly output to reduce server process load
 			public readonly ?array	$aux		= null	# Resource auxiliary data, template defined data array
 		) {}
+
+		public static function validURL(string $url): bool { return $url === '' || ( strlen($url) <= 128 && ctype_alnum( str_replace(['-', '_', ':', '/', '.'], '', $url) ) ); }
 
 		/** Constructe an error page template. 
 		 * Do NOT use! This method is for Bearweb framework use ONLY. 
@@ -222,7 +202,7 @@
 			$sql->bindValue(5,	self::__vmap($this->create, [[null, $current], [self::TIME_CURRENT, $current]]),	PDO::PARAM_INT	);
 			$sql->bindValue(6,	self::__vmap($this->modify, [[null, $current], [self::TIME_CURRENT, $current]]),	PDO::PARAM_INT	);
 			$sql->bindValue(7,	$this->meta ? implode("\n", $this->meta) : 'text/plain',				PDO::PARAM_STR	);
-			$sql->bindValue(8,	$this->state			?? 'S',							PDO::PARAM_STR	);
+			$sql->bindValue(8,	$this->state			?? 'P',							PDO::PARAM_STR	);
 			$sql->bindValue(9,	$this->content			?? '',							PDO::PARAM_STR	);
 			$sql->bindValue(10,	$this->aux			?? '{}',						PDO::PARAM_STR	);
 			$sql->execute();
@@ -288,6 +268,9 @@
 			public readonly ?array	$data		= null,
 			public readonly ?string	$avatar		= null
 		) {}
+
+		public static function validID(string $uid): bool { return strlen($uid) >= 6 && strlen($uid) <= 16 && ctype_alnum(str_replace(['-', '_'], '', $uid)); }
+		public static function validPassword(string $pass): bool { return strlen(base64_decode($pass, true)) == 48; } // 32-byte (256-bit) cipher
 
 		/** Query a user. 
 		 * @param string	$id	User ID
@@ -501,16 +484,15 @@
 	class BW_ClientError extends BW_Error {}		# Client-side error: Bad request from client
 
 	trait Bearweb_DatabaseBacked{
-		/** Database connection resource, null if DB is not ready or module disabled. 
-		*/
-		public static ?PDO $db = null;
+		/** Database connection resource */
+		public static PDO $db;
 
-		/** Init Bearweb sitemap module. Do NOT call this routine. This routine should only be called by Bearweb framework for each module at the loading time. 
-		 * @param string $dsn Data source name
+		/** Init module by connect its database. Do NOT call this routine. This routine should only be called by Bearweb framework for each module at the loading time. 
+		 * @param array $dsn Data source name, username and password
 		 * @throws BW_DatabaseServerError Fail to open db
 		 */
-		public static function init(string $dsn): void {
-			try { self::$db = new PDO($dsn, null, null, [
+		public static function init(array $dsn): void {
+			try { self::$db = new PDO($dsn[0], $dsn[1], $dsn[2], [
 				PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
 				PDO::ATTR_TIMEOUT => 10, #10s waiting time should be far more than enough
 				PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC
