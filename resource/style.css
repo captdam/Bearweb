@@ -26,17 +26,22 @@
 * { margin: 0; padding: 0; max-width: 100%; overflow-wrap: break-word; }
 body { background-color: var(--highlight-bgcolor); font-family: Arial, 'Arial', 'Microsoft YaHei', '微软雅黑'; }
 body>*>* { max-width: var(--margin-maxwidth); padding: 12px var(--margin-pad); } @media (max-width: 1279px) { body>*>* { width: calc(100% - 20px); padding: 12px 10px; } }
-
 h1,h2,h3,h4 { margin: 18px 0; }
-p,ul,ol { margin: 12px 0; }
+p,ul,ol,li { margin: 12px 0; }
 li { margin-left: 2em; }
-a { color: inherit; text-decoration: none; opacity: 75%; } a:hover { cursor: pointer; opacity: 100%; }
-del { opacity: 0.25; } del:hover { opacity: 0.75; }
-script,style { display: none !important; }
-code { background-color: var(--content-bgscolor); overflow: auto; } pre code { display: block; width: 100%; padding: 10px 0; }
 hr { margin: 10px 0; }
-figure { text-align: center; } .info,figcaption { font-size: 85%; opacity: 0.75; }
+
+a { color: inherit; text-decoration: none; opacity: 75%; } a:hover { cursor: pointer; opacity: 100%; }
+a[href^="http://"]::after,a[href^="https://"]::after { content: '↗' }
+
+del { opacity: 0.25; } del:hover { opacity: 0.75; }
+.info { font-size: 85%; opacity: 0.75; }
+
+script,style { display: none !important; }
+code { background-color: var(--content-bgscolor); overflow: auto; } pre { display: block; background-color: var(--content-bgscolor); width: 100%; padding: 10px 0; }
+
 details>summary { cursor: pointer; list-style-type: '+  '; background: var(--content-bgscolor); margin: 12px 0; padding: 5px 12px; } details[open]>summary { color: var(--highlight-color); background: var(--highlight-bgcolor); list-style-type: '-  '; }
+
 form>div { display: grid; grid-template-columns: 20ch 1fr; gap: 10px; }
 textarea { resize: vertical; }
 
@@ -46,7 +51,7 @@ header {
 	border-bottom: solid var(--highlight-color) 2px;
 	position: sticky;
 	top: 0;
-	z-index: 99999;
+	z-index: 99;
 	font-size: 18px;
 	font-weight: bold;
 }
@@ -89,17 +94,30 @@ footer { border-top: solid var(--highlight-color) 2px; }
 
 main>*:nth-child(2n) { background-color: var(--content-bgcolor0); }
 main>*:nth-child(2n+1) { background-color: var(--content-bgcolor1); }
-.main_title {
-	color: var(--highlight-color);
-	background-color: var(--highlight-bgcolor) !important;
-}
+.main_title { color: var(--highlight-color); background-color: var(--highlight-bgcolor) !important; }
+.main_content a { color: var(--highlight-bgcolor); text-decoration: underline; margin: 0 0.25em; }
+.main_content figure { text-align: center; margin: 12px 0; }
+.main_content figure>img { max-width: min(600px, 100%); cursor: pointer; }
+.main_content figure>img[data-wide] { max-width: 100%; }
+.main_content figcaption { font-size: 85%; opacity: 0.75; }
 .main_note {
 	border-left: solid var(--color) 4px;
 	background-image: linear-gradient(var(--content-bgscolor), var(--content-bgscolor)), linear-gradient(var(--color), var(--color));
 	padding: 2px 0 2px 10px;
 	margin: 0 0 10px 0;
 }
-.main_content a { color: var(--highlight-bgcolor); text-decoration: underline; margin: 0 0.25em; }
+
+#viewer_container {
+	z-index: 100;
+	position: fixed;
+	height: 100%;
+	width: 100%;
+	top: 0;
+	left: 0;
+	display: none;
+	cursor: pointer;
+	backdrop-filter: blur(6px);
+}
 
 #dialog_container {
 	z-index: 101;
@@ -165,11 +183,8 @@ main>*:nth-child(2n+1) { background-color: var(--content-bgcolor1); }
 /** Home page and category list page */
 .home_categoryOverview>div {
 	color: #FFF;
-	padding: 4px;
-	margin: 10vh 25px;
+	margin: 10vh 0;
 }
-.home_categoryOverview>div>*:first-of-type { width: 250px; }
-.home_categoryOverview>div>*:last-of-type { width: calc(95% - 250px); }
 .home_categoryOverview a:last-child {
 	text-decoration: underline;
 	font-weight: bold;
@@ -222,10 +237,9 @@ main>*:nth-child(2n+1) { background-color: var(--content-bgcolor1); }
 }
 
 /** Place two children contents side by side */ 
-.sidebyside { display: flex; justify-content: space-between; }
-@media (max-width: 767px) {
-	.sidebyside { display: block; }
-	.sidebyside>* { width: 100% !important; }
+.sidebyside { display: block; }
+@media (min-width: 768px) {
+	.sidebyside { display: grid; gap: 10px; grid-template-columns: 1fr 1fr; }
 }
 
 

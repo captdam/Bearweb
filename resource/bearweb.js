@@ -19,6 +19,14 @@ const onload_frame = () => { // Front-end framework
 		_('#header_nav').style.display = _('#header_button').textContent == '≡' ? 'block' : 'none';
 		_('#header_button').textContent = _('#header_button').textContent == '≡' ? '×' : '≡';
 	}; })();
+	(() => { _('#viewer_container').onclick = () => { _('#viewer_container').style.display = 'none'; }; })();// Viewer for figures
+	(() => { // Special page
+		if (['A', 'P'].includes(_('html').dataset.pagestate)) {
+			_('html').style.setProperty('--highlight-bgcolor', '#622');
+			_('html').style.setProperty('--content-bgcolor0', '#EDD');
+			_('html').style.setProperty('--content-bgcolor1', '#F6D0D0');
+		}
+	})();
 };
 const onload_content = () => { // Content section only
 	(() => { // Key words style
@@ -39,8 +47,32 @@ const onload_content = () => { // Content section only
 			} );
 		} );
 	})();
+	(() => { // Viewer for figures
+		__('.main_content figure>img').forEach(x => {
+			x.onclick = () => {
+				_('#viewer_container').style.background = 'center/contain no-repeat url(' + x.src + ')';
+				_('#viewer_container').style.display = 'block';
+			};
+		});
+	})();
+	(() => { // Special page
+		if (['A', 'P'].includes(_('html').dataset.pagestate)) {
+			_('html').style.setProperty('--highlight-bgcolor', '#622');
+			_('html').style.setProperty('--content-bgcolor0', '#EDD');
+			_('html').style.setProperty('--content-bgcolor1', '#F6D0D0');
+		}
+	})();
+	(() => { // Index
+
+	})();
 };
 ready().then(()=>{onload_frame();onload_content();});
+
+const cookie = {
+	get: key => decodeURIComponent(('; '+document.cookie).split('; '+key+'=').pop().split(';')[0]),
+	set: (key, value) => document.cookie = key + '=' + encodeURIComponent(value),
+	remove: key => document.cookie = key + '=; expires=Thu, 01 Jan 1970 00:00:00 GMT'
+};
 
 // Animation
 const typebox = (dom, list, speed = 200, delay = 10) => {
@@ -71,45 +103,11 @@ const dialog = (d, delay = 5000) => {
 	setTimeout(() => {d.remove()}, delay + 1100);
 }
 
-// Cookie util
-const cookie = {
-	get: key => decodeURIComponent(('; '+document.cookie).split('; '+key+'=').pop().split(';')[0]),
-	set: (key, value) => document.cookie = key + '=' + encodeURIComponent(value),
-	remove: key => document.cookie = key + '=; expires=Thu, 01 Jan 1970 00:00:00 GMT'
-};
-
-//Modal
-function modal(dom) {
-	const container = _('#modal_container');
-	const modal = _('#modal');
-	const content = _('#modal_content');
-	if (typeof dom == 'undefined') {
-		modal.style.top = '-100%';
-		setTimeout( () => container.style.background = 'transparent', 400);
-		setTimeout( () => content.replaceChildren(), 1000);
-		setTimeout( () => container.style.display = 'none', 1400);
-	} else {
-		content.replaceChildren(dom);
-		setTimeout( () => container.style.background = 'rgba(0,0,0,0.7)', 50);
-		container.style.display = 'block';
-		setTimeout( () => modal.style.top = '100px', 400);
-	}
-	
-}
-function modalFormat(contents) {
-	var display = [];
-	contents.forEach(
-		(x,i) => display.push({
-			"tag" : (i ? "p" : "h2"),  //First element: i = 0 => Title
-			"textContent" : x
-		})
-	);
-	modal(domStructure({"tag":"div","child":display}));
-}
+// APIs
 
 const API_Resource = {
 	get: (url, base64 = false) => { return new Promise( async (ok, fail) => { // Detail of a resource
-		const res = await fetch('/api/resource/get', {method: 'POST', body: new URLSearchParams('URL=' + encodeURIComponent(url)), headers: {'X-Content-Encoding': base64 ? 'base64' : 'raw'}});
+		const res = await fetch('/api/resource/get', {method: 'POST', body: new URLSearchParams({URL: url}), headers: {'X-Content-Encoding': base64 ? 'base64' : 'raw'}});
 		const body = await res.json();
 		if (res.status == 200) { ok({
 			category: body.category,
@@ -122,14 +120,14 @@ const API_Resource = {
 		}); } else { fail({status: res.status, error: body.Error}); }
 	} ); },
 	my: () => { return new Promise( async (ok, fail) => { // List of my resource (Owner)
-		const res = await fetch('/api/resource/my', {method: 'POST', body: new URLSearchParams('URL=dummy')});
+		const res = await fetch('/api/resource/my', {method: 'POST', body: new URLSearchParams({URL: 'dummy'})});
 		const body = await res.json();
 		if (res.status == 200) { ok(
 			body.sort((a,b) => a.URL.localeCompare(b.URL))
 		); } else { fail({status: res.status, error: body.Error}); }
 	} ); },
 	create: url => { return new Promise( async (ok, fail) => { // Create a resource by URL
-		const res = await fetch('/api/resource/create', {method: 'POST', body: new URLSearchParams('URL=' + encodeURIComponent(url))});
+		const res = await fetch('/api/resource/create', {method: 'POST', body: new URLSearchParams({URL: url})});
 		const body = await res.json();
 		if (res.status == 201) { ok(); } else { fail({status: res.status, error: body.Error}); }
 	} ); },
@@ -141,4 +139,27 @@ const API_Resource = {
 	upload: form => {
 
 	}
+}
+
+const API_User = {
+	__hash: async src => await window.crypto.subtle.digest('SHA-384', (new TextEncoder()).encode(src)),
+	login: (id, pass, passnew = null) => { return new Promise( async (ok, fail) => { // Login and change password (everytime login will change password hash on server-side)
+		const response1 = await (await fetch('/api/user/loginkey', {method: 'POST', body: new URLSearchParams({ID: id})})).json();
+		if ('Error' in response1) {
+			fail({status: response1.status, error: 'Login failed (1. Get key): ' + response1.Error});
+			return;
+		}
+		const salt = response1.User.Salt;
+		const sessionKey = cookie.get('BW_SessionKey'); // Server has same key for the same session
+		const p1 = await API_User.__hash(atob(salt) + pass); // Old hash saved on server
+		const p2 = await API_User.__hash(sessionKey + btoa(String.fromCharCode(...new Uint8Array(p1)))); // Use salt to verify with server
+		const pn = await API_User.__hash(atob(sessionKey) + passnew ?? pass); // Update hash on server with new salt
+		const response2 = await (await fetch('/api/user/login', {method: 'POST', body: new URLSearchParams({ID: id, Password: pass, PasswordNew: passnew})})).json();
+		if ('Error' in response2) {
+			fail({status: response2.status, error: 'Login failed (2. Submit credentials): ' + response2.Error});
+			return;
+		}
+		console.log('XXX');
+		ok();
+	} ); }
 }

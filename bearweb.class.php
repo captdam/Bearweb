@@ -1,4 +1,4 @@
-<?php	header('X-Powered-By: Bearweb 7.1.240831');
+<?php	header('X-Powered-By: Bearweb 7.1.241112');
 
 	class Bearweb {
 		private Bearweb_Session $session;
@@ -27,7 +27,7 @@
 				[$stateFlag, $stateInfo] = [substr($this->site->state, 0, 1), substr($this->site->state, 1)];
 
 				// Access control
-				if (!$this->site->access($this->user)) {
+				if ($this->site->access($this->user) == Bearweb_Site::ACCESS_NONE) {
 					if ($stateFlag == 'A') {
 						throw BW_Config::Site_HideAuthError ? new BW_ClientError('Not found', 404) : new BW_ClientError('Unauthorized: Controlled resource. Cannot access, please login first', 401);
 					} else if ($stateFlag == 'P') {
@@ -63,13 +63,13 @@
 
 			} catch (Exception $e) { ob_clean(); ob_start();
 				if ($e instanceof BW_ClientError) {
-					$this->site = Bearweb_Site::createErrorPage($e->getCode().' - Client Error', $e->getMessage(), $e->getCode());
+					$this->site = self::createErrorPage($e->getCode().' - Client Error', $e->getMessage(), $e->getCode());
 				} else if ($e instanceof BW_ServerError) {
 					error_log('[BW] Server Error: '.$e);
-					$this->site = BW_Config::Site_HideServerError ? Bearweb_Site::createErrorPage('500 - Internal Error', 'Server-side internal error.', 500) : Bearweb_Site::createErrorPage($e->getCode().' - Server Error', $e->getMessage(), $e->getCode());
+					$this->site = BW_Config::Site_HideServerError ? self::createErrorPage('500 - Internal Error', 'Server-side internal error.', 500) : self::createErrorPage($e->getCode().' - Server Error', $e->getMessage(), $e->getCode());
 				} else {
 					error_log('[BW] Unknown Error: '.$e);
-					$this->site = BW_Config::Site_HideServerError ? Bearweb_Site::createErrorPage('500 - Internal Error', 'Server-side internal error.', 500) : Bearweb_Site::createErrorPage('500 - Unknown Error', $e->getMessage(), 500);
+					$this->site = BW_Config::Site_HideServerError ? self::createErrorPage('500 - Internal Error', 'Server-side internal error.', 500) : self::createErrorPage('500 - Unknown Error', $e->getMessage(), 500);
 				}
 				self::invokeTemplate($this);
 			}
@@ -103,12 +103,25 @@
 				include $template;
 			}
 		}
+
+		private static function createErrorPage(string $title, string $detail, int $code = 0): Bearweb_Site {
+			if ($code) http_response_code($code);
+			return new Bearweb_Site(
+				url: '', category: '', template: ['page', 'error'],
+				owner: '', create: Bearweb_Site::TIME_NULL, modify: Bearweb_Site::TIME_NULL,
+				meta: [$title, '', $detail], 
+				state: 'S', content: $detail, aux: []
+			);
+		}
 	}
 
 
 	class Bearweb_Site { use Bearweb_DatabaseBacked;
 		const TIME_CURRENT = -1;	# Pass this parameter to let Bearweb use current timestamp
 		const TIME_NULL = 0;		# Some resource (like auto generated one) has no create / modify time
+		const ACCESS_NONE = 0;		# No access
+		const ACCESS_RO = 1;		# Readonly, and executable
+		const ACCESS_RW = -1;		# Read and write
 
 		public function __construct(
 			public readonly string	$url,			# Resource URL, PK, Unique, Not Null
@@ -124,23 +137,6 @@
 		) {}
 
 		public static function validURL(string $url): bool { return $url === '' || ( strlen($url) <= 128 && ctype_alnum( str_replace(['-', '_', ':', '/', '.'], '', $url) ) ); }
-
-		/** Constructe an error page template. 
-		 * Do NOT use! This method is for Bearweb framework use ONLY. 
-		 * @param string $title		Error page title
-		 * @param string $detail	Detail info about the error
-		 * @param int $code		If not 0, HTTP code will be set and send to client
-		 * @return Bearweb_Site		A Bearweb site resource
-		*/
-		public static function createErrorPage(string $title, string $detail, int $code = 0): static {
-			if ($code) http_response_code($code);
-			return new static(
-				url: '', category: '', template: ['page', 'error'],
-				owner: '', create: self::TIME_NULL, modify: self::TIME_NULL,
-				meta: [$title, '', $detail], 
-				state: 'S', content: $detail, aux: []
-			);
-		}
 
 		/** Query a resource from sitemap db. 
 		 * Note: Data in DB is volatile, instance only reflects the data at time of DB fetch, it may be changed by another transaction (e.g. Resource modify API) and other process. 
@@ -174,15 +170,15 @@
 
 		/** Test user access privilege level. 
 		 * @param Bearweb_User $user Bearweb_User object with user ID and group
-		 * @return int 0 = No access; 1 = read/execute; -1 = read/execute/write (owner/admin)
+		 * @return int ACCESS_NONE, ACCESS_RO or ACCESS_RW (owner/admin)
 		 */
 		public function access(Bearweb_User $user): int {
-			if ( !$user->isGuest() && ($user->isAdmin() || $user->id==$this->owner) ) return -1; # Note: Admin always have privilege, guest never have privilege; system resource is owned by '' but '' means guest in Bearweb_User
+			if ( !$user->isGuest() && ($user->isAdmin() || $user->id==$this->owner) ) return self::ACCESS_RW; # Note: Admin always have privilege, guest never have privilege; system resource is owned by '' but '' means guest in Bearweb_User
 			[$stateFlag, $stateInfo] = [substr($this->state, 0, 1), substr($this->state, 1)];
 			return (
 				$stateFlag == 'P' ||										# Pending resource: owner only
 				( $stateFlag == 'A' && !count(array_intersect( $user->group , explode(',',$stateInfo) )) )	# Auth control: check user groups against privilege groups
-			) ? 0 : 1;
+			) ? self::ACCESS_NONE : self::ACCESS_RO;
 		}
 
 		/** Insert this resource into sitemap db.

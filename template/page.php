@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <?php header('Content-Type: text/html'); ?>
-<html
+<html <?= array_key_exists('lang', $BW->site->aux) ? 'lang="'.$BW->site->aux['lang'].'"' : '' ?>
 	data-sid="<?=$BW->session->sID?>"
 	data-tid="<?=$BW->session->tID?>"
 	data-suser="<?=$BW->session->sUser?>"
@@ -18,6 +18,8 @@
 	<link href="/web/style.css" rel="stylesheet" type="text/css" />
 	<script src="/web/bearweb.js"></script>
 	<script src="/web/md5.js"></script>
+	<?= array_key_exists('lang-en', $BW->site->aux) ? '<link rel="alternate" hreflang="en" href="'.$BW->site->aux['lang-en'].'" type="text/html" />' : '' ?>
+	<?= array_key_exists('lang-zh', $BW->site->aux) ? '<link rel="alternate" hreflang="zh" href="'.$BW->site->aux['lang-zh'].'" type="text/html" />' : '' ?>
 </head><body>
 	<header>
 		<div id="header_topbar">
@@ -32,9 +34,9 @@
 	</header>
 	<main>
 <?php if ($BW->site->template[1] == 'error'): ?>
-		<div class="sidebyside">
-			<div style="width:25%"><img src="/web/heihua.jpg" alt="Rua~~" /></div>
-			<div style="width:70%">
+		<div class="sidebyside" style="grid-template-columns: 25% 1fr;">
+			<img src="/web/heihua.jpg" alt="Rua~~" />
+			<div>
 				<h2>服务器娘进入了傲娇模式。。。。。。</h2>
 				<p>总之，由于某些不可抗因素，服务器娘现在进入了傲娇模式。因此，你将无法看到这个页面。</p>
 				<div class="main_note" style="--color: red;">
@@ -70,8 +72,9 @@
 			<p><?=$BW->site->meta[2]??''?></p>
 			<p class="content_keywords"><?=$BW->site->meta[1]??''?></p>
 			<i>--by <?=$BW->site->owner?> @ <?=date('Y-m-d H:i',$BW->site->modify)?> GMT<?= $BW->site->modify == $BW->site->create ? '' : (' <span class="info" title="orginal post @ '.date('Y-m-d H:i', $BW->site->create).' GMT'.'">edited</span>') ?></i>
-			<?= array_key_exists('lang-en', $BW->site->aux) ? '<p><a href="'.$BW->site->aux['lang-en'].'">[en] Here is the English version of this article</a></p>' : '' ?>
-			<?= array_key_exists('lang-zh', $BW->site->aux) ? '<p><a href="'.$BW->site->aux['lang-zh'].'">【中】 这里是这篇文章的中文版</a></p>' : '' ?>
+			<?= array_key_exists('lang-en', $BW->site->aux) ? '<p><a hreflang="en" href="'.$BW->site->aux['lang-en'].'">[en] Here is the English version of this article</a></p>' : '' ?>
+			<?= array_key_exists('lang-zh', $BW->site->aux) ? '<p><a hreflang="zh" href="'.$BW->site->aux['lang-zh'].'">【中】 这里是这篇文章的中文版</a></p>' : '' ?>
+			<?= array_key_exists('github', $BW->site->aux) ? '<p>Also on GitHub: <a href="'.$BW->site->aux['github'].'" target="_blank">'.$BW->site->aux['github'].'</a></p>' : '' ?>
 		</div><?=$BW->site->content?>
 <?php else: ?>
 		<?php
@@ -82,50 +85,47 @@
 <?php endif; ?>
 	</main>
 <?php if ($BW->site->owner && $BW->site->access($BW->user) == -1): ?>
-	<div style="background:#DA8"><form id="editor" onsubmit="event.preventDefault(); API_Resource.update(new FormData(_('#editor'))).then(x => {
+	<div style="background:#DA8"><form id="editor" onchange="_('#editor_render').style.background=_('#editor_submit').style.background='red'" onsubmit="event.preventDefault(); API_Resource.update(new FormData(_('#editor'))).then(x => {
 			dialog('Success');
 		}, x => {
 			dialog('Error: ' + x.status + ' - ' + x.error);
 		});"><h1>Editor</h1>
 		<div><label for="editor_url">URL</label>			<input type="text" name="URL" id="editor_url" value="<?=$BW->site->url?>" readonly /></div>
-		<div><label for="editor_type">Type</label>			<select name="Type" id="editor_type" required>
+		<div><label for="editor_category">Category</label>		<select name="Category" id="editor_category">
 			<option id="editor_type_embedded" value="Embedded">Embedded</option>
 			<option id="editor_type_computer" value="Computer">Computer</option>
 		</select></div>
 		<div><label for="editor_title">Title</label>			<input type="text" name="Title" id="editor_title" /></div>
 		<div><label for="editor_keywords">Keywords</label>		<input type="text" name="Keywords" id="editor_keywords" /></div>
-		<div><label for="editor_state">State</label>			<input type="text" name="State" id="editor_state" required /></div>
+		<div><label for="editor_state">State</label>			<input type="text" name="State" id="editor_state" /></div>
 		<div><label for="editor_description">Description</label>	<textarea type="text" name="Description" id="editor_description"></textarea></div>
 		<div><label for="editor_content">Content</label>		<textarea type="text" name="Content" id="editor_content"></textarea></div>
 		<div><label for="editor_aux">Aux </label>			<textarea type="text" name="Aux" id="editor_aux"></textarea></div>
-		<div><label for="editor_info">Info</label>			<input type="text" id="editor_info" value="-" disabled /></div>
-		<div style="display:flex;justify-content:center;">
-			<button id="editor_reload" type="button" onclick="API_Resource.get(_('#editor_url').value).then(x => {
-				_('#editor_type').value = x.category;
-				_('#editor_title').value = x.title;
-				_('#editor_keywords').value = x.keywords;
-				_('#editor_state').value = x.state;
-				_('#editor_description').value = x.description;
-				_('#editor_content').value = x.content;
-				_('#editor_aux').value = x.aux;
+		<div style="display:flex;justify-content:center;margin-top:1em;">
+			<button id="editor_reload" type="button" style="padding:0 2em;background:red" onclick="API_Resource.get(_('#editor_url').value).then(x => {
+				['category', 'title', 'keywords', 'state', 'description', 'content', 'aux'].forEach(y => _('#editor_'+y).value = x[y]);
 				dialog('Loaded');
+				_('#editor_reload').style.background = 'green';
+				_('#editor_render').style.background = 'red';
 			}, x => {
 				dialog('Error: ' + x.status + ' - ' + x.error);
 			})">Reload</button>
-			<button id="editor_render" type="button" onclick="(() => {
+			<button id="editor_render" type="button" style="padding:0 2em;background:grey" onclick="(() => {
 				const aux = JSON.parse(_('#editor_aux').value);
 				const pre = '<div class=\'tintimg\' style=\'--bgcolor:rgba(255,255,255,0.7);--bgimg:' + (aux.bgimg ?? '') + '\'><h1>' + _('#editor_title').value + '</h1><p>' + _('#editor_description').value + '</p><p class=\'content_keywords\'>' + _('#editor_keywords').value + '</p><i>--by ' + _('meta[name=author]').content + ' @ [Now]</i></div>';
 				_('main').innerHTML = pre + _('#editor_content').value;
 				onload_content();
 				dialog('Rendered');
+				_('#editor_render').style.background = 'green';
+				_('#editor_submit').style.background = 'red';
 			})()">Render</button>
-			<button id="editor_submit" type="submit">Update</button>
+			<button id="editor_submit" type="submit" style="padding:0 2em;background:grey" onclick="_('#editor_submit').style.background='green'">Update</button>
 		</div>
 	</form></div>
 <?php endif; ?>
 	<footer>
-		<div class="sidebyside">
-			<div style="width:25%;">
+		<div class="sidebyside" style="grid-template-columns: 30ch 1fr;">
+			<div>
 				<h2>Captdam's blog</h2>
 				<h3>My Links</h3>
 				<p><a href="mailto:admin@beardle.com">✉ Admin E-mail</a></p>
@@ -133,7 +133,7 @@
 				<h3>Friend Sites</h3>
 				<p><a href="https://r12f.com" target="_blank">r12f</a></p>
 			</div>
-			<div style="width:70%;">
+			<div>
 				<p>本站所有内容(包括文本和媒体资源,除非另有说明)根据CC BY-SA协议共享。</p>
 				<p>All resource (include text and media, unless otherwise stated) are shared using CC BY-SA.</p>
 				<p>站内所涉及部分内容为外部资源且为其各自所有者的资产，本站仅作识别所用。</p>
@@ -141,6 +141,7 @@
 			</div>
 		</div>
 	</footer>
+	<div id="viewer_container"></div>
 	<div id="dialog_container"></div>
 	<div id="modal_container" onclick="modal()"><div id="modal">
 		<div id="modal_close">╳</div>

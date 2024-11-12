@@ -16,7 +16,7 @@
 	<form id="form_modify">
 		<h2>Modify</h2>
 		<div><label for="modify_url">URL</label><input type="text" id="modify_url" name="URL" readonly></div>
-		<div><label for="modify_type">Type</label>			<select name="Type" id="modify_type" required>
+		<div><label for="modify_category">Category</label>		<select name="Category" id="modify_category" required>
 			<option value="Content">Content</option>
 			<option value="Embedded">Embedded</option>
 			<option value="Computer">Computer</option>
@@ -79,33 +79,11 @@
 				reader.onloadend = x => { _('#modify_content').value = x.target.result.split(',')[1]; };
 				reader.readAsDataURL(f);
 			};
-			_('#form_modify').onsubmit = event => { event.preventDefault(); API_Resource.update(new FormData(_('#form_modify')), true).then( x => {
-				dialog('Modifying resource success!');
-			}, x => {
-				dialog('Modifying resource failed: ' + x.status + ' - ' + x.error);
-			} ); };
+			_('#form_modify').onsubmit = event => { event.preventDefault(); API_Resource.update(new FormData(_('#form_modify')), true).then(() => dialog('Modifying resource success!'), x => dialog('Modifying resource failed: ' + x.status + ' - ' + x.error)); };
 
 			_('#list button').onclick = () => API_Resource.my().then( list => {
-				const stateColorLookup = c => {
-					if (c == 'O') return 'lightgreen';
-					if (c == 'A' || c == 'P') return 'pink';
-					if (c == 'S') return 'lightgray';
-					return 'none';
-				};
-				const categoryColorLookup = c => {
-					if (c == 'Embedded') return 'aqua';
-					if (c == 'Computer') return 'salmon';
-					if (c == 'Content') return 'lightgray';
-					return 'none';
-				};
-				let d = [{_: 'div', classList: 'beartable_tr', children: [
-						{_: 'span', classList: 'beartable_th', textContent: 'URL (Open in new tab)'},
-						{_: 'span', classList: 'beartable_th', textContent: 'Title (Bring to Modify)'},
-						{_: 'span', classList: 'beartable_th', textContent: 'Category'},
-						{_: 'span', classList: 'beartable_th', textContent: 'Create'},
-						{_: 'span', classList: 'beartable_th', textContent: 'Modify'},
-						{_: 'span', classList: 'beartable_th', textContent: 'State'}
-					]}];
+				let d = [{_: 'div', classList: 'beartable_tr', children: []}];
+				['URL (Open in new tab)', 'Title (Bring to Modify)', 'Category', 'Create', 'Modify', 'State'].forEach(x => d[0].children.push({_: 'span', classList: 'beartable_th', textContent: x}));
 				list.map(x => {
 					let c = {_: 'div', classList: 'beartable_tr', children: [
 						{_: 'span', classList: 'beartable_td', children: [{_: 'a', href: x.URL, target: '_blank', textContent: x.URL}]},
@@ -119,10 +97,20 @@
 						}, x => {
 							dialog('Loading failed: ' + x.status + ' - ' + x.error);
 						}); }, textContent: x.Title}]},
-						{_: 'span', classList: 'beartable_td', textContent: x.Category, style: 'background:'+categoryColorLookup(x.Category)},
+						{_: 'span', classList: 'beartable_td', textContent: x.Category, style: 'background:' + (c => {
+							if (c == 'Embedded') return 'aqua';
+							if (c == 'Computer') return 'salmon';
+							if (c == 'Content') return 'lightgray';
+							return 'none';
+						})(x.Category)},
 						{_: 'span', classList: 'beartable_td', textContent: timestamp2str(x.Create)},
 						{_: 'span', classList: 'beartable_td', textContent: timestamp2str(x.Modify)},
-						{_: 'span', classList: 'beartable_td', textContent: x.State, style: 'background:'+stateColorLookup(x.State)}
+						{_: 'span', classList: 'beartable_td', textContent: x.State, style: 'background:' + (c => {
+							if (c == 'O') return 'lightgreen';
+							if (c == 'A' || c == 'P') return 'pink';
+							if (c == 'S') return 'lightgray';
+							return 'none';
+						})(x.State)}
 					]};
 					d.push(c);
 				});

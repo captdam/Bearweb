@@ -10,7 +10,7 @@
 			if (!$resource) {
 				http_response_code(404);
 				return ['Error' => 'No such resource'];
-			} else if ($resource->access($BW->user) != -1) {
+			} else if ($resource->access($BW->user) != Bearweb_Site::ACCESS_RW) {
 				http_response_code(403);
 				return ['Error' => 'No write access'];
 			}
@@ -45,7 +45,7 @@
 			return [];
 
 		case 'Update':
-			if (!isset($_POST['Type']) || !array_key_exists($_POST['Type'], $BW->site->aux['type'])) {
+			if (!isset($_POST['Category']) || !array_key_exists($_POST['Category'], $BW->site->aux['type'])) {
 				http_response_code(403);
 				return ['Error' => 'Type undefined or not allowed'];
 			}
@@ -57,15 +57,15 @@
 			if (!$resource) {
 				http_response_code(404);
 				return ['Error' => 'No such resource'];
-			} else if ($resource->access($BW->user) != -1) {
+			} else if ($resource->access($BW->user) != Bearweb_Site::ACCESS_RW) {
 				http_response_code(403);
 				return ['Error' => 'No write access'];
 			}
 			$headers = getallheaders();
 			(new Bearweb_Site(
 				url:		$_POST['URL'],
-				category:	$BW->site->aux['type'][$_POST['Type']][0],
-				template:	$BW->site->aux['type'][$_POST['Type']][1],
+				category:	$BW->site->aux['type'][$_POST['Category']][0],
+				template:	$BW->site->aux['type'][$_POST['Category']][1],
 				owner:		$BW->user->id,
 				create:		null,
 				modify:		Bearweb_Site::TIME_CURRENT,
@@ -91,7 +91,10 @@
 			$x['Aux'] = json_decode($x['Aux'], true);
 			$x['Content'] = str_replace(array_keys($lookup), array_values($lookup), $x['Aux']['pre']);
 		}; unset($x);
-		foreach(Bearweb_Site::$db->query('SELECT `URL`, `Category`, `Owner`, `Create`, `Modify`, `Meta`, CASE WHEN json_valid(Aux) THEN json_extract(Aux, \'$.bgimg\') ELSE null END AS `Bgimg` FROM `Sitemap` WHERE `State` = \'O\' ORDER BY `Modify` DESC') as $r) {
+		foreach(Bearweb_Site::$db->query('SELECT `URL`, `Category`, `Owner`, `Create`, `Modify`, `Meta`,
+			CASE WHEN json_valid(Aux) THEN json_extract(Aux, \'$.bgimg\') ELSE null END AS `Bgimg`,
+			CASE WHEN json_valid(Aux) THEN json_extract(Aux, \'$.lang\') ELSE null END AS `Lang`
+		FROM `Sitemap` WHERE `State` = \'O\' ORDER BY `Modify` DESC') as $r) {
 			$r['Meta'] = explode("\n", $r['Meta']);
 			$lookup = timetable($r['Modify']) + [
 				'$URL'			=> $r['URL'],
@@ -103,6 +106,7 @@
 				'$Keywords'		=> $r['Meta'][1] ?? '',
 				'$Description'		=> $r['Meta'][2] ?? '',
 				'$Bgimg'		=> $r['Bgimg'] ?? '',
+				'$Lang'			=> $r['Lang'] ?? '',
 			];
 			foreach ($index as &$x) {
 				if (in_array( $r['Category'] , $x['Aux']['category'] ))
