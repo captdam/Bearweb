@@ -193,17 +193,17 @@ main>*:nth-child(2n+1) { background-color: var(--content-bgcolor1); }
 }
 .home_categoryOverview a:last-child:after { content: ' >>>'; }
 
-/** Content information on content page and category list page */
-.content_description { font-size: 85%; opacity: 0.75; }
-.content_keywords a{
-	display: inline-block;
-	padding: 0 5px;
-	margin: 5px 10px;
-	transition: all 0.2s;
+#categoryfilter {
+	width: 100%;
+	font-size: inherit;
+	font-weight: normal;
+	color: inherit;
+	background-color: transparent;
+	outline: none;
+	border: none;
+	border-radius: 0;
+	border-bottom: solid var(--highlight-color) 2px;
 }
-.content_keywords a:before { content: '# '; } .content_keywords a:hover { filter: contrast(0.5); }
-.content_author:before { content: '✒  '; }
-.content_lastmodify:before { content: '⏱  '; }
 
 #categorylist {
 	display: grid;
@@ -227,6 +227,15 @@ main>*:nth-child(2n+1) { background-color: var(--content-bgcolor1); }
 	#categorylist>a:first-child { grid-column: 1/3; grid-row: 1/3; }
 }
 
+/** Content information on content page and category list page */
+.content_description { font-size: 85%; opacity: 0.75; }
+.content_keywords a{
+	display: inline-block;
+	padding: 0 5px;
+	margin: 5px 10px;
+	transition: all 0.2s;
+}
+.content_keywords a:before { content: '# '; } .content_keywords a:hover { filter: contrast(0.5); }
 
 /** -------------------------- MODULES TO USE -------------------------- **/
 

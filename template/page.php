@@ -71,7 +71,7 @@
 			<h1><?=$BW->site->meta[0]?></h1>
 			<p><?=$BW->site->meta[2]??''?></p>
 			<p class="content_keywords"><?=$BW->site->meta[1]??''?></p>
-			<i>--by <?=$BW->site->owner?> @ <?=date('Y-m-d H:i',$BW->site->modify)?> GMT<?= $BW->site->modify == $BW->site->create ? '' : (' <span class="info" title="orginal post @ '.date('Y-m-d H:i', $BW->site->create).' GMT'.'">edited</span>') ?></i>
+			<i>--by <?=$BW->site->owner?> @ <?=date('M j, Y',$BW->site->modify)?></i>
 			<?= array_key_exists('lang-en', $BW->site->aux) ? '<p><a hreflang="en" href="'.$BW->site->aux['lang-en'].'">[en] Here is the English version of this article</a></p>' : '' ?>
 			<?= array_key_exists('lang-zh', $BW->site->aux) ? '<p><a hreflang="zh" href="'.$BW->site->aux['lang-zh'].'">【中】 这里是这篇文章的中文版</a></p>' : '' ?>
 			<?= array_key_exists('github', $BW->site->aux) ? '<p>Also on GitHub: <a href="'.$BW->site->aux['github'].'" target="_blank">'.$BW->site->aux['github'].'</a></p>' : '' ?>
@@ -138,6 +138,7 @@
 				<p>All resource (include text and media, unless otherwise stated) are shared using CC BY-SA.</p>
 				<p>站内所涉及部分内容为外部资源且为其各自所有者的资产，本站仅作识别所用。</p>
 				<p>Some resources from external sources are the property of their respective owners and are for identification purpose.</p>
+				<p><a href="/sitemap.xml">XML Sitemap</a> <a href="/rss.xml">RSS</a></p>
 			</div>
 		</div>
 	</footer>

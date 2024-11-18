@@ -68,6 +68,17 @@ const onload_content = () => { // Content section only
 };
 ready().then(()=>{onload_frame();onload_content();});
 
+const filter = (elements, keywords) => {
+	elements.forEach(x => {
+		let ok = false;
+		keywords.split(' ').map(s => {
+			if (x.textContent.toLowerCase().includes(s.toLowerCase()))
+				ok = true;
+		});
+		x.style.display = ok ? '' : 'none';
+	});
+}
+
 const cookie = {
 	get: key => decodeURIComponent(('; '+document.cookie).split('; '+key+'=').pop().split(';')[0]),
 	set: (key, value) => document.cookie = key + '=' + encodeURIComponent(value),

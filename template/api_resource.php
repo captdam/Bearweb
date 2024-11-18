@@ -83,7 +83,7 @@
 			throw new BW_WebServerError('Unknown task in Meta', 500);
 	}
 
-	function timetable($timestamp) { return [ '$Modify_RFC7231' => date(DATE_RFC7231,$timestamp) , '$Modify_RSS' => date(DATE_RSS,$timestamp) , '$Modify_W3C' =>  date(DATE_W3C,$timestamp) ]; }
+	function timetable($timestamp) { return [ '$Modify_RFC7231' => date(DATE_RFC7231,$timestamp) , '$Modify_RSS' => date(DATE_RSS,$timestamp) , '$Modify_W3C' =>  date(DATE_W3C,$timestamp) , '$Modify_Date' =>  date('M j, Y',$timestamp) ]; }
 	function reindex() {
 		$index = Bearweb_Site::$db->query('SELECT `URL`, `Aux` FROM `Sitemap` WHERE `Category` = \'Index\'')->fetchAll();
 		foreach ($index as &$x) {

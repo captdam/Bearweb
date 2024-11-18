@@ -31,6 +31,7 @@
 </div>
 <div id="list" style="display:none">
 	<h2>Resource list</h2>
+	<input id="list_filter" placeholder="Type keywords to filter result" onkeyup="filter(__('#list_table>*>*:nth-child(n+2)'), event.target.value)" style="width: 100%" />
 	<div id="list_table"></div>
 	<div style="display:flex;justify-content:center;"><button>Refresh</button></div>
 </div>
