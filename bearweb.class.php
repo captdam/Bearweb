@@ -1,9 +1,9 @@
 <?php	header('X-Powered-By: Bearweb 7.1.241112');
 
-	class Bearweb {
-		private Bearweb_Session $session;
-		private Bearweb_User $user;
-		private Bearweb_Site $site;
+	class _Bearweb {
+		protected Bearweb_Session $session;
+		protected Bearweb_User $user;
+		protected Bearweb_Site $site;
 
 		/** Use Bearweb to server a resource. 
 		 * This function will init the Site module and the Session module. 
@@ -12,9 +12,9 @@
 		 */
 		public function __construct(string $url) {
 			try {
-				Bearweb_Site::init(BW_Config::Site_DB);
-				Bearweb_User::init(BW_Config::User_DB);
-				Bearweb_Session::init(BW_Config::Session_DB);
+				Bearweb_Site::init(Bearweb_Config::Site_DB);
+				Bearweb_User::init(Bearweb_Config::User_DB);
+				Bearweb_Session::init(Bearweb_Config::Session_DB);
 				$this->session = new Bearweb_Session($url);
 				$this->user = Bearweb_User::query($this->session->sUser);
 			} catch (Exception $e) {
@@ -29,9 +29,9 @@
 				// Access control
 				if ($this->site->access($this->user) == Bearweb_Site::ACCESS_NONE) {
 					if ($stateFlag == 'A') {
-						throw BW_Config::Site_HideAuthError ? new BW_ClientError('Not found', 404) : new BW_ClientError('Unauthorized: Controlled resource. Cannot access, please login first', 401);
+						throw Bearweb_Config::Site_HideAuthError ? new BW_ClientError('Not found', 404) : new BW_ClientError('Unauthorized: Controlled resource. Cannot access, please login first', 401);
 					} else if ($stateFlag == 'P') {
-						throw BW_Config::Site_HideAuthError ? new BW_ClientError('Not found', 404) : new BW_ClientError('Forbidden: Locked resource. Access denied', 403);
+						throw Bearweb_Config::Site_HideAuthError ? new BW_ClientError('Not found', 404) : new BW_ClientError('Forbidden: Locked resource. Access denied', 403);
 					}
 					throw new BW_ClientError('Access denied', 403);
 				}
@@ -59,52 +59,31 @@
 				}
 				
 				// Invoke template
-				self::invokeTemplate($this);
+				$this->invokeTemplate();
 
 			} catch (Exception $e) { ob_clean(); ob_start();
 				if ($e instanceof BW_ClientError) {
 					$this->site = self::createErrorPage($e->getCode().' - Client Error', $e->getMessage(), $e->getCode());
 				} else if ($e instanceof BW_ServerError) {
 					error_log('[BW] Server Error: '.$e);
-					$this->site = BW_Config::Site_HideServerError ? self::createErrorPage('500 - Internal Error', 'Server-side internal error.', 500) : self::createErrorPage($e->getCode().' - Server Error', $e->getMessage(), $e->getCode());
+					$this->site = Bearweb_Config::Site_HideServerError ? self::createErrorPage('500 - Internal Error', 'Server-side internal error.', 500) : self::createErrorPage($e->getCode().' - Server Error', $e->getMessage(), $e->getCode());
 				} else {
 					error_log('[BW] Unknown Error: '.$e);
-					$this->site = BW_Config::Site_HideServerError ? self::createErrorPage('500 - Internal Error', 'Server-side internal error.', 500) : self::createErrorPage('500 - Unknown Error', $e->getMessage(), 500);
+					$this->site = Bearweb_Config::Site_HideServerError ? self::createErrorPage('500 - Internal Error', 'Server-side internal error.', 500) : self::createErrorPage('500 - Unknown Error', $e->getMessage(), 500);
 				}
-				self::invokeTemplate($this);
+				$this->invokeTemplate();
 			}
 		}
 
-		private static function invokeTemplate(Bearweb $BW) {
-			if ($BW->site->template[0] == 'object') {
-				header('Content-Type: '.($BW->site->meta[0] ? $BW->site->meta[0] : 'text/plain'));
-				if ($BW->site->template[1] == 'blob') {
-					echo $BW->site->content;
-				} else if ($BW->site->template[1] == 'local') {
-					$resource = BW_Config::Site_ResourceDir.$BW->site->content;
-					if (!file_exists($resource)) throw new BW_WebServerError('Resource not found: '.$resource, 500);
-					echo file_get_contents($resource);
-				} else {
-					$template = BW_Config::Site_TemplateDir.'object_'.$BW->site->template[1].'.php';
-					if (!file_exists($template)) throw new BW_WebServerError('Secondary object template not found: '.$BW->site->template[1], 500);
-					include $template;
-				}
-			} else if ($BW->site->template[0] == 'api') {
-				header('Content-Type: application/json');
-				$template = BW_Config::Site_TemplateDir.'api_'.$BW->site->template[1].'.php';
-				if (!file_exists($template)) throw new BW_WebServerError('Secondary object template not found: '.$BW->site->template[1], 500);
-				$data = include $template;
-				//$data['BW_Session'] = ['sID' => $BW->session->sID, 'tID' => $BW->session->tID, 'sUser' => $BW->session->sUser, 'http' => http_response_code()];
-				echo json_encode($data);
-			} else {
-				$template = BW_Config::Site_TemplateDir.$BW->site->template[0].'.php';
-				if (!file_exists($template))
-					throw new BW_WebServerError('Template not found: '.$BW->site->template[0], 500);
-				include $template;
-			}
+		protected function invokeTemplate(): void {
+			$BW = $this;
+			$template = Bearweb_Config::Site_TemplateDir.$this->site->template[0].'.php';
+			if (!file_exists($template))
+				throw new BW_WebServerError('Template not found: '.$this->site->template[0], 500);
+			include $template;
 		}
 
-		private static function createErrorPage(string $title, string $detail, int $code = 0): Bearweb_Site {
+		protected static function createErrorPage(string $title, string $detail, int $code = 0): Bearweb_Site {
 			if ($code) http_response_code($code);
 			return new Bearweb_Site(
 				url: '', category: '', template: ['page', 'error'],
@@ -116,7 +95,7 @@
 	}
 
 
-	class Bearweb_Site { use Bearweb_DatabaseBacked;
+	class _Bearweb_Site { use Bearweb_DatabaseBacked;
 		const TIME_CURRENT = -1;	# Pass this parameter to let Bearweb use current timestamp
 		const TIME_NULL = 0;		# Some resource (like auto generated one) has no create / modify time
 		const ACCESS_NONE = 0;		# No access
@@ -358,17 +337,31 @@
 		const TIME_NULL = 0;		# Some resource (like auto generated one) has no create / modify time
 
 		public readonly string	$sID;		# Session ID
-		public readonly string	$sKey;		# Session key for client-side JS
 		public readonly int	$sCreate;	# Session create time
+		public readonly int	$sLastUse;	# Session last use time (always current timestamp)
 		public readonly string	$sUser;		# Session user ID
+		public readonly string	$sKey;		# Session key for client-side JS
 		public readonly string	$tID;		# Transaction ID
-		public readonly int	$tCreate;	# Transaction create time
+		public readonly int	$tCreate;	# Transaction create time (always current timestamp)
 		public readonly string	$tIP;		# Transaction client IP
 		public readonly string	$tURL;		# Transaction request URL
+		public readonly string	$tSID;		# Transaction assoicated session ID (same as sID)
+		public string		$tLog;		# Transaction log
 
 		const KEY_LENGTH = 48; # 64 char
 		private static function keygen(): string { return base64_encode(random_bytes(self::KEY_LENGTH)); }
 		private static function keycheck(string|array $data, string $key = ''): bool { return strlen(base64_decode( is_array($data) ? ($data[$key] ?? '') : ($data ?? '') , true)) == self::KEY_LENGTH; }
+
+		private static function insertRetry(int $retry, callable $fn, Exception $err): void {
+			for (; $retry; $retry--) {
+				try {
+					$fn();
+					return;
+				} catch (Exception $e) {
+					if (strpos($e->getMessage(), 'UNIQUE') === false) throw $e;
+				}
+			} throw $err;
+		}
 
 		/** Constructor. 
 		 * Do NOT use! This method is for Bearweb framework use ONLY. 
@@ -376,23 +369,19 @@
 		 * @param string $url Request URL
 		 * @throws BW_DatabaseServerError Cannot write session / transaction into DB
 		*/
-		public function __construct(string $url) {
-			$this->tID	= self::keygen(); # There may be collision in very low chance. TID may be helpful when tracking a transaction manually. Bearweb never uses TID other than records it to log.
-			$this->tCreate	= $_SERVER['REQUEST_TIME'];
-			$this->tIP	= $_SERVER['REMOTE_ADDR'];
-			$this->tURL	= $url;
-			apache_setenv('BW_TID', $this->tID);
-			apache_setenv('BW_LOG', '');
+		public function __construct(string $url) { try {
+			if (!self::$db->beginTransaction()) { throw new Exception ('Cannot start transaction'); }
 
 			$session = null;
+			$transaction = null;
 
-			// Update session if session cookies are valid, found and matched in db
-			if ( self::keycheck($_COOKIE, BW_Config::Session_CookieSID) && self::keycheck($_COOKIE, BW_Config::Session_CookieKey) ) {
-				$sql = self::$db->prepare('UPDATE `Session` SET `LastUse` = ? WHERE `ID` = ? AND `Key` = ? AND `LastUse` > ? RETURNING `ID`, `Key`, `Create`, `User`');
-				$sql->bindValue(	1,	$this->tCreate,					PDO::PARAM_INT	);
-				$sql->bindValue(	2,	$_COOKIE[ BW_Config::Session_CookieSID ],	PDO::PARAM_STR	);
-				$sql->bindValue(	3,	$_COOKIE[ BW_Config::Session_CookieKey ],	PDO::PARAM_STR	);
-				$sql->bindValue(	4,	$this->tCreate - BW_Config::Session_Expire,	PDO::PARAM_INT	);
+			// Update session if session cookies are valid, found and matched, not expired in db
+			if ( self::keycheck($_COOKIE, Bearweb_Config::Session_CookieSID) && self::keycheck($_COOKIE, Bearweb_Config::Session_CookieKey) ) {
+				$sql = self::$db->prepare('UPDATE `Session` SET `LastUse` = ? WHERE `ID` = ? AND `Key` = ? AND `LastUse` > ? RETURNING `ID`, `Create`, `LastUse`, `User`, `Key`');
+				$sql->bindValue(	1,	$_SERVER['REQUEST_TIME'],					PDO::PARAM_INT	);
+				$sql->bindValue(	2,	$_COOKIE[ Bearweb_Config::Session_CookieSID ],			PDO::PARAM_STR	);
+				$sql->bindValue(	3,	$_COOKIE[ Bearweb_Config::Session_CookieKey ],			PDO::PARAM_STR	);
+				$sql->bindValue(	4,	$_SERVER['REQUEST_TIME'] - Bearweb_Config::Session_Expire,	PDO::PARAM_INT	);
 				$sql->execute();
 				$session = $sql->fetch();
 				$sql->closeCursor();
@@ -401,42 +390,51 @@
 			// Create a new session otherwise
 			if (!$session) {
 				$sid = '';
-				$key = self::keygen();
-				$sql = self::$db->prepare('INSERT INTO `Session` (`ID`, `Create`, `LastUse`, `User`, `Key`) VALUES (?,?,?,?,?) RETURNING `ID`, `Key`, `Create`, `User`');
-				$sql->bindParam(	1,	$sid,		PDO::PARAM_STR	); #By reference
-				$sql->bindValue(	2,	$this->tCreate,	PDO::PARAM_INT	);
-				$sql->bindValue(	3,	$this->tCreate,	PDO::PARAM_INT	);
-				$sql->bindValue(	4,	'',		PDO::PARAM_STR	); #New session is always issused to new user, it can only be changed by User Login API with existed SID
-				$sql->bindValue(	5,	$key,		PDO::PARAM_STR	);
-				for ($try = 5; ; $try--) {
-					try {
-						$sid = self::keygen();
-						$sql->execute(); # Retry if fail
-						$session = $sql->fetch();
-						$sql->closeCursor();
-						break;
-					} catch(Exception $e) {
-						if ( strpos($e->getMessage(), 'UNIQUE') === false || $try < 0 ) # Catch and retry if UNIQUE constraint fails within retry times limit
-							throw $e;
-					}
-				}
-				setcookie(BW_Config::Session_CookieSID, $sid, 0, '/', '', true, true );
-				setcookie(BW_Config::Session_CookieKey, $key, 0, '/', '', true, false );
+				$sql = self::$db->prepare('INSERT INTO `Session` (`ID`, `Create`, `LastUse`, `User`, `Key`) VALUES (?,?,?,?,?) RETURNING `ID`, `Create`, `LastUse`, `User`, `Key`');
+				$sql->bindParam(	1,	$sid,				PDO::PARAM_STR	); #By reference
+				$sql->bindValue(	2,	$_SERVER['REQUEST_TIME'],	PDO::PARAM_INT	);
+				$sql->bindValue(	3,	$_SERVER['REQUEST_TIME'],	PDO::PARAM_INT	);
+				$sql->bindValue(	4,	'',				PDO::PARAM_STR	); #New session is always issused to new user, it can only be changed by User Login API with existed SID
+				$sql->bindValue(	5,	self::keygen(),			PDO::PARAM_STR	);
+				self::insertRetry(5, function() use (&$sid, $sql) { $sid = self::keygen(); $sql->execute(); }, new Exception('Retry too much for session ID'));
+				$session = $sql->fetch();
+				$sql->closeCursor();
 			}
 
-			$this->sID	= $session['ID'];
-			$this->sKey	= $session['Key'];
-			$this->sCreate	= $session['Create'];
-			$this->sUser	= $session['User'];
-			apache_setenv('BW_UID', $this->sUser);
-			apache_setenv('BW_SID', $this->sID);
-		}
+			// Create a new transaction
+			$tid = '';
+			$sql = self::$db->prepare('INSERT INTO `Transaction` (`ID`, `Create`, `IP`, `URL`, `Session`, `Log`) VALUES (?,?,?,?,?,\'\') RETURNING `ID`, `Create`, `IP`, `URL`, `Session`, `Log`');
+			$sql->bindParam(	1,	$tid,				PDO::PARAM_STR	); #By reference
+			$sql->bindValue(	2,	$_SERVER['REQUEST_TIME'],	PDO::PARAM_INT	);
+			$sql->bindValue(	3,	$_SERVER['REMOTE_ADDR'],	PDO::PARAM_STR	);
+			$sql->bindValue(	4,	$url,				PDO::PARAM_STR	); #New session is always issused to new user, it can only be changed by User Login API with existed SID
+			$sql->bindValue(	5,	$session['ID'],			PDO::PARAM_STR	);
+			self::insertRetry(5, function() use (&$tid, $sql) { $tid = self::keygen(); $sql->execute(); }, new Exception('Retry too much for transaction ID'));
+			$transaction = $sql->fetch();
+			$sql->closeCursor();
 
-		/** Append log to Apache transaction record. 
-		 * This method will replace "\n" (new-line) and '-' to "\t" and '_' so it looks nicer in that file. 
+			$this->sID	= $session['ID'];
+			$this->sCreate	= $session['Create'];
+			$this->sLastUse	= $session['LastUse'];
+			$this->sUser	= $session['User'];
+			$this->sKey	= $session['Key'];
+			$this->tID	= $transaction['ID'];
+			$this->tCreate	= $transaction['Create'];
+			$this->tIP	= $transaction['IP'];
+			$this->tURL	= $transaction['URL'];
+			$this->tSID	= $transaction['Session'];
+			$this->tLog	= $transaction['Log'];
+			setcookie(Bearweb_Config::Session_CookieSID, $this->sID, 0, '/', '', true, true ); # Note: Send cookie to client only if DB write success
+			setcookie(Bearweb_Config::Session_CookieKey, $this->sKey, 0, '/', '', true, false );
+
+			if (!self::$db->commit()) { throw new Exception ('Cannot commit transaction'); }
+		} catch (Exception $e) { self::$db->rollBack(); throw new BW_DatabaseServerError('Cannot record session control in DB: '.$e->getMessage(), 500); } } # Cannot do anything if rollback fails :(
+
+		/** Append log to transaction record. 
 		 * @param string	$log	Log to append
+		 * @return string	Log in full after append
 		 */
-		public function log(string $log): void { apache_setenv('BW_LOG', apache_getenv('BW_LOG').str_replace(["\n", '-'], ["\t", '_'], $log)); }
+		public function log(string $log): string { return $this->tLog .= $log; }
 
 		/** Bind a user to the session. Effects next transaction. 
 		 * @param string	$uid	User ID
@@ -465,8 +463,22 @@
 				$sql->execute();
 				$sql->closeCursor();
 			} catch (Exception $e) { throw new BW_DatabaseServerError('Cannot update session user in DB: '.$e->getMessage(), 500); }
-			setcookie(BW_Config::Session_CookieKey, $key, 0, '/', '', true, false );
+			setcookie(Bearweb_Config::Session_CookieKey, $key, 0, '/', '', true, false );
 			return $key;
+		}
+
+		/** Destructor. 
+		 * Do NOT use! This method is for Bearweb framework use ONLY. 
+		 * Commit log to DB. 
+		*/
+		public function __destruct() {
+			$sql = self::$db->prepare('UPDATE `Transaction` SET `Log` = ?, `Status` = ?, `Time` = ? WHERE ID = ?');
+			$sql->bindValue(	1,	$this->tLog,							PDO::PARAM_STR	);
+			$sql->bindValue(	2,	http_response_code(),						PDO::PARAM_INT	);
+			$sql->bindValue(	3,	(microtime(true) - $_SERVER["REQUEST_TIME_FLOAT"]) * 1e6,	PDO::PARAM_STR	);
+			$sql->bindValue(	4,	$this->tID,							PDO::PARAM_STR	);
+			$sql->execute();
+			$sql->closeCursor();
 		}
 	}
 
