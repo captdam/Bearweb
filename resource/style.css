@@ -46,8 +46,9 @@ form>div { display: grid; grid-template-columns: 20ch 1fr; gap: 10px; }
 textarea { resize: vertical; }
 
 /** Header & footer & main */
-header,footer { color: var(--highlight-color); background-color: var(--highlight-bgcolor); }
 header {
+	color: var(--highlight-color);
+	background-color: var(--highlight-bgcolor);
 	border-bottom: solid var(--highlight-color) 2px;
 	position: sticky;
 	top: 0;
@@ -55,16 +56,20 @@ header {
 	font-size: 18px;
 	font-weight: bold;
 }
-footer { border-top: solid var(--highlight-color) 2px; }
+footer {
+	color: var(--highlight-color);
+	border-top: solid var(--highlight-color) 2px;
+	background: center / cover url('/web/footer_banner.png'), var(--highlight-bgcolor);
+}
 
-#header_topbar>div { display: flex; justify-content: space-between; }
-#header_logo { text-align: left; }
+#header_topbar>*:nth-child(1) { display: flex; justify-content: space-between; }
+#header_logo { text-align: left; } #header_logo:hover { cursor: n-resize; }
 #header_button { text-align: right; }
 #header_button:hover { cursor: pointer; }
-#header_nav { display: none; }
-#header_nav>* { display: block; width: 100%; margin: 15px 0 0; text-align: left; margin: 4px; }
+#header_topbar>*:nth-child(2) { display: none; }
+#header_search,#header_navCat li,#header_navLang { display: block; width: 100%; margin: 15px 0 0; text-align: left; }
+#header_navLang li { display: inline-block; margin: 0 0 0 10px; width: inherit; font-weight: normal; }
 #header_search {
-	width: 100%;
 	font-size: inherit;
 	font-weight: normal;
 	color: inherit;
@@ -77,19 +82,16 @@ footer { border-top: solid var(--highlight-color) 2px; }
 }
 @media (min-width: 768px) {
 	#header_topbar { display: flex; justify-content: space-between; }
-	#header_topbar>* { display: block !important; }
+	#header_topbar>*:nth-child(1) { text-align: left; }
+	#header_topbar>*:nth-child(2) { text-align: right; display: block !important; }
 	#header_button { display: none; }
-	#header_nav { text-align: right; }
-	#header_nav>* {
+	#header_topbar>*:nth-child(2) * { display: inline; }
+	#header_search,#header_navCat *,#header_navLang * {
 		display: inline-block;
-		margin: 0 0 0 25px;
+		margin: 0 0 0 10px;
 		width: inherit;
 	}
-	#header_search {
-		text-align: right;
-		width: 150px;
-	}
-	#header_search:focus { width: 400px; }
+	#header_search { text-align: right; width: 150px; } #header_search:focus { width: 400px; }
 }
 
 main>*:nth-child(2n) { background-color: var(--content-bgcolor0); }
@@ -97,7 +99,7 @@ main>*:nth-child(2n+1) { background-color: var(--content-bgcolor1); }
 .main_title { color: var(--highlight-color); background-color: var(--highlight-bgcolor) !important; }
 .main_content a { color: var(--highlight-bgcolor); text-decoration: underline; margin: 0 0.25em; }
 .main_content figure { text-align: center; margin: 12px 0; }
-.main_content figure>img { max-width: min(600px, 100%); cursor: pointer; }
+.main_content figure>img { max-width: min(600px, 100%); cursor: zoom-in; }
 .main_content figure>img[data-wide] { max-width: 100%; }
 .main_content figcaption { font-size: 85%; opacity: 0.75; }
 .main_note {
@@ -115,8 +117,10 @@ main>*:nth-child(2n+1) { background-color: var(--content-bgcolor1); }
 	top: 0;
 	left: 0;
 	display: none;
-	cursor: pointer;
+	cursor: zoom-out;
 	backdrop-filter: blur(6px);
+	color: #FFF;
+	text-align: center;
 }
 
 #dialog_container {
@@ -130,6 +134,9 @@ main>*:nth-child(2n+1) { background-color: var(--content-bgcolor1); }
 	background: linear-gradient(var(--highlight-bgcolor), var(--highlight-bgcolor)) left bottom no-repeat, linear-gradient(var(--content-bgscolor), var(--content-bgscolor));
 	margin: 12px 0;
 }
+
+/** Header search result */
+#header_searchResult_container { height: 0; overflow-y: hidden; }
 
 /** Modal: Simular to JS alert, but with custom style (TODO) */
 #modal_container {
@@ -203,7 +210,10 @@ main>*:nth-child(2n+1) { background-color: var(--content-bgcolor1); }
 	border: none;
 	border-radius: 0;
 	border-bottom: solid var(--highlight-color) 2px;
+	opacity: 0.8;
+	transition: opacity 0.5s;
 }
+#categoryfilter:focus { opacity: 1.0; }
 
 #categorylist {
 	display: grid;

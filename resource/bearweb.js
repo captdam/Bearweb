@@ -15,20 +15,18 @@ const timestamp2str = (x = Date.now() / 1000) => { return (new Date(x * 1000)).t
 
 const onload_frame = () => { // Front-end framework
 	(() => { if (window.navigator.userAgent.includes('mobile')) _('meta[name=viewport]').content = 'width=1024'; })(); // Request desktop version on mobile
-	(() => { _('#header_button').onclick = () => { // Process page HTML head: Phone menu
-		_('#header_nav').style.display = _('#header_button').textContent == '≡' ? 'block' : 'none';
+	(() => { _('#header_button').onclick = () => { // Process page HTML header: Phone menu
+		__('#header_topbar>*')[1].style.display = _('#header_button').textContent == '≡' ? 'block' : 'none';
 		_('#header_button').textContent = _('#header_button').textContent == '≡' ? '×' : '≡';
 	}; })();
+	(() => { _('#header_logo').onclick = () => { window.scrollTo({top: 0, behavior: 'smooth'}); }; })(); // Logo: go page top
+	(() => { _('#header_search').onfocus = async () => {
+		const index = (new DOMParser()).parseFromString(await (await fetch('/sitemap.xml')).text(), 'text/xml').firstChild.children;
+		console.log(index);
+	}; })();
 	(() => { _('#viewer_container').onclick = () => { _('#viewer_container').style.display = 'none'; }; })();// Viewer for figures
-	(() => { // Special page
-		if (['A', 'P'].includes(_('html').dataset.pagestate)) {
-			_('html').style.setProperty('--highlight-bgcolor', '#622');
-			_('html').style.setProperty('--content-bgcolor0', '#EDD');
-			_('html').style.setProperty('--content-bgcolor1', '#F6D0D0');
-		}
-	})();
 };
-const onload_content = () => { // Content section only
+const onload_content = () => { // Content section only (for content reload, such as in-place modify)
 	(() => { // Key words style
 		Array.prototype.slice.call(__('.content_keywords')).map( (x) => {
 			var k = x.textContent.split(',');
@@ -50,8 +48,10 @@ const onload_content = () => { // Content section only
 	(() => { // Viewer for figures
 		__('.main_content figure>img').forEach(x => {
 			x.onclick = () => {
-				_('#viewer_container').style.background = 'center/contain no-repeat url(' + x.src + ')';
+				const link = x.getAttribute('src');
+				_('#viewer_container').style.background = 'center/contain no-repeat url(' + link + ')';
 				_('#viewer_container').style.display = 'block';
+				_('#viewer_container').replaceChildren(dom({_: 'a', href: link, textContent: 'View figure - URL: ' + link, style: 'background:#000'}));
 			};
 		});
 	})();
@@ -62,7 +62,7 @@ const onload_content = () => { // Content section only
 			_('html').style.setProperty('--content-bgcolor1', '#F6D0D0');
 		}
 	})();
-	(() => { // Index
+	(() => { // Index generation for blog content page
 
 	})();
 };

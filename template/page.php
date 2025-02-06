@@ -1,35 +1,36 @@
 <!DOCTYPE html>
 <?php header('Content-Type: text/html'); ?>
-<html <?= array_key_exists('lang', $BW->site->aux) ? 'lang="'.$BW->site->aux['lang'].'"' : '' ?>
-	data-sid="<?=$BW->session->sID?>"
-	data-tid="<?=$BW->session->tID?>"
-	data-suser="<?=$BW->session->sUser?>"
-	data-pagestate="<?=substr($BW->site->state,0,1)?>"
-	data-httpstate="<?=http_response_code()?>"
-><head>
+<html <?= array_key_exists('lang', $BW->site->aux) ? 'lang="'.$BW->site->aux['lang'].'"' : '' ?> data-suser="<?=$BW->session->sUser?>" ><head>
 	<title><?=$BW->site->meta[0]?> - Captdam's Blog</title>
 	<meta name="keywords" content="<?=$BW->site->meta[1]??''?>" />
 	<meta name="description" content="<?=$BW->site->meta[2]??''?>" />
-	<?php if ($BW->site->owner) echo '<meta name="author" content="',$BW->site->owner,'" />'; ?>
 	<meta name="robots" content="<?= $BW->site->state == 'S' ? 'no' : '' ?>index" />
 	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 	<meta charset="utf-8" />
 	<link href="/web/favorite.png" rel="icon" type="image/png" />
 	<link href="/web/style.css" rel="stylesheet" type="text/css" />
+	<link rel="canonical" href="https://captdam.com/<?=$BW->site->url?>" />
 	<script src="/web/bearweb.js"></script>
 	<script src="/web/md5.js"></script>
+	<?= $BW->site->owner ? '<meta name="author" content="'.$BW->site->owner.'" />' : '' ?>
 	<?= array_key_exists('lang-en', $BW->site->aux) ? '<link rel="alternate" hreflang="en" href="'.$BW->site->aux['lang-en'].'" type="text/html" />' : '' ?>
 	<?= array_key_exists('lang-zh', $BW->site->aux) ? '<link rel="alternate" hreflang="zh" href="'.$BW->site->aux['lang-zh'].'" type="text/html" />' : '' ?>
 </head><body>
 	<header>
 		<div id="header_topbar">
-			<div><a id="header_logo" href="/">Captdam</a><span id="header_button">≡</span></div>
-			<nav id="header_nav">
-				<form id="header_search_container" action="/search" method="get" target="searchtab" style="display:none"><input name="search" id="header_search" placeholder="Search..." disabled></form>
-				<a href="/">Home</a>
-				<a href="/embedded">Embedded</a>
-				<a href="/computer">Computer</a>
-			</nav>
+			<div><a id="header_logo">Captdam</a><span id="header_button">≡</span></div>
+			<div>
+				<form id="header_search_container" action="/search" method="get" target="searchtab" style="display:none !important"><input name="search" id="header_search" placeholder="Search..." disabled></form>
+				<nav id="header_navCat"><ul>
+					<li><a href="/">Home</a></li>
+					<li><a href="/embedded">Embedded</a></li>
+					<li><a href="/computer">Computer</a></li>
+				</ul></nav>
+				<nav id="header_navLang"><ul>
+					<?= array_key_exists('lang-en', $BW->site->aux) ? '<li><a hreflang="en" href="'.$BW->site->aux['lang-en'].'">EN</a></li>' : '' ?>
+					<?= array_key_exists('lang-zh', $BW->site->aux) ? '<li><a hreflang="zh" href="'.$BW->site->aux['lang-zh'].'">中</a></li>' : '' ?>
+				</ul></nav>
+			</div>
 		</div>
 	</header>
 	<main>
@@ -59,10 +60,10 @@
 			</div>
 		</div>
 <?php elseif ($BW->site->template[1] == 'direct'): ?>
-		<?=$BW->site->content?>
+		<?= $BW->site->content ?>
 <?php elseif ($BW->site->template[1] == 'local'): ?>
 		<?php
-			$resource = BW_Config::Site_ResourceDir.$BW->site->content;
+			$resource = Bearweb_Config::Site_ResourceDir.$BW->site->content;
 			if (!file_exists($resource)) throw new BW_WebServerError('Resource not found: '.$resource, 500);
 			echo file_get_contents($resource);
 		?>
@@ -78,7 +79,7 @@
 		</div><?=$BW->site->content?>
 <?php else: ?>
 		<?php
-			$template = BW_Config::Site_TemplateDir.'page_'.$BW->site->template[1].'.php';
+			$template = Bearweb_Config::Site_TemplateDir.'page_'.$BW->site->template[1].'.php';
 			if (!file_exists($template)) throw new BW_WebServerError('Secondary page template not found: '.$BW->site->template[1], 500);
 			include $template;
 		?>
