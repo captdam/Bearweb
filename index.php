@@ -5,7 +5,6 @@
 	class Bearweb_Config {
 		const Error_LogFile		= './error.log';				// Critical error log file
 		const Site_DB			= ['sqlite:./bw_site.db', null, null];		// Sitemap database file
-		const Site_HideAuthError	= false;					// Hide resource that requires auth. Show 404 instead of 401/403 code
 		const Site_HideServerError	= false;					// Hide server error. Show 500 Internal error for types of BW_ServerError
 		const Site_TemplateDir		= './template/';				// Template dir
 		const Site_ResourceDir		= './resource/';				// Resource dir
@@ -45,6 +44,18 @@
 				parent::invokeTemplate();
 			}
 		}
+
+		protected function createErrorPage(string $title, string $detail, int $code = 0): void {
+			if ($code) http_response_code($code);
+			$this->site = new Bearweb_Site(
+				url: '', category: '', template: ['page-en', 'error'],
+				owner: '', create: Bearweb_Site::TIME_NULL, modify: Bearweb_Site::TIME_NULL,
+				meta: [$title, '', $detail], 
+				state: 'S', content: $detail, aux: []
+			);
+		}
+
+		//protected function throwClientError_auth(BW_Error $e) { throw new BW_ClientError('Not found', 404); }
 	}
 
 	class Bearweb_Site extends _Bearweb_Site {
@@ -54,7 +65,13 @@
 			'api/resource/create' => ['category' => 'API', 'template' => ['api','resource'], 'meta' => ['Create'], 'state' => 'AMOD', 'content' => '', 'aux' => []],
 			'api/resource/get' => ['category' => 'API', 'template' => ['api','resource'], 'meta' => ['Get'], 'state' => 'AMOD', 'content' => '', 'aux' => []],
 			'api/resource/my' => ['category' => 'API', 'template' => ['api','resource'], 'meta' => ['My'], 'state' => 'AMOD', 'content' => '', 'aux' => []],
-			'api/resource/update' => ['category' => 'API', 'template' => ['api','resource'], 'meta' => ['Update'], 'state' => 'AMOD', 'content' => '', 'aux' => ['type' => ['Embedded' => ['Embedded',['page','content']], 'Computer' => ['Computer',['page','content']], 'Content' => ['Content',['object','blob']]]]],
+			'api/resource/update' => ['category' => 'API', 'template' => ['api','resource'], 'meta' => ['Update'], 'state' => 'AMOD', 'content' => '', 'aux' => ['type' => [
+				'Embedded-en' => ['Embedded-en',['page-en','content']],
+				'Computer-en' => ['Computer-en',['page-en','content']],
+				'Embedded-zh' => ['Embedded-zh',['page-zh','content']],
+				'Computer-zh' => ['Computer-zh',['page-zh','content']],
+				'Content' => ['Content',['object','blob']]
+			]]],
 
 			'api/user/data' => ['category' => 'API', 'template' => ['api','user'], 'meta' => ['Data'], 'state' => 'S', 'content' => '', 'aux' => []],
 			'api/user/login' => ['category' => 'API', 'template' => ['api','user'], 'meta' => ['Login'], 'state' => 'S', 'content' => '', 'aux' => []],

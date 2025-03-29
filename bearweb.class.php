@@ -29,9 +29,9 @@
 				// Access control
 				if ($this->site->access($this->user) == Bearweb_Site::ACCESS_NONE) {
 					if ($stateFlag == 'A') {
-						throw Bearweb_Config::Site_HideAuthError ? new BW_ClientError('Not found', 404) : new BW_ClientError('Unauthorized: Controlled resource. Cannot access, please login first', 401);
+						$this->throwClientError_auth(new BW_ClientError('Unauthorized: Controlled resource. Cannot access, please login first', 401));
 					} else if ($stateFlag == 'P') {
-						throw Bearweb_Config::Site_HideAuthError ? new BW_ClientError('Not found', 404) : new BW_ClientError('Forbidden: Locked resource. Access denied', 403);
+						$this->throwClientError_auth(new BW_ClientError('Forbidden: Locked resource. Access denied', 403));
 					}
 					throw new BW_ClientError('Access denied', 403);
 				}
@@ -63,13 +63,13 @@
 
 			} catch (Exception $e) { ob_clean(); ob_start();
 				if ($e instanceof BW_ClientError) {
-					$this->site = self::createErrorPage($e->getCode().' - Client Error', $e->getMessage(), $e->getCode());
+					$this->createErrorPage($e->getCode().' - Client Error', $e->getMessage(), $e->getCode());
 				} else if ($e instanceof BW_ServerError) {
 					error_log('[BW] Server Error: '.$e);
-					$this->site = Bearweb_Config::Site_HideServerError ? self::createErrorPage('500 - Internal Error', 'Server-side internal error.', 500) : self::createErrorPage($e->getCode().' - Server Error', $e->getMessage(), $e->getCode());
+					Bearweb_Config::Site_HideServerError ? $this->createErrorPage('500 - Internal Error', 'Server-side internal error.', 500) : $this->createErrorPage($e->getCode().' - Server Error', $e->getMessage(), $e->getCode());
 				} else {
 					error_log('[BW] Unknown Error: '.$e);
-					$this->site = Bearweb_Config::Site_HideServerError ? self::createErrorPage('500 - Internal Error', 'Server-side internal error.', 500) : self::createErrorPage('500 - Unknown Error', $e->getMessage(), 500);
+					Bearweb_Config::Site_HideServerError ? $this->createErrorPage('500 - Internal Error', 'Server-side internal error.', 500) : $this->createErrorPage('500 - Unknown Error', $e->getMessage(), 500);
 				}
 				$this->invokeTemplate();
 			}
@@ -83,15 +83,17 @@
 			include $template;
 		}
 
-		protected static function createErrorPage(string $title, string $detail, int $code = 0): Bearweb_Site {
+		protected function createErrorPage(string $title, string $detail, int $code = 0): void {
 			if ($code) http_response_code($code);
-			return new Bearweb_Site(
-				url: '', category: '', template: ['page', 'error'],
+			$this->site = new Bearweb_Site(
+				url: '', category: '', template: ['object', 'blob'],
 				owner: '', create: Bearweb_Site::TIME_NULL, modify: Bearweb_Site::TIME_NULL,
-				meta: [$title, '', $detail], 
-				state: 'S', content: $detail, aux: []
+				meta: ['text/html'], 
+				state: 'S', content: '<!DOCTYPE html><h3>'.$title.'</h3><p>'.$detail.'</p>', aux: []
 			);
 		}
+
+		protected function throwClientError_auth(BW_Error $e) { throw new BW_ClientError($e->getMessage(), $e->getCode()); }
 	}
 
 
@@ -102,19 +104,30 @@
 		const ACCESS_RO = 1;		# Readonly, and executable
 		const ACCESS_RW = -1;		# Read and write
 
+		public readonly ?array	$template;	# Template used to process the given resourc
+		public readonly ?array	$meta;		# Meta data
+		public readonly ?array	$aux;		# Resource auxiliary data, template defined data array
+
 		public function __construct(
 			public readonly string	$url,			# Resource URL, PK, Unique, Not Null
 			public readonly ?string	$category	= null,	# Resource category, for management purpose
-			public readonly ?array	$template	= null,	# Template used to process the given resourc
+			null|array|string	$template	= null,	# Template used to process the given resourc, array or / divide string
 			public readonly ?string	$owner		= null,	# Owner's user ID of the given resource; Only the owner and user in "ADMIN" group can modify this resource
 			public readonly ?int	$create		= null,	# Create timestamp
 			public readonly ?int	$modify		= null,	# Modify timestamp
-			public readonly ?array	$meta		= null,	# Meta data
+			null|array|string	$meta		= null,	# Meta data, array or \n divide string
 			public readonly ?string	$state		= null,	# State of the given resource
 			public readonly ?string	$content	= null,	# Resource content, the content should be directly output to reduce server process load
-			public readonly ?array	$aux		= null	# Resource auxiliary data, template defined data array
-		) {}
+			null|array|string	$aux		= null	# Resource auxiliary data, template defined data array, object or JSON string
+		) {
+			$this->template	= gettype($template) == 'string'	? explode('/', $template)	: $template;
+			$this->meta	= gettype($meta) == 'string'		? explode("\n", $meta)		: $meta;
+			$this->aux	= gettype($aux) == 'string'		? json_decode($aux, true)	: $aux;
+		}
 
+		/** URL is valid.
+		 * URL is 128 length or less, allows A-Za-z0-9 or -_:/.
+		 */
 		public static function validURL(string $url): bool { return $url === '' || ( strlen($url) <= 128 && ctype_alnum( str_replace(['-', '_', ':', '/', '.'], '', $url) ) ); }
 
 		/** Query a resource from sitemap db. 
@@ -126,25 +139,13 @@
 		public static function query(string $url): ?static {
 			$site = null;
 			try {
-				$sql = self::$db->prepare('SELECT `Category`, `Template`, `Owner`, `Create`, `Modify`, `Meta`, `State`, `Content`, `Aux` FROM `Sitemap` WHERE URL = ?');
+				$sql = self::$db->prepare('SELECT * FROM `Sitemap` WHERE `url` = ?');
 				$sql->bindValue(	1,	$url,	PDO::PARAM_STR	);
 				$sql->execute();
 				$site = $sql->fetch();
 				$sql->closeCursor();
+				return $site ? new static(...$site) : null;
 			} catch (Exception $e) { throw new BW_DatabaseServerError('Cannot read sitemap database: '.$e->getMessage(), 500); }
-
-			return $site ? new static(
-				url:		$url,
-				category:	$site['Category']	?? '',
-				template:	$site['Template']	?  explode('/', $site['Template'])	: ['object', 'blob'],
-				owner:		$site['Owner']		?? '',
-				create:		$site['Create']		?? self::TIME_NULL,
-				modify:		$site['Modify']		?? self::TIME_NULL,
-				meta:		explode("\n", $site['Meta'] ?? ''),
-				state:		$site['State']		?? 'S',
-				content:	$site['Content']	?? '',
-				aux:		json_decode($site['Aux'] ?? '{}', true) ?? []
-			) : null;
 		}
 
 		/** Test user access privilege level. 
@@ -166,9 +167,9 @@
 		public function insert(): void { try {
 			$current = $_SERVER['REQUEST_TIME'];
 			$sql = self::$db->prepare('INSERT INTO `Sitemap` (
-				`URL`, `Category`, `Template`,
-				`Owner`, `Create`, `Modify`, `Meta`,
-				`State`, `Content`, `Aux`
+				`url`, `category`, `template`,
+				`owner`, `create`, `modify`, `meta`,
+				`state`, `content`, `aux`
 			) VALUES (	?, ?, ?,	?, ?, ?, ?,	?, ?, ?)');
 			$sql->bindValue(1,	$this->url,										PDO::PARAM_STR	);	
 			$sql->bindValue(2,	$this->category			?? '',							PDO::PARAM_STR	);
@@ -191,15 +192,15 @@
 		public function update(): void { try {
 			$current = $_SERVER['REQUEST_TIME'];
 			$sql = self::$db->prepare('UPDATE `Sitemap` SET
-				`Category` =	IFNULL(?, `Category`),
-				`Template` =	IFNULL(?, `Template`),
-				`Owner` =	IFNULL(?, `Owner`),
-				`Create` =	IFNULL(?, `Create`),
-				`Modify` =	IFNULL(?, `Modify`),
-				`Meta` =	IFNULL(?, `Meta`),
-				`State` =	IFNULL(?, `State`),
-				`Content` =	IFNULL(?, `Content`),
-				`Aux` =		IFNULL(?, `Aux`)
+				`category` =	IFNULL(?, `category`),
+				`template` =	IFNULL(?, `template`),
+				`owner` =	IFNULL(?, `owner`),
+				`create` =	IFNULL(?, `create`),
+				`modify` =	IFNULL(?, `modify`),
+				`meta` =	IFNULL(?, `meta`),
+				`state` =	IFNULL(?, `state`),
+				`content` =	IFNULL(?, `content`),
+				`aux` =		IFNULL(?, `aux`)
 			WHERE `URL` = ?');
 			$sql->bindValue(1,	$this->category,								PDO::PARAM_STR	);
 			$sql->bindValue(2,	is_null($this->template) ? null : implode('/', $this->template),		PDO::PARAM_STR	);
@@ -343,7 +344,7 @@
 		public readonly string	$sKey;		# Session key for client-side JS
 		public readonly string	$tID;		# Transaction ID
 		public readonly int	$tCreate;	# Transaction create time (always current timestamp)
-		public readonly string	$tIP;		# Transaction client IP
+		public readonly string	$tIP;		# Transaction client IP and port
 		public readonly string	$tURL;		# Transaction request URL
 		public readonly string	$tSID;		# Transaction assoicated session ID (same as sID)
 		public string		$tLog;		# Transaction log
@@ -374,6 +375,7 @@
 
 			$session = null;
 			$transaction = null;
+			$needToSendSessionCookie = false;
 
 			// Update session if session cookies are valid, found and matched, not expired in db
 			if ( self::keycheck($_COOKIE, Bearweb_Config::Session_CookieSID) && self::keycheck($_COOKIE, Bearweb_Config::Session_CookieKey) ) {
@@ -399,16 +401,17 @@
 				self::insertRetry(5, function() use (&$sid, $sql) { $sid = self::keygen(); $sql->execute(); }, new Exception('Retry too much for session ID'));
 				$session = $sql->fetch();
 				$sql->closeCursor();
+				$needToSendSessionCookie = true;
 			}
 
 			// Create a new transaction
 			$tid = '';
 			$sql = self::$db->prepare('INSERT INTO `Transaction` (`ID`, `Create`, `IP`, `URL`, `Session`, `Log`) VALUES (?,?,?,?,?,\'\') RETURNING `ID`, `Create`, `IP`, `URL`, `Session`, `Log`');
-			$sql->bindParam(	1,	$tid,				PDO::PARAM_STR	); #By reference
-			$sql->bindValue(	2,	$_SERVER['REQUEST_TIME'],	PDO::PARAM_INT	);
-			$sql->bindValue(	3,	$_SERVER['REMOTE_ADDR'],	PDO::PARAM_STR	);
-			$sql->bindValue(	4,	$url,				PDO::PARAM_STR	); #New session is always issused to new user, it can only be changed by User Login API with existed SID
-			$sql->bindValue(	5,	$session['ID'],			PDO::PARAM_STR	);
+			$sql->bindParam(	1,	$tid,							PDO::PARAM_STR	); #By reference
+			$sql->bindValue(	2,	$_SERVER['REQUEST_TIME'],				PDO::PARAM_INT	);
+			$sql->bindValue(	3,	$_SERVER['REMOTE_ADDR'].':'.$_SERVER['REMOTE_PORT'],	PDO::PARAM_STR	);
+			$sql->bindValue(	4,	$url,							PDO::PARAM_STR	); #New session is always issused to new user, it can only be changed by User Login API with existed SID
+			$sql->bindValue(	5,	$session['ID'],						PDO::PARAM_STR	);
 			self::insertRetry(5, function() use (&$tid, $sql) { $tid = self::keygen(); $sql->execute(); }, new Exception('Retry too much for transaction ID'));
 			$transaction = $sql->fetch();
 			$sql->closeCursor();
@@ -424,8 +427,10 @@
 			$this->tURL	= $transaction['URL'];
 			$this->tSID	= $transaction['Session'];
 			$this->tLog	= $transaction['Log'];
-			setcookie(Bearweb_Config::Session_CookieSID, $this->sID, 0, '/', '', true, true ); # Note: Send cookie to client only if DB write success
-			setcookie(Bearweb_Config::Session_CookieKey, $this->sKey, 0, '/', '', true, false );
+			if ($needToSendSessionCookie) {
+				setcookie(Bearweb_Config::Session_CookieSID, $this->sID, 0, '/', '', true, true ); # Note: Send cookie to client only if DB write success
+				setcookie(Bearweb_Config::Session_CookieKey, $this->sKey, 0, '/', '', true, false );
+			}
 
 			if (!self::$db->commit()) { throw new Exception ('Cannot commit transaction'); }
 		} catch (Exception $e) { self::$db->rollBack(); throw new BW_DatabaseServerError('Cannot record session control in DB: '.$e->getMessage(), 500); } } # Cannot do anything if rollback fails :(
