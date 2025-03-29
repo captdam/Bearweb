@@ -8,22 +8,24 @@
 	<div style="display:flex;justify-content:center;"><button type="submit">Logoff</button></div>
 </form></div>
 <div id="edit" style="display:none">
-	<form id="form_create">
+	<form id="form_create" onsubmit="Interface_Resource.list.create(event)">
 		<h2>Create</h2>
 		<div><label for="create_url">URL</label><input type="text" id="create_url" name="URL"></div>
 		<div style="display:flex;justify-content:center;"><button>Create</button></div>
 	</form>
-	<form id="form_modify">
+	<form id="form_modify" onsubmit="Interface_Resource.list.modify(event)">
 		<h2>Modify</h2>
 		<div><label for="modify_url">URL</label><input type="text" id="modify_url" name="URL" readonly></div>
 		<div><label for="modify_category">Category</label>		<select name="Category" id="modify_category" required>
 			<option value="Content">Content</option>
-			<option value="Embedded">Embedded</option>
-			<option value="Computer">Computer</option>
+			<option value="Embedded-en">Embedded-en</option>
+			<option value="Embedded-zh">Embedded-zh</option>
+			<option value="Computer-en">Computer-en</option>
+			<option value="Computer-zh">Computer-zh</option>
 		</select></div>
-		<div><label for="modify_title">Title/MIME</label>		<input type="text" name="Title" id="modify_title" /></div>
+		<div><label for="modify_title">Meta (MIME)</label>		<input type="text" name="Meta" id="modify_title" /></div>
 		<div><label for="modify_state">State</label>			<input type="text" name="State" id="modify_state" required /></div>
-		<div><label for="modify_content">Content</label>		<textarea type="text" name="Content" id="modify_content" ondragover="event.preventDefault()" placeholder="Drop file here or enter base64"></textarea></div>
+		<div><label for="modify_content">Content</label>		<textarea type="text" name="Content" id="modify_content" ondragover="event.preventDefault()" ondrop="Interface_Resource.list.drop(event)" placeholder="Drop file here or enter base64"></textarea></div>
 		<div><label for="modify_aux">Aux </label>			<textarea type="text" name="Aux" id="modify_aux"></textarea></div>
 		<div style="display:none"><input name="Keywords" value="" readonly /><input name="Description" value="" readonly /></div>
 		<div style="display:flex;justify-content:center;"><button>Modify</button></div>
@@ -33,7 +35,7 @@
 	<h2>Resource list</h2>
 	<input id="list_filter" placeholder="Type keywords to filter result" onkeyup="filter(__('#list_table>*>*:nth-child(n+3)'), event.target.value)" style="width: 100%" />
 	<div id="list_table"></div>
-	<div style="display:flex;justify-content:center;"><button>Refresh</button></div>
+	<div style="display:flex;justify-content:center;"><button onclick="Interface_Resource.list.getall()">Refresh</button></div>
 </div>
 <div id="login" style="display:none"><form id="form_login">
 	<h2>Login</h2>
@@ -68,55 +70,7 @@
 				if ((await fetch('/api/user/logoff')).status == 401) location.reload();
 			};
 
-			_('#form_create').onsubmit = event => { event.preventDefault(); API_Resource.create(_('#create_url').value).then( x => {
-				dialog('Creating resource success!');
-				_('#list button').click();
-			}, x => {
-				dialog('Creating resource failed: ' + x.status + ' - ' + x.error);
-			} ); };
-			_('#modify_content').ondrop = event => { event.preventDefault();
-				const f = event.dataTransfer.items[0].getAsFile();
-				const reader = new FileReader();
-				reader.onloadend = x => { _('#modify_content').value = x.target.result.split(',')[1]; };
-				reader.readAsDataURL(f);
-			};
-			_('#form_modify').onsubmit = event => { event.preventDefault(); API_Resource.update(new FormData(_('#form_modify')), true).then(() => dialog('Modifying resource success!'), x => dialog('Modifying resource failed: ' + x.status + ' - ' + x.error)); };
-
-			_('#list button').onclick = () => API_Resource.my().then( list => {
-				let d = [{_: 'div', classList: 'beartable_tr', children: []}];
-				['URL (Open in new tab)', 'Title (Bring to Modify)', 'Category', 'Create', 'Modify', 'State'].forEach(x => d[0].children.push({_: 'span', classList: 'beartable_th', textContent: x}));
-				list.map(x => {
-					let c = {_: 'div', classList: 'beartable_tr', children: [
-						{_: 'span', classList: 'beartable_td', children: [{_: 'a', href: x.URL, target: '_blank', textContent: x.URL}]},
-						{_: 'span', classList: 'beartable_td', children: [{_: 'a', onclick: () => { API_Resource.get(x.URL, true).then(d => {
-							_('#modify_url').value = x.URL;
-							_('#modify_title').value = d.title;
-							_('#modify_state').value = d.state;
-							_('#modify_content').value = d.content;
-							_('#modify_aux').value = d.aux;
-							dialog('Loaded!');
-						}, x => {
-							dialog('Loading failed: ' + x.status + ' - ' + x.error);
-						}); }, textContent: x.Title}]},
-						{_: 'span', classList: 'beartable_td', textContent: x.Category, style: 'background:' + (c => {
-							if (c == 'Embedded') return 'aqua';
-							if (c == 'Computer') return 'salmon';
-							if (c == 'Content') return 'lightgray';
-							return 'none';
-						})(x.Category)},
-						{_: 'span', classList: 'beartable_td', textContent: timestamp2str(x.Create)},
-						{_: 'span', classList: 'beartable_td', textContent: timestamp2str(x.Modify)},
-						{_: 'span', classList: 'beartable_td', textContent: x.State, style: 'background:' + (c => {
-							if (c == 'O') return 'lightgreen';
-							if (c == 'A' || c == 'P') return 'pink';
-							if (c == 'S') return 'lightgray';
-							return 'none';
-						})(x.State)}
-					]};
-					d.push(c);
-				});
-				_('#list_table').replaceChildren(dom({_: 'div', classList: 'beartable', children: d}));
-			} );
+			
 			_('#list button').click();
 			
 		} else { _('#login').style.display = _('#register').style.display = 'block';

@@ -1,12 +1,4 @@
-/**************************************************************************
- Bearweb_7 style sheet
- Responseable design
- Small window (smart phone)	-- 320px - 767px
- Middle window (netbook)	-- 768px - 1279px
- Large window (desktop)		-- 1280px ~
- *************************************************************************/
-
- :root {
+:root {
 	--bgcolor: #2063AA;
 	--highlight-color: #FFF;
 	--highlight-bgcolor: #111D33;
@@ -15,22 +7,41 @@
 	--content-bgcolor1: #F6F6F6;
 	--content-bgscolor: rgba(225, 225, 225, 0.8);
 
-	--margin-width: calc(100% - 20px);
-	--margin-maxwidth: 1260px;
-	--margin-pad: calc(50% - 630px);
+	
 }
+
+body {
+	--margin-largelow: 1360px;
+	--margin-middlelow: 768px;
+	--margin-smallhigh: 767px;
+	--margin-middlehigh: 1359px;
+	--margin_innerpad: 10px;
+	--margin_innerpadx2: calc(var(--margin_innerpad) * 2);
+	--margin-width: calc(100% - var(--margin_innerpadx2));
+	--margin-maxwidth: calc(var(--margin-largelow) - var(--margin_innerpadx2));
+	--margin-pad: calc(50% - calc(var(--margin-maxwidth) / 2));
+}
+body>*>* {
+	max-width: var(--margin-maxwidth);
+	padding: 12px var(--margin-pad);
+}
+@media (max-width: 1359px) {
+	body>*>* {
+		width: var(--margin-width);
+		padding: 12px var(--margin_innerpad);
+	}
+}
+
 
 /** -------------------------- LAYOUT FOR ALL PAGES -------------------------- **/
 
 /** Pading, margin, size and font */
 * { margin: 0; padding: 0; max-width: 100%; overflow-wrap: break-word; }
 body { background-color: var(--highlight-bgcolor); font-family: Arial, 'Arial', 'Microsoft YaHei', '微软雅黑'; }
-body>*>* { max-width: var(--margin-maxwidth); padding: 12px var(--margin-pad); } @media (max-width: 1279px) { body>*>* { width: calc(100% - 20px); padding: 12px 10px; } }
 h1,h2,h3,h4 { margin: 18px 0; }
 p,ul,ol,li { margin: 12px 0; }
 li { margin-left: 2em; }
 hr { margin: 10px 0; }
-
 a { color: inherit; text-decoration: none; opacity: 75%; } a:hover { cursor: pointer; opacity: 100%; }
 a[href^="http://"]::after,a[href^="https://"]::after { content: '↗' }
 
@@ -38,7 +49,7 @@ del { opacity: 0.25; } del:hover { opacity: 0.75; }
 .info { font-size: 85%; opacity: 0.75; }
 
 script,style { display: none !important; }
-code { background-color: var(--content-bgscolor); overflow: auto; } pre { display: block; background-color: var(--content-bgscolor); width: 100%; padding: 10px 0; }
+code { background-color: var(--content-bgscolor); overflow: auto; } pre { display: block; background-color: var(--content-bgscolor); width: 100%; padding: 10px 0; overflow-x: auto; }
 
 details>summary { cursor: pointer; list-style-type: '+  '; background: var(--content-bgscolor); margin: 12px 0; padding: 5px 12px; } details[open]>summary { color: var(--highlight-color); background: var(--highlight-bgcolor); list-style-type: '-  '; }
 
@@ -122,6 +133,8 @@ main>*:nth-child(2n+1) { background-color: var(--content-bgcolor1); }
 	color: #FFF;
 	text-align: center;
 }
+#viewer_container_link { background: rgb(0, 0, 0); opacity: 0.4; }
+#viewer_container_link:hover { opacity: 1; }
 
 #dialog_container {
 	z-index: 101;
@@ -156,7 +169,7 @@ main>*:nth-child(2n+1) { background-color: var(--content-bgcolor1); }
 	padding: inherit;
 	top: -100%;
 	width: 80%;
-	max-width: 1280px;
+	max-width: 1360px;
 	max-height: 600px;
 	overflow: auto;
 	background-color: var(--content-bgcolor0);
@@ -183,6 +196,12 @@ main>*:nth-child(2n+1) { background-color: var(--content-bgcolor1); }
 	text-align: center;
 	padding: 10px 5px;
 	margin: 5px;
+}
+
+/** Misc */
+.github_logo {
+	background: left / contain no-repeat url('https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png');
+	padding-left: 2em;
 }
 
 /** -------------------------- LAYOUT FOR SPECIAL PAGES -------------------------- **/
@@ -232,7 +251,7 @@ main>*:nth-child(2n+1) { background-color: var(--content-bgcolor1); }
 	#categorylist { grid-template-columns: repeat(2, 1fr); }
 	#categorylist>a:first-child { grid-column: 1/3; }
 }
-@media (min-width: 1280px) {
+@media (min-width: 1360px) {
 	#categorylist { grid-template-columns: repeat(3, 1fr); }
 	#categorylist>a:first-child { grid-column: 1/3; grid-row: 1/3; }
 }
@@ -246,6 +265,13 @@ main>*:nth-child(2n+1) { background-color: var(--content-bgcolor1); }
 	transition: all 0.2s;
 }
 .content_keywords a:before { content: '# '; } .content_keywords a:hover { filter: contrast(0.5); }
+
+/** Content index */
+.content_index_nav { display: block; }
+.content_index_nav:hover { cursor: pointer; }
+.content_index_target { transition: all 1s; }
+.content_index_nav:hover:after,.content_index_target:hover:after { content: '#'; color: grey; padding-left: 4ch; }
+
 
 /** -------------------------- MODULES TO USE -------------------------- **/
 

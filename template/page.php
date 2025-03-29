@@ -1,6 +1,10 @@
 <!DOCTYPE html>
 <?php header('Content-Type: text/html'); ?>
-<html <?= array_key_exists('lang', $BW->site->aux) ? 'lang="'.$BW->site->aux['lang'].'"' : '' ?> data-suser="<?=$BW->session->sUser?>" ><head>
+<html
+	<?= array_key_exists('lang', $BW->site->aux) ? 'lang="'.$BW->site->aux['lang'].'"' : '' ?>
+	data-suser="<?=$BW->session->sUser?>"
+	data-pagestate="<?=substr($BW->site->state,0,1)?>"
+><head>
 	<title><?=$BW->site->meta[0]?> - Captdam's Blog</title>
 	<meta name="keywords" content="<?=$BW->site->meta[1]??''?>" />
 	<meta name="description" content="<?=$BW->site->meta[2]??''?>" />
@@ -20,7 +24,7 @@
 		<div id="header_topbar">
 			<div><a id="header_logo">Captdam</a><span id="header_button">≡</span></div>
 			<div>
-				<form id="header_search_container" action="/search" method="get" target="searchtab" style="display:none !important"><input name="search" id="header_search" placeholder="Search..." disabled></form>
+			<form id="header_search_container" action="/blog" method="get" target="search"><input name="s" id="header_search" placeholder="Search by keywords"></form>
 				<nav id="header_navCat"><ul>
 					<li><a href="/">Home</a></li>
 					<li><a href="/embedded">Embedded</a></li>
@@ -75,8 +79,10 @@
 			<i>--by <?=$BW->site->owner?> @ <?=date('M j, Y',$BW->site->modify)?></i>
 			<?= array_key_exists('lang-en', $BW->site->aux) ? '<p><a hreflang="en" href="'.$BW->site->aux['lang-en'].'">[en] Here is the English version of this article</a></p>' : '' ?>
 			<?= array_key_exists('lang-zh', $BW->site->aux) ? '<p><a hreflang="zh" href="'.$BW->site->aux['lang-zh'].'">【中】 这里是这篇文章的中文版</a></p>' : '' ?>
-			<?= array_key_exists('github', $BW->site->aux) ? '<p>Also on GitHub: <a href="'.$BW->site->aux['github'].'" target="_blank">'.$BW->site->aux['github'].'</a></p>' : '' ?>
-		</div><?=$BW->site->content?>
+			<?= array_key_exists('github', $BW->site->aux) ? '<p class="github_logo">Also on GitHub: <a href="'.$BW->site->aux['github'].'" target="_blank">'.$BW->site->aux['github'].'</a></p>' : '' ?>
+		</div>
+		<?=$BW->site->meta[4]??''?>
+		<?=$BW->site->content?>
 <?php else: ?>
 		<?php
 			$template = Bearweb_Config::Site_TemplateDir.'page_'.$BW->site->template[1].'.php';
@@ -85,52 +91,14 @@
 		?>
 <?php endif; ?>
 	</main>
-<?php if ($BW->site->owner && $BW->site->access($BW->user) == -1): ?>
-	<div style="background:#DA8"><form id="editor" onchange="_('#editor_render').style.background=_('#editor_submit').style.background='red'" onsubmit="event.preventDefault(); API_Resource.update(new FormData(_('#editor'))).then(x => {
-			dialog('Success');
-		}, x => {
-			dialog('Error: ' + x.status + ' - ' + x.error);
-		});"><h1>Editor</h1>
-		<div><label for="editor_url">URL</label>			<input type="text" name="URL" id="editor_url" value="<?=$BW->site->url?>" readonly /></div>
-		<div><label for="editor_category">Category</label>		<select name="Category" id="editor_category">
-			<option id="editor_type_embedded" value="Embedded">Embedded</option>
-			<option id="editor_type_computer" value="Computer">Computer</option>
-		</select></div>
-		<div><label for="editor_title">Title</label>			<input type="text" name="Title" id="editor_title" /></div>
-		<div><label for="editor_keywords">Keywords</label>		<input type="text" name="Keywords" id="editor_keywords" /></div>
-		<div><label for="editor_state">State</label>			<input type="text" name="State" id="editor_state" /></div>
-		<div><label for="editor_description">Description</label>	<textarea type="text" name="Description" id="editor_description"></textarea></div>
-		<div><label for="editor_content">Content</label>		<textarea type="text" name="Content" id="editor_content"></textarea></div>
-		<div><label for="editor_aux">Aux </label>			<textarea type="text" name="Aux" id="editor_aux"></textarea></div>
-		<div style="display:flex;justify-content:center;margin-top:1em;">
-			<button id="editor_reload" type="button" style="padding:0 2em;background:red" onclick="API_Resource.get(_('#editor_url').value).then(x => {
-				['category', 'title', 'keywords', 'state', 'description', 'content', 'aux'].forEach(y => _('#editor_'+y).value = x[y]);
-				dialog('Loaded');
-				_('#editor_reload').style.background = 'green';
-				_('#editor_render').style.background = 'red';
-			}, x => {
-				dialog('Error: ' + x.status + ' - ' + x.error);
-			})">Reload</button>
-			<button id="editor_render" type="button" style="padding:0 2em;background:grey" onclick="(() => {
-				const aux = JSON.parse(_('#editor_aux').value);
-				const pre = '<div class=\'tintimg\' style=\'--bgcolor:rgba(255,255,255,0.7);--bgimg:' + (aux.bgimg ?? '') + '\'><h1>' + _('#editor_title').value + '</h1><p>' + _('#editor_description').value + '</p><p class=\'content_keywords\'>' + _('#editor_keywords').value + '</p><i>--by ' + _('meta[name=author]').content + ' @ [Now]</i></div>';
-				_('main').innerHTML = pre + _('#editor_content').value;
-				onload_content();
-				dialog('Rendered');
-				_('#editor_render').style.background = 'green';
-				_('#editor_submit').style.background = 'red';
-			})()">Render</button>
-			<button id="editor_submit" type="submit" style="padding:0 2em;background:grey" onclick="_('#editor_submit').style.background='green'">Update</button>
-		</div>
-	</form></div>
-<?php endif; ?>
+	<?= $BW->site->owner && $BW->site->access($BW->user) == Bearweb_Site::ACCESS_RW ? '<script>ready().then(Interface_Resource.content.__init(\''.$BW->site->url.'\'))</script>' : '' ?>
 	<footer>
 		<div class="sidebyside" style="grid-template-columns: 30ch 1fr;">
 			<div>
 				<h2>Captdam's blog</h2>
 				<h3>My Links</h3>
 				<p><a href="mailto:admin@beardle.com">✉ Admin E-mail</a></p>
-				<p><a href="https://github.com/captdam" target="_blank"><img alt="Github logo" src="https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png" width="12px" height="12px" margin-right="3px"> My Github</a></p>
+				<p><a class="github_logo"> My Github</a></p>
 				<h3>Friend Sites</h3>
 				<p><a href="https://r12f.com" target="_blank">r12f</a></p>
 			</div>
