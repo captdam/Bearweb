@@ -5,17 +5,17 @@
 	data-suser="<?=$BW->session->sUser?>"
 	data-pagestate="<?=substr($BW->site->state,0,1)?>"
 ><head>
-	<title><?=$BW->site->meta[0]?> - Captdam's Blog</title>
+<title><?=$BW->site->meta[0]?> - Captdam's Blog</title> <meta property="og:title" content="<?=$BW->site->meta[0]?>" /><meta property="og:site_name" content="Captdam's Blog" />
 	<meta name="keywords" content="<?=$BW->site->meta[1]??''?>" />
-	<meta name="description" content="<?=$BW->site->meta[2]??''?>" />
+	<meta name="description" content="<?=$BW->site->meta[2]??''?>" /> <meta property="og:description" content="<?=$BW->site->meta[2]??''?>" />
 	<meta name="robots" content="<?= $BW->site->state == 'S' ? 'no' : '' ?>index" />
 	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 	<meta charset="utf-8" />
 	<link href="/web/favorite.png" rel="icon" type="image/png" />
 	<link href="/web/style.css" rel="stylesheet" type="text/css" />
-	<link rel="canonical" href="https://captdam.com/<?=$BW->site->url?>" />
+	<link rel="canonical" href="https://captdam.com/<?=$BW->site->url?>" /> <meta property="og:url" content="https://captdam.com/<?=$BW->site->url?>" />
 	<script src="/web/bearweb.js"></script>
-	<script src="/web/md5.js"></script>
+	<meta property="__og:image" content="<?= $BW->site->aux['bgimg']??'' ?>" />
 	<?= $BW->site->owner ? '<meta name="author" content="'.$BW->site->owner.'" />' : '' ?>
 	<?= array_key_exists('lang-en', $BW->site->aux) ? '<link rel="alternate" hreflang="en" href="'.$BW->site->aux['lang-en'].'" type="text/html" />' : '' ?>
 	<?= array_key_exists('lang-zh', $BW->site->aux) ? '<link rel="alternate" hreflang="zh" href="'.$BW->site->aux['lang-zh'].'" type="text/html" />' : '' ?>
@@ -67,7 +67,7 @@
 		<?= $BW->site->content ?>
 <?php elseif ($BW->site->template[1] == 'local'): ?>
 		<?php
-			$resource = Bearweb_Config::Site_ResourceDir.$BW->site->content;
+			$resource = Bearweb_Site::Dir_Resource.$BW->site->content;
 			if (!file_exists($resource)) throw new BW_WebServerError('Resource not found: '.$resource, 500);
 			echo file_get_contents($resource);
 		?>
@@ -85,7 +85,7 @@
 		<?=$BW->site->content?>
 <?php else: ?>
 		<?php
-			$template = Bearweb_Config::Site_TemplateDir.'page_'.$BW->site->template[1].'.php';
+			$template = Bearweb_Site::Dir_Template.'page_'.$BW->site->template[1].'.php';
 			if (!file_exists($template)) throw new BW_WebServerError('Secondary page template not found: '.$BW->site->template[1], 500);
 			include $template;
 		?>
