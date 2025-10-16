@@ -1,0 +1,80 @@
+All DB in SQLite3:
+
+Sitemap: bw_site.db
+
+CREATE TABLE "Sitemap" (
+	"url"		TEXT NOT NULL UNIQUE,
+	"category"	TEXT NOT NULL DEFAULT '',
+	"template"	TEXT NOT NULL DEFAULT '["object", "blob"]',
+	"owner"		TEXT NOT NULL DEFAULT '',
+	"create"	INTEGER NOT NULL DEFAULT 0,
+	"modify"	INTEGER NOT NULL DEFAULT 0,
+	"meta"		TEXT NOT NULL DEFAULT '{}',
+	"content"	BLOB DEFAULT '',
+	"aux"		BLOB NOT NULL DEFAULT '{}',
+	PRIMARY KEY("url")
+) WITHOUT ROWID
+
+CREATE INDEX "Sitemap_Modify" ON "Sitemap" (
+	"modify"
+)
+
+User: bw_user.db
+
+CREATE TABLE "User" (
+	"id"		TEXT NOT NULL UNIQUE,
+	"name"		TEXT NOT NULL DEFAULT '',
+	"salt"		TEXT NOT NULL DEFAULT ':',
+	"password"	TEXT NOT NULL DEFAULT ':',
+	"registerTime"	INTEGER NOT NULL DEFAULT 0,
+	"lastActive"	INTEGER NOT NULL DEFAULT 0,
+	"group"		TEXT NOT NULL DEFAULT '{}',
+	"data"		TEXT NOT NULL DEFAULT '{}',
+	PRIMARY KEY("id")
+)
+
+Note: group is an array of int, 0 in array means admin
+
+Session: bw_session.db
+
+CREATE TABLE "Session" (
+	"ID"		TEXT NOT NULL UNIQUE,
+	"Create"	INTEGER NOT NULL DEFAULT -1,
+	"LastUse"	INTEGER NOT NULL DEFAULT -1,
+	"User"		TEXT NOT NULL DEFAULT '',
+	"Key"		TEXT NOT NULL DEFAULT '',
+	PRIMARY KEY("ID")
+) WITHOUT ROWID
+
+CREATE TABLE "Transaction" (
+	"ID"		TEXT NOT NULL UNIQUE,
+	"Create"	INTEGER NOT NULL DEFAULT -1,
+	"IP"		TEXT NOT NULL DEFAULT '',
+	"URL"		TEXT NOT NULL DEFAULT '',
+	"Status"	INTEGER NOT NULL DEFAULT 0,
+	"Time"		INTEGER NOT NULL DEFAULT -1,
+	"Memory"	INTEGER NOT NULL DEFAULT -1,
+	"Session"	TEXT NOT NULL DEFAULT '',
+	"Log"		TEXT NOT NULL DEFAULT '',
+	PRIMARY KEY("ID")
+) WITHOUT ROWID
+
+To view recent requests, use:
+
+CREATE VIEW `Transaction_View` AS
+select all
+t.`ID`,
+datetime(t.`Create`, 'unixepoch') as `Create`,
+t.`IP`,
+t.`URL`,
+t.`Status`,
+t.`Time` as `Time (us)`,
+t.`Memory` as `Memory (kB)`,
+t.`Log`,
+t.`Session`,
+datetime(s.`Create`, 'unixepoch') as `FirstUse`,
+datetime(s.`LastUse`, 'unixepoch') as `LastUse`,
+s.`User`,
+s.`Key`
+from `Transaction` t join `Session` s where t.`Session` = s.`ID`
+order by `Create` desc
