@@ -9,14 +9,28 @@
 
 		protected function invokeTemplate(): void {
 			$BW = $this;
-			if ($this->site->template[0] == 'object') {
-				header('Content-Type: '.($this->site->meta[0] ? $this->site->meta[0] : 'text/plain'));
+			if (substr($this->site->template[0], 0, 4) == 'page') {
+				header('Content-Type: text/html');
+				$template = Bearweb_Site::Dir_Template.$this->site->template[0].'.php';
+				if (!file_exists($template))
+					throw new BW_WebServerError('Template not found: '.$this->site->template[0], 500);
+				echo '<!DOCTYPE html><html', (array_key_exists('lang', $BW->site->meta) ? ' lang="'.htmlspecialchars($BW->site->meta['lang'], ENT_COMPAT).'"' : ''), ' data-suser="',htmlspecialchars($BW->session->sUser, ENT_COMPAT),'"><head>
+						<title>', htmlspecialchars($BW->site->meta['title'] ?? '', ENT_COMPAT), '</title>
+						<meta name="keywords" content="', htmlspecialchars($BW->site->meta['keywords'] ?? '', ENT_COMPAT), '" />
+						<meta name="description" content="', htmlspecialchars($BW->site->meta['description'] ?? '', ENT_COMPAT), '" />
+						<meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta charset="utf-8" /><link href="/web/style.css" rel="stylesheet" type="text/css" /><script src="/web/bearweb.js"></script>
+						<link rel="canonical" href="https://captdam.com/', htmlspecialchars($BW->site->url, ENT_COMPAT), '" />';
+				if (array_key_exists('robots', $BW->site->meta)) echo '<meta name="robots" content="',htmlspecialchars($BW->site->meta['robots'], ENT_COMPAT),'" />';
+				if ($BW->site->owner) echo '<meta name="author" content="', htmlspecialchars($BW->site->owner, ENT_COMPAT), '" />';
+				if (array_key_exists('lang-en', $BW->site->aux)) echo '<link rel="alternate" hreflang="en" href="'.htmlspecialchars($BW->site->aux['lang-en'], ENT_COMPAT).'" type="text/html" />';
+				if (array_key_exists('lang-zh', $BW->site->aux)) echo '<link rel="alternate" hreflang="zh" href="'.htmlspecialchars($BW->site->aux['lang-zh'], ENT_COMPAT).'" type="text/html" />';
+				echo '</head><body>';
+				include $template;
+				echo '</body></html>';
+			} else if ($this->site->template[0] == 'object') {
+				header('Content-Type: '.($this->site->aux['mime'] ?? 'text/plain'));
 				if ($this->site->template[1] == 'blob') {
 					echo $this->site->content;
-				} else if ($this->site->template[1] == 'local') {
-					$resource = Bearweb_Site::Dir_Resource.($this->site->content ? $this->site->content : $this->site->url);
-					if (!file_exists($resource)) throw new BW_WebServerError('Resource not found: '.$resource, 500);
-					echo file_get_contents($resource);
 				} else {
 					$template = Bearweb_Site::Dir_Template.'object_'.$this->site->template[1].'.php';
 					if (!file_exists($template)) throw new BW_WebServerError('Secondary object template not found: '.$this->site->template[1], 500);
@@ -36,41 +50,41 @@
 
 		protected function createErrorPage(string $title, string $detail, int $code = 0): void {
 			if ($code) http_response_code($code);
-			$this->site = new Bearweb_Site(
-				url: '', category: '', template: ['page-en', 'error'],
-				owner: '', create: Bearweb_Site::TIME_NULL, modify: Bearweb_Site::TIME_NULL,
-				meta: [$title, '', $detail], 
-				state: 'S', content: $detail, aux: []
-			);
+			$this->site = new Bearweb_Site(template: ['page-en', 'error'], meta: ['title' => $title, 'keywords' => '', 'description' => $detail, 'robots' => 'noindex, nofollow'], content: $detail);
 		}
 
 		//protected function throwClientError_auth(BW_Error $e) { throw new BW_ClientError('Not found', 404); } // Hide detail reason and return 404 for 401 and 403 (auth required)
 	}
 
 	class Bearweb_Site extends _Bearweb_Site {
-		const Dir_Template = './template/';	# Template dir
-		const Dir_Resource = './resource/';	# Resource dir
+		// const Dir_Template = './template/';	# Template dir
+		// const Dir_Resource = './resource/';	# Resource dir
 
 		const FixedMap = [
-			'test' => ['category' => 'Content', 'template' => ['object','blob'], 'meta' => ['text/plain'], 'state' => 'S', 'content' => '123', 'aux' => []],
-			
-			'api/resource/create' => ['category' => 'API', 'template' => ['api','resource'], 'meta' => ['Create'], 'state' => 'AMOD', 'content' => '', 'aux' => []],
-			'api/resource/get' => ['category' => 'API', 'template' => ['api','resource'], 'meta' => ['Get'], 'state' => 'AMOD', 'content' => '', 'aux' => []],
-			'api/resource/my' => ['category' => 'API', 'template' => ['api','resource'], 'meta' => ['My'], 'state' => 'AMOD', 'content' => '', 'aux' => []],
-			'api/resource/update' => ['category' => 'API', 'template' => ['api','resource'], 'meta' => ['Update'], 'state' => 'AMOD', 'content' => '', 'aux' => ['type' => [
-				'Embedded-en' => ['Embedded-en',['page-en','content']],
-				'Computer-en' => ['Computer-en',['page-en','content']],
-				'Embedded-zh' => ['Embedded-zh',['page-zh','content']],
-				'Computer-zh' => ['Computer-zh',['page-zh','content']],
+			'web/bearweb.js' => ['category' => 'Web', 'create' => 1666333333, 'modify' => 1666333333, 'content' => null],
+
+			'api/resource/get' => ['category' => 'API', 'template' => ['api','resource'], 'meta' => ['task' => 'get', 'access' => [1]]],
+			'api/resource/create' => ['category' => 'API', 'template' => ['api','resource'], 'meta' => ['task' => 'create', 'access' => [1]]],
+			'api/resource/update' => ['category' => 'API', 'template' => ['api','resource'], 'meta' => ['task' => 'update', 'access' => [1]], 'aux' => ['type' => [ // Add yours ------------------------------------------------
+				/* List of allowed template */
+				// 'Name' => ['sitemap->category', sitemap->template[]]
 				'Content' => ['Content',['object','blob']]
 			]]],
+			'api/resource/delete' => ['category' => 'API', 'template' => ['api','resource'], 'meta' => ['task' => 'delete', 'access' => [1]]],
+			'api/resource/reindex' => ['category' => 'API', 'template' => ['api','resource'], 'meta' => ['task' => 'reindex', 'access' => [1]]],
 
-			'api/user/data' => ['category' => 'API', 'template' => ['api','user'], 'meta' => ['Data'], 'state' => 'S', 'content' => '', 'aux' => []],
-			'api/user/login' => ['category' => 'API', 'template' => ['api','user'], 'meta' => ['Login'], 'state' => 'S', 'content' => '', 'aux' => []],
-			'api/user/loginkey' => ['category' => 'API', 'template' => ['api','user'], 'meta' => ['LoginKey'], 'state' => 'S', 'content' => '', 'aux' => []],
-			'api/user/logoff' => ['category' => 'API', 'template' => ['api','user'], 'meta' => ['Logoff'], 'state' => 'S', 'content' => '', 'aux' => []],
-			'api/user/my' => ['category' => 'API', 'template' => ['api','user'], 'meta' => ['My'], 'state' => 'S', 'content' => '', 'aux' => []],
-			'api/user/register' => ['category' => 'API', 'template' => ['api','user'], 'meta' => ['Register'], 'state' => 'S', 'content' => '', 'aux' => []],
+			'api/user/get' => ['category' => 'API', 'template' => ['api','user'], 'meta' => ['task' => 'get']],
+			'api/user/logoff' => ['category' => 'API', 'template' => ['api','user'], 'meta' => ['task' => 'logoff']],
+			'api/user/login' => ['category' => 'API', 'template' => ['api','user'], 'meta' => ['task' => 'login']],
+			'api/user/register' => ['category' => 'API', 'template' => ['api','user'], 'meta' => ['task' => 'register']],
+
+			'user.html' => ['category' => 'CMD', 'template' => ['page-en','direct'], 'meta' => ['title' => 'User page', 'robots' => 'noindex, nofollow'], 'content' => null],
+			'editor.html' => ['category' => 'CMD', 'template' => ['page-en','direct'], 'meta' => [
+				'title' => 'Moderator workspace',
+				'access' => [1],
+				'robots' => 'noindex, nofollow',
+				'keywords' => 'Content, grey, Name1, color1, Name2, color2' // Add yours ------------------------------------------------
+			], 'content' => null],
 		];
 
 		public static function init(): void {
@@ -82,7 +96,12 @@
 		}
 
 		public static function query(string $url): ?static {
-			return array_key_exists($url, static::FixedMap) ? new static(...static::FixedMap[$url], url: $url, owner: '', create: static::TIME_NULL, modify: static::TIME_NULL) : parent::query($url);
+			if (array_key_exists($url, static::FixedMap)) {
+				$site = static::FixedMap[$url];
+				$site['content'] = $site['content'] ?? static::__file_read($url);
+				return new static(...$site, url: $url);
+			}
+			return parent::query($url);
 		}
 
 		public function insert(): void {
@@ -105,9 +124,9 @@
 	}
 
 	class Bearweb_Session extends _Bearweb_Session {
-		const CookieSID = 'SessionID';
-		const CookieKey = 'SessionKey';
-		const Expire = 7 * 24 * 3600;
+		// const CookieSID = 'SessionID';
+		// const CookieKey = 'SessionKey';
+		// const Expire = 7 * 24 * 3600;
 
 		public static function init(): void {
 			try { static::$db = new PDO('sqlite:./bw_session.db', null, null, [
@@ -126,6 +145,28 @@
 				PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC
 			]); } catch (Exception $e) { throw new BW_DatabaseServerError('Fail to open DB: '.$e->getMessage(), 500); }
 		}
+	}
+	
+	
+	function bear_reindex() {
+		_bear_reindex([
+			new class extends BearIndex_Catalog {
+				public function __construct() { parent::__construct('catalog', ['page-en', 'catalog'], ['title' => 'Index', 'keywords' => 'keywords', 'description' => 'My site index', 'lang' => 'en', 'bgimg' => 'url(\'/web/banner.png\')'], ['lang-en' => '/catalog']); }
+				public function add(array $r): bool { return in_array($r['category'], ['Category1', 'Category2']) && !static::dontIndex($r) && parent::add($r); }
+			},
+			new class extends BearIndex_SitemapRss {
+				public function __construct() { parent::__construct('rss.xml', [], 'https://example.com/', 'Example Sitemap', 'Example site', 'Copyright Example | CC BY-SA', 'admin@example.com'); }
+				public function add(array $r): bool { return !static::dontIndex($r) && parent::add($r); }
+			},
+			new class extends BearIndex_SitemapTxt {
+				public function __construct() { parent::__construct('sitemap.txt', [], 'https://example.com/'); }
+				public function add(array $r): bool { return !static::dontIndex($r) && parent::add($r); }
+			},
+			new class extends BearIndex_SitemapXml {
+				public function __construct() { parent::__construct('sitemap.xml', [], 'https://example.com/'); }
+				public function add(array $r): bool { return !static::dontIndex($r) && parent::add($r); }
+			}
+		]);
 	}
 
 	if (!Bearweb_Site::validURL($_SERVER["SCRIPT_URL"])) {
