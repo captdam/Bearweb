@@ -1,4 +1,4 @@
-<?php	header('X-Powered-By: Bearweb 7.2.250511');
+<?php	header('X-Powered-By: Bearweb 7.2.251016');
 
 	class _Bearweb {
 		const HideServerError = false;
@@ -18,7 +18,7 @@
 				Bearweb_User::init();
 				Bearweb_Session::init();
 				$this->session = new Bearweb_Session($url);
-				$this->user = Bearweb_User::query($this->session->sUser);
+				$this->user = Bearweb_User::query($this->session->sUser, Bearweb_User::QUERY_UPDATE_LASTACTIVE) ?? Bearweb_User::query('');
 			} catch (Exception $e) {
 				error_log('[BW] Fatal error: Module init failed - Cannot connect to DB: '.$e->getMessage());
 				http_response_code(500); exit('500 - Server Fatal Error!');
@@ -26,29 +26,23 @@
 			
 			try { ob_start();
 				$this->site = Bearweb_Site::query($url) ?? throw new BW_ClientError('Not found', 404);
-				[$stateFlag, $stateInfo] = [substr($this->site->state, 0, 1), substr($this->site->state, 1)];
 
 				// Access control
 				if ($this->site->access($this->user) == Bearweb_Site::ACCESS_NONE) {
-					if ($stateFlag == 'A') {
-						$this->throwClientError_auth(new BW_ClientError('Unauthorized: Controlled resource. Cannot access, please login first', 401));
-					} else if ($stateFlag == 'P') {
-						$this->throwClientError_auth(new BW_ClientError('Forbidden: Locked resource. Access denied', 403));
-					}
 					throw new BW_ClientError('Access denied', 403);
 				}
 
 				// Redirect resource
-				if ( $stateFlag == 'R' ) {
-					header('Location: /'.$stateInfo);
-					throw new BW_ClientError('301 - Moved Permanently: Resource has been moved permanently to: '.$stateInfo, 301); # To terminate the resource processing
-				} else if ( $stateFlag == 'r' ) {
-					header('Location: /'.$stateInfo);
-					throw new BW_ClientError('302 - Moved Temporarily: Resource has been moved temporarily to: '.$stateInfo, 302);
+				if (array_key_exists('r301', $this->site->meta)) {
+					header('Location: /'.$this->site->meta['r301']);
+					throw new BW_ClientError('301 - Moved Permanently: Resource has been moved permanently to: '.$this->site->meta['r301'], 301); # To terminate the resource processing
+				} else if (array_key_exists('r302', $this->site->meta)) {
+					header('Location: /'.$this->site->meta['r302']);
+					throw new BW_ClientError('302 - Moved Temporarily: Resource has been moved temporarily to: '.$this->site->meta['r302'], 302);
 				}
 
 				// E-tag
-				if ($this->site->modify == Bearweb_Site::TIME_NULL) { # Create E-tag for content and auto generated content (and error page), for client-side cache
+				if ($this->site->create == Bearweb_Site::TIME_NULL) { # Create random E-tag for auto generated contents, and disable client-side cache
 					header('Last-Modified: '.date('D, j M Y G:i:s').' GMT');
 					header('Etag: '.base64_encode(random_bytes(48))); 
 					header('Cache-Control: no-store');
@@ -56,14 +50,19 @@
 					throw new BW_ClientError('304 - Not Modified', 304);*/
 				} else {
 					header('Last-Modified: '.date('D, j M Y G:i:s', $this->site->modify).' GMT');
-					header('Etag: '.base64_encode($this->site->url).':'.base64_encode($this->site->modify));
+					header('Etag: '.$this->site->url.'@'.$this->site->modify);
 					header('Cache-Control: private, max-age=3600');
 				}
+
+				// Aux headers
+				header('X-Robots-Tag: '.($this->site->meta['robots'] ?? 'all'));
 				
 				// Invoke template
 				$this->invokeTemplate();
-
+				header('Content-Length: '.ob_get_length());
+				
 			} catch (Exception $e) { ob_clean(); ob_start();
+				$this->session->log($e->getMessage());
 				if ($e instanceof BW_ClientError) {
 					$this->createErrorPage($e->getCode().' - Client Error', $e->getMessage(), $e->getCode());
 				} else if ($e instanceof BW_ServerError) {
@@ -87,12 +86,8 @@
 
 		protected function createErrorPage(string $title, string $detail, int $code = 0): void {
 			if ($code) http_response_code($code);
-			$this->site = new Bearweb_Site(
-				url: '', category: '', template: ['object', 'blob'],
-				owner: '', create: Bearweb_Site::TIME_NULL, modify: Bearweb_Site::TIME_NULL,
-				meta: ['text/html'], 
-				state: 'S', content: '<!DOCTYPE html><h3>'.$title.'</h3><p>'.$detail.'</p>', aux: []
-			);
+			header('X-Debug: 123');
+			$this->site = new Bearweb_Site(meta: ['robots'=> 'noindex, nofollow'], content: '<!DOCTYPE html><meta name="robots" content="noindex" /><h1>'.$title.'</h1><p>'.$detail.'</p>', aux: ['mime' => 'text/html']);
 		}
 
 		protected function throwClientError_auth(BW_Error $e) { throw new BW_ClientError($e->getMessage(), $e->getCode()); }
@@ -102,42 +97,100 @@
 	class _Bearweb_Site { use Bearweb_DatabaseBacked;
 		const Dir_Template = './template/';	# Template dir
 		const Dir_Resource = './resource/';	# Resource dir
+		const Size_FileBlob = 100000;		# Threshold for storing blob in DB instead of file system (100kB as https://www.sqlite.org/intern-v-extern-blob.html)
 
-		final const TIME_CURRENT = -1;	# Pass this parameter to let Bearweb use current timestamp
+		final const TIME_CURRENT = -1;		# Pass this parameter to let Bearweb use current timestamp
 		final const TIME_NULL = 0;		# Some resource (like auto generated one) has no create / modify time
 		final const ACCESS_NONE = 0;		# No access
 		final const ACCESS_RO = 1;		# Readonly, and executable
 		final const ACCESS_RW = -1;		# Read and write
 
-		public readonly ?array	$template;	# Template used to process the given resourc
-		public readonly ?array	$meta;		# Meta data
-		public readonly ?array	$aux;		# Resource auxiliary data, template defined data array
+		/** Resource URL, PK */
+		public string $url;
+
+		/** Resource category, for management purpose */
+		public string $category;
+
+		/** Template used to process the given resourc [main_template, sub_template, 2nd_sub_template...] */
+		public array $template {
+			set (string|array $value) => is_string($value) ? json_decode($value, false) : $value;
+		}
+
+		/** Owner's user ID of the given resource; Only the owner and user in "ADMIN" group can modify this resource */
+		public string $owner;
+
+		/** Create timestamp */
+		public int $create {
+			set => $value == self::TIME_CURRENT ? $_SERVER['REQUEST_TIME'] : $value;
+		}
+
+		/** Modify timestamp */
+		public int $modify {
+			set => $value == self::TIME_CURRENT ? $_SERVER['REQUEST_TIME'] : $value;
+		}
+
+		/** Meta data, used by framework and index [meta => data...] */
+		public array $meta {
+			set (string|array $value) => is_string($value) ? json_decode($value, true) : $value;
+		}
+
+		/** Resource content, the content should be directly output to reduce server process load */
+		public string $content;
+
+		/** Resource auxiliary data, template defined data array [key => value...] */
+		public array $aux {
+			set (string|array $value) => is_string($value) ? json_decode($value, true) : $value;
+		}
+
+		/** Create a resource object. 
+		 * @param string	$url		Resource URL, PK. Default ''
+		 * @param string 	$category	Resource category, for management purpose. Default ''
+		 * @param string|array	$template	Template used to process the given resourc [main_template, sub_template, 2nd_sub_template...]: JSON or array. Default [object, blob] for direct output content
+		 * @param string	$owner		Owner's user ID of the given resource; Only the owner and user in "ADMIN" group can modify this resource. Default '' system owned
+		 * @param string 	$create		Create timestamp. Default this::TIME_NULL for no actual time, use this::TIME_CURRENT to use current timestamp
+		 * @param string 	$modify		Modify timestamp. Default this::TIME_NULL for no actual time, use this::TIME_CURRENT to use current timestamp
+		 * @param string|array 	$meta		Meta data, used by framework and index [meta => data...]: JSON or array. Default []
+		 * @param string	$content	Resource content, the content should be directly output to reduce server process load. Default ''
+		 * @param string 	$aux		Resource auxiliary data, template defined data array [key => value...]: JSON or array. Default []
+		 */
 		public function __construct(
-			public readonly string	$url,			# Resource URL, PK, Unique, Not Null
-			public readonly ?string	$category	= null,	# Resource category, for management purpose
-			null|array|string	$template	= null,	# Template used to process the given resourc, array or / divide string
-			public readonly ?string	$owner		= null,	# Owner's user ID of the given resource; Only the owner and user in "ADMIN" group can modify this resource
-			public readonly ?int	$create		= null,	# Create timestamp
-			public readonly ?int	$modify		= null,	# Modify timestamp
-			null|array|string	$meta		= null,	# Meta data, array or \n divide string
-			public readonly ?string	$state		= null,	# State of the given resource
-			public readonly ?string	$content	= null,	# Resource content, the content should be directly output to reduce server process load
-			null|array|string	$aux		= null	# Resource auxiliary data, template defined data array, object or JSON string
+			string		$url = '',
+			string		$category = '',
+			array|string	$template = ['object', 'blob'],
+			string		$owner = '',
+			int		$create = self::TIME_NULL,
+			int		$modify = self::TIME_NULL,
+			array|string	$meta = [],
+			string		$content = '',
+			array|string	$aux = []
 		) {
-			$this->template	= gettype($template) == 'string'	? explode('/', $template)	: $template;
-			$this->meta	= gettype($meta) == 'string'		? explode("\n", $meta)		: $meta;
-			$this->aux	= gettype($aux) == 'string'		? json_decode($aux, true)	: $aux;
+			$this->url	= $url;
+			$this->category	= $category;
+			$this->template	= $template;
+			$this->owner	= $owner;
+			$this->create	= $create;
+			$this->modify	= $modify;
+			$this->meta	= $meta;
+			$this->content	= $content;
+			$this->aux	= $aux;
 		}
 
 		/** URL is valid.
-		 * URL is 128 length or less, allows A-Za-z0-9 or -_:/.
+		 * URL is 128 length or less, allows [A-Za-z0-9 or -_:/.], last character is not /, trimed
 		 */
-		public static function validURL(string $url): bool { return $url === '' || ( strlen($url) <= 128 && ctype_alnum( str_replace(['-', '_', ':', '/', '.'], '', $url) ) ); }
+		public static function validURL(string $url): bool {
+			return $url === '' || (
+				strlen($url) <= 128 &&
+				ctype_alnum( str_replace(['-', '_', ':', '/', '.'], '', $url) ) &&
+				substr($url, -1) != '/' &&
+				trim($url) == $url
+			);
+		}
 
 		/** Query a resource from sitemap db. 
 		 * Note: Data in DB is volatile, instance only reflects the data at time of DB fetch, it may be changed by another transaction (e.g. Resource modify API) and other process. 
 		 * @param string $url			Resource URL
-		 * @return Bearweb_Site			A Bearweb site resource
+		 * @return ?Bearweb_Site		A Bearweb site resource, or null if resource not exist
 		 * @throws BW_DatabaseServerError	Cannot read sitemap DB
 		*/
 		public static function query(string $url): ?static {
@@ -148,7 +201,10 @@
 				$sql->execute();
 				$site = $sql->fetch();
 				$sql->closeCursor();
-				return $site ? new static(...$site) : null;
+				if (!$site)
+					return null;
+				$site['content'] = $site['content'] ?? static::__file_read($site['url']);
+				return new static(...$site);
 			} catch (Exception $e) { throw new BW_DatabaseServerError('Cannot read sitemap database: '.$e->getMessage(), 500); }
 		}
 
@@ -157,129 +213,201 @@
 		 * @return int ACCESS_NONE, ACCESS_RO or ACCESS_RW (owner/admin)
 		 */
 		public function access(Bearweb_User $user): int {
-			if ( !$user->isGuest() && ($user->isAdmin() || $user->id==$this->owner) ) return static::ACCESS_RW; # Note: Admin always have privilege, guest never have privilege; system resource is owned by '' but '' means guest in Bearweb_User
-			[$stateFlag, $stateInfo] = [substr($this->state, 0, 1), substr($this->state, 1)];
-			return (
-				$stateFlag == 'P' ||										# Pending resource: owner only
-				( $stateFlag == 'A' && !count(array_intersect( $user->group , explode(',',$stateInfo) )) )	# Auth control: check user groups against privilege groups
-			) ? static::ACCESS_NONE : static::ACCESS_RO;
+			if ( !$user->isGuest() && ($user->isAdmin() || $user->id==$this->owner) ) return self::ACCESS_RW; # Note: Admin always have privilege, guest never have privilege; system resource is owned by '' but '' means guest in Bearweb_User
+			if (!array_key_exists('access', $this->meta)) return self::ACCESS_RO;
+			foreach ($this->meta['access'] as $whitelist) {
+				if ($whitelist == $user->id || in_array($whitelist, $user->group))
+					return self::ACCESS_RO;
+			}
+			return self::ACCESS_NONE;
 		}
 
 		/** Insert this resource into sitemap db.
 		 * @throws BW_DatabaseServerError Fail to insert into sitemap db
 		 */
-		public function insert(): void { try {
-			$current = $_SERVER['REQUEST_TIME'];
+		public function insert(): void { try { static::$db->beginTransaction();
 			$sql = static::$db->prepare('INSERT INTO `Sitemap` (
 				`url`, `category`, `template`,
 				`owner`, `create`, `modify`, `meta`,
-				`state`, `content`, `aux`
-			) VALUES (	?, ?, ?,	?, ?, ?, ?,	?, ?, ?)');
-			$sql->bindValue(1,	$this->url,										PDO::PARAM_STR	);	
-			$sql->bindValue(2,	$this->category			?? '',							PDO::PARAM_STR	);
-			$sql->bindValue(3,	implode('/', $this->template ?? ['object', 'blob']),					PDO::PARAM_STR	);
-			$sql->bindValue(4,	$this->owner			?? '',							PDO::PARAM_STR	);
-			$sql->bindValue(5,	static::__vmap($this->create, [[null, $current], [static::TIME_CURRENT, $current]]),	PDO::PARAM_INT	);
-			$sql->bindValue(6,	static::__vmap($this->modify, [[null, $current], [static::TIME_CURRENT, $current]]),	PDO::PARAM_INT	);
-			$sql->bindValue(7,	$this->meta ? implode("\n", $this->meta) : 'text/plain',				PDO::PARAM_STR	);
-			$sql->bindValue(8,	$this->state			?? 'P',							PDO::PARAM_STR	);
-			$sql->bindValue(9,	$this->content			?? '',							PDO::PARAM_STR	);
-			$sql->bindValue(10,	$this->aux			?? '{}',						PDO::PARAM_STR	);
+				`content`, `aux`
+			) VALUES (	?, ?, ?,	?, ?, ?, ?,	?, ?)');
+			$sql->bindValue(1,	$this->url,				PDO::PARAM_STR	);
+			$sql->bindValue(2,	$this->category,			PDO::PARAM_STR	);
+			$sql->bindValue(3,	json_encode((array)$this->template),	PDO::PARAM_STR	);
+			$sql->bindValue(4,	$this->owner,				PDO::PARAM_STR	);
+			$sql->bindValue(5,	$this->create,				PDO::PARAM_INT	);
+			$sql->bindValue(6,	$this->modify,				PDO::PARAM_INT	);
+			$sql->bindValue(7,	json_encode((object)$this->meta),	PDO::PARAM_STR	);
+			$sql->bindValue(9,	json_encode((object)$this->aux),	PDO::PARAM_STR	);
+			if (strlen($this->content) >= static::Size_FileBlob) {
+				static::__file_write($this->url, $this->content);
+				$sql->bindValue(8, null, PDO::PARAM_NULL);
+			} else {
+				static::__file_delete($this->url, $this->content);
+				$sql->bindValue(8, $this->content, PDO::PARAM_STR);
+			}
 			$sql->execute();
 			$sql->closeCursor();
-		} catch (Exception $e) { throw new BW_DatabaseServerError('Cannot insert into sitemap database: '.$e->getMessage(), 500); } }
+		static::$db->commit(); } catch (Exception $e) { static::$db->rollBack(); throw new BW_DatabaseServerError('Cannot insert into sitemap database: '.$e->getMessage(), 500); } }
 
 		/** Update this resource in sitemap db. 
 		 * It is not necessary to query this resource, create a dummy resource with url and fields to modify (leave other field null to keep orginal data). 
 		 * @throws BW_DatabaseServerError Fail to update sitemap db
 		 */
-		public function update(): void { try {
-			$current = $_SERVER['REQUEST_TIME'];
+		public function update(): void { try { static::$db->beginTransaction();
 			$sql = static::$db->prepare('UPDATE `Sitemap` SET
-				`category` =	IFNULL(?, `category`),
-				`template` =	IFNULL(?, `template`),
-				`owner` =	IFNULL(?, `owner`),
-				`create` =	IFNULL(?, `create`),
-				`modify` =	IFNULL(?, `modify`),
-				`meta` =	IFNULL(?, `meta`),
-				`state` =	IFNULL(?, `state`),
-				`content` =	IFNULL(?, `content`),
-				`aux` =		IFNULL(?, `aux`)
+				`category` = ?,	`template` = ?,
+				`owner` = ?,	`create` = ?,	`modify` = ?,	`meta` = ?,
+				`content` = ?,	`aux` =	 ?
 			WHERE `URL` = ?');
-			$sql->bindValue(1,	$this->category,								PDO::PARAM_STR	);
-			$sql->bindValue(2,	is_null($this->template) ? null : implode('/', $this->template),		PDO::PARAM_STR	);
-			$sql->bindValue(3,	$this->owner,									PDO::PARAM_STR	);
-			$sql->bindValue(4,	static::__vmap($this->create, [[null, null], [static::TIME_CURRENT, $current]]),	PDO::PARAM_INT	);
-			$sql->bindValue(5,	static::__vmap($this->modify, [[null, null], [static::TIME_CURRENT, $current]]),	PDO::PARAM_INT	);
-			$sql->bindValue(6,	is_null($this->meta) ? null : implode("\n", $this->meta),			PDO::PARAM_STR	);
-			$sql->bindValue(7,	$this->state,									PDO::PARAM_STR	);
-			$sql->bindValue(8,	$this->content,									PDO::PARAM_STR	);
-			$sql->bindValue(9,	is_null($this->aux) ? null : json_encode($this->aux),				PDO::PARAM_STR	);
-			$sql->bindValue(10,	$this->url,									PDO::PARAM_STR	);
+			$sql->bindValue(1,	$this->category,			PDO::PARAM_STR	);
+			$sql->bindValue(2,	json_encode((array)$this->template),	PDO::PARAM_STR	);
+			$sql->bindValue(3,	$this->owner,				PDO::PARAM_STR	);
+			$sql->bindValue(4,	$this->create,				PDO::PARAM_INT	);
+			$sql->bindValue(5,	$this->modify,				PDO::PARAM_INT	);
+			$sql->bindValue(6,	json_encode((object)$this->meta),	PDO::PARAM_STR	);
+			$sql->bindValue(8,	json_encode((object)$this->aux),	PDO::PARAM_STR	);
+			$sql->bindValue(9,	$this->url,				PDO::PARAM_STR	);
+			if (strlen($this->content) >= static::Size_FileBlob) {
+				static::__file_write($this->url, $this->content);
+				$sql->bindValue(7, null, PDO::PARAM_NULL);
+			} else {
+				static::__file_delete($this->url, $this->content);
+				$sql->bindValue(7, $this->content, PDO::PARAM_STR);
+			}
 			$sql->execute();
 			$sql->closeCursor();
-		} catch (Exception $e) { throw new BW_DatabaseServerError('Cannot update sitemap database: '.$e->getMessage(), 500); } }
+		static::$db->commit(); } catch (Exception $e) { static::$db->rollBack(); throw new BW_DatabaseServerError('Cannot update sitemap database: '.$e->getMessage(), 500); } }
 
 		/** Delete this resource. 
 		 * It is not necessary to query this resource, create a dummy resource with url to specify resource in sitemap db. 
 		 * @throws BW_DatabaseServerError Fail to delete from sitemap db
 		 */
-		public function delete(): void { try {
+		public function delete(): void { try { static::$db->beginTransaction();
 			$sql = static::$db->prepare('DELETE FROM `Sitemap` WHERE `URL` = ?');
 			$sql->bindValue(1,	$this->url,	PDO::PARAM_STR	);
+			static::__file_delete($this->url, $this->content);
 			$sql->execute();
 			$sql->closeCursor();
-		} catch (Exception $e) { throw new BW_DatabaseServerError('Cannot delete from sitemap database: '.$e->getMessage(), 500); } }
+		static::$db->commit(); } catch (Exception $e) { static::$db->rollBack(); throw new BW_DatabaseServerError('Cannot delete from sitemap database: '.$e->getMessage(), 500); } }
+
+		protected static function __file_write(string $url, string $content): void {
+			$dir = dirname(static::Dir_Resource.$url);
+			if (!is_dir($dir))
+				mkdir($dir, 0755, true);
+			file_put_contents(static::Dir_Resource.$url, $content);
+		}
+		protected static function __file_read(string $url): string {
+			if (!is_file(static::Dir_Resource.$url))
+				throw new BW_DatabaseServerError('Blob file not existed', 500);
+			return file_get_contents(static::Dir_Resource.$url);
+		}
+		protected static function __file_delete(string $url): void {
+			if (is_file(static::Dir_Resource.$url))
+				unlink(static::Dir_Resource.$url);
+		}
 	}
 
 
 	class _Bearweb_User { use Bearweb_DatabaseBacked;
-		final const TIME_CURRENT = -1;	# Pass this parameter to let Bearweb use current timestamp
-		final const TIME_NULL = 0;		# Some resource (like auto generated one) has no create / modify time
+		final const TIME_CURRENT = -1;		# Pass this parameter to let Bearweb use current timestamp
 
+		/** User ID, PK, 6 to 16 characters [A-Za-z0-9-_] ID must be string (to differentiate from int group), '' for guest */
+		public string	$id;
+		
+		/** User name (nickname) */
+		public string	$name;
+
+		/** Salt for password */
+		public string	$salt;
+
+		/** Password after salt 32-byte (256-bit) cipher */
+		public string	$password;
+
+		/** Register timestamp */
+		public int	$registerTime {
+			set => $value == self::TIME_CURRENT ? $_SERVER['REQUEST_TIME'] : $value;
+		}
+
+		/** Last active timestamp */
+		public int	$lastActive {
+			set => $value == self::TIME_CURRENT ? $_SERVER['REQUEST_TIME'] : $value;
+		}
+
+		/** User group [114, 514, ...], group must be int (to differentiate from string id), group 0 is for admin */
+		public array	$group {
+			set (string|array $value) => is_string($value) ? json_decode($value, false) : $value;
+		}
+
+		/** User data [meta => data...] */
+		public array	$data {
+			set (string|array $value) => is_string($value) ? json_decode($value, true) : $value;
+		}
+
+		/** Create a user object. 
+		 * @param string	$id		User ID, PK, 6 to 16 characters [A-Za-z0-9-_] ID must be string (to differentiate from int group). Default '' for guest
+		 * @param string	$name		User name (nickname). Default 'Guest' for guest
+		 * @param string	$salt		Salt for password. Default ':' invalid
+		 * @param string	$password	Password after salt 32-byte (256-bit) cipher. Default ':' invalid
+		 * @param int		$registerTime	Register timestamp. Default this::TIME_NULL for no actual time, use this::TIME_CURRENT to use current timestamp
+		 * @param int		$lastActive	Last active timestamp. Default this::TIME_NULL for no actual time, use this::TIME_CURRENT to use current timestamp
+		 * @param string|array	$group		User group [114, 514, ...], group must be int (to differentiate from string id), group 0 is for admin: JSON or array. Default []
+		 * @param string|array	$group		User data [meta => data...]: JSON or array. Default []
+		 * @param string	$avatar		User avatar
+		*/
 		public function __construct(
-			public readonly string	$id,
-			public readonly ?string	$name		= null,
-			public readonly ?string	$salt		= null,
-			public readonly ?string	$password	= null,
-			public readonly ?int	$registerTime	= null,
-			public readonly ?int	$lastActive	= null,
-			public readonly ?array	$group		= null,
-			public readonly ?array	$data		= null,
-			public readonly ?string	$avatar		= null
-		) {}
+			string		$id = '',
+			string		$name = 'Guest',
+			string		$salt = ':',
+			string		$password = ':',
+			int		$registerTime = self::TIME_CURRENT,
+			int		$lastActive = self::TIME_CURRENT,
+			string|array	$group = [],
+			string|array	$data = [],
+			string		$avatar = ''
+		) {
+			$this->id		= $id;
+			$this->name		= $name;
+			$this->salt		= $salt;
+			$this->password		= $password;
+			$this->registerTime	= $registerTime;
+			$this->lastActive	= $lastActive;
+			$this->group		= $group;
+			$this->data		= $data;
+		}
 
-		public static function validID(string $uid): bool { return strlen($uid) >= 6 && strlen($uid) <= 16 && ctype_alnum(str_replace(['-', '_'], '', $uid)); }
-		public static function validPassword(string $pass): bool { return strlen(base64_decode($pass, true)) == 48; } // 32-byte (256-bit) cipher
+		public function isAdmin(): bool { return in_array(0, $this->group); }
+		public function isGuest(): bool { return !$this->id; }
+
+		public static function validID(string $uid): bool { return strlen($uid) >= 6 && strlen($uid) <= 16 && ctype_alnum(str_replace(['-', '_'], '', $uid)); } // 6 to 16 characters [A-Za-z0-9-_]
+		public static function validPassword(string $pass): bool { return strlen(base64_decode($pass, true)) == 48; } // 48-byte (384-bit) cipher
+
+		final const int QUERY_UPDATE_LASTACTIVE = 0x01;
 
 		/** Query a user. 
-		 * @param string	$id	User ID
+		 * @param string	$id	User ID, '' for guest
+		 * @param int		$flag	this::QUERY_UPDATE_*
 		 * @return ?Bearweb_User	A Bearweb_User instance, or null if user not existed
 		 * @throws BW_DatabaseServerError Fail to query user info
 		 */
-		public static function query(string $id): ?static {
-			if (!$id) return new static(id: '', name: 'Guest', salt: '', password: '', registerTime: static::TIME_NULL, lastActive: static::TIME_NULL, group: [], data: [], avatar: null);
-
+		public static function query(string $id, int $flag = 0): ?static {
+			if (!$id) return new static();
 			$user = null;
 			try {
-				$sql = static::$db->prepare('SELECT `ID`, `Name`, `Salt`, `Password`, `RegisterTime`, `LastActive`, `Group`, `Data`, `Avatar` FROM `User` WHERE `ID` = ?');
-				$sql->bindValue(	1,	$id,	PDO::PARAM_STR	);
+				$sql = static::$db->prepare('UPDATE `User` SET `lastActive` = IFNULL(?, `lastActive`) WHERE `id` = ? RETURNING *');
+				if ($flag & self::QUERY_UPDATE_LASTACTIVE) {
+					$sql->bindValue(1, $_SERVER['REQUEST_TIME'], PDO::PARAM_INT);
+				} else {
+					$sql->bindValue(1, null, PDO::PARAM_NULL);
+				}
+				$sql->bindValue(2, $id, PDO::PARAM_STR);
 				$sql->execute();
+				$sql->setFetchMode(PDO::FETCH_CLASS|PDO::FETCH_PROPS_LATE, static::class);
 				$user = $sql->fetch();
 				$sql->closeCursor();
 			} catch (Exception $e) { throw new BW_DatabaseServerError('Cannot query user from DB: '.$e->getMessage(), 500); }
 			
-			return $user ? new static(
-				id:		$user['ID'],
-				name:		$user['Name']		?? $user['ID'],
-				salt:		$user['Salt']		?? '',
-				password:	$user['Password']	?? '',
-				registerTime:	$user['RegisterTime']	?? static::TIME_NULL,
-				lastActive:	$user['LastActive']	?? static::TIME_NULL,
-				group:		explode(',', $user['Group'] ?? ''),
-				data:		json_decode($user['Data'] ?? '{}', true),
-				avatar:		$user['Avatar']
-			) : null;
+			return $user ? $user : null;
 		}
 
 		/** Create a new user. 
@@ -288,17 +416,15 @@
 		 * @throws BW_DatabaseServerError Fail to write user into DB
 		 */
 		public function insert(): void { try {
-			$current = $_SERVER['REQUEST_TIME'];
-			$sql = static::$db->prepare('INSERT INTO `User` (`ID`, `Name`, `Salt`, `Password`, `RegisterTime`, `LastActive`, `Group`, `Data`, `Avatar`) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)');
-			$sql->bindValue(1,	$this->id,										PDO::PARAM_STR	);
-			$sql->bindValue(2,	$this->name		?? $this->id,							PDO::PARAM_STR	);
-			$sql->bindValue(3,	$this->salt		?? ':',								PDO::PARAM_STR	);
-			$sql->bindValue(4,	$this->password		?? ':',								PDO::PARAM_STR	);
-			$sql->bindValue(5,	static::__vmap($this->registerTime, [[null, $current], [static::TIME_CURRENT, $current]]),	PDO::PARAM_INT	);
-			$sql->bindValue(6,	static::__vmap($this->lastActive, [[null, $current], [static::TIME_CURRENT, $current]]),	PDO::PARAM_INT	);
-			$sql->bindValue(7,	implode(',', $this->group ?? []),							PDO::PARAM_STR	);
-			$sql->bindValue(8,	json_encode($this->group ?? []),							PDO::PARAM_STR	);
-			$sql->bindValue(9,	$this->avatar,										PDO::PARAM_LOB	);
+			$sql = static::$db->prepare('INSERT INTO `User` (`id`, `name`, `salt`, `password`, `registerTime`, `lastActive`, `group`, `data`) VALUES (?, ?, ?, ?, ?, ?, ?, ?)');
+			$sql->bindValue(1,	$this->id,				PDO::PARAM_STR	);
+			$sql->bindValue(2,	$this->name,				PDO::PARAM_STR	);
+			$sql->bindValue(3,	$this->salt,				PDO::PARAM_STR	);
+			$sql->bindValue(4,	$this->password,			PDO::PARAM_STR	);
+			$sql->bindValue(5,	$this->registerTime,			PDO::PARAM_INT	);
+			$sql->bindValue(6,	$this->lastActive,			PDO::PARAM_INT	);
+			$sql->bindValue(7,	json_encode((array)$this->group),	PDO::PARAM_STR	);
+			$sql->bindValue(8,	json_encode((object)$this->data),	PDO::PARAM_STR	);
 			$sql->execute();
 			$sql->closeCursor();
 		} catch (Exception $e) { throw strpos($e->getMessage(), 'UNIQUE') ? new BW_ClientError('User ID has been used', 409) : new BW_DatabaseServerError('Cannot insert new user into DB: '.$e->getMessage(), 500); } }
@@ -308,32 +434,23 @@
 		 * @throws BW_DatabaseServerError Failed to update user DB (server error or no such user)
 		 */
 		public function update(): void { try {
-			$current = $_SERVER['REQUEST_TIME'];
 			$sql = static::$db->prepare('UPDATE `User` SET
-				`Name` =		IFNULL(?, `Name`),
-				`Salt` =		IFNULL(?, `Salt`),
-				`Password` =		IFNULL(?, `Password`),
-				`RegisterTime` =	IFNULL(?, `RegisterTime`),
-				`LastActive` =		IFNULL(?, `LastActive`),
-				`Group` =		IFNULL(?, `Group`),
-				`Data` =		IFNULL(?, `Data`),
-				`Avatar` =		IFNULL(?, `Avatar`)
-			WHERE `ID` = ?');
-			$sql->bindValue(1,	$this->name,										PDO::PARAM_STR	);
-			$sql->bindValue(2,	is_null($this->salt)		? null	: $this->salt,					PDO::PARAM_STR	);
-			$sql->bindValue(3,	is_null($this->password)	? null	: $this->password,				PDO::PARAM_STR	);
-			$sql->bindValue(4,	static::__vmap($this->registerTime, [[null, null], [static::TIME_CURRENT, $current]]),	PDO::PARAM_INT	);
-			$sql->bindValue(5,	static::__vmap($this->lastActive, [[null, null], [static::TIME_CURRENT, $current]]),	PDO::PARAM_INT	);
-			$sql->bindValue(6,	is_null($this->group)		? null	: implode(',', $this->group),			PDO::PARAM_STR	);
-			$sql->bindValue(7,	is_null($this->data)		? null	: json_encode($this->data),			PDO::PARAM_STR	);
-			$sql->bindValue(8,	$this->avatar,										PDO::PARAM_LOB	);
-			$sql->bindValue(9,	$this->id,										PDO::PARAM_STR	);
+				`name` = ?,
+				`salt` = ?,		`password` = ?,
+				`registerTime` = ?,	`lastActive` = ?,
+				`group` = ?,		`data` = ?
+			WHERE `id` = ?');
+			$sql->bindValue(1,	$this->name,				PDO::PARAM_STR	);
+			$sql->bindValue(2,	$this->salt,				PDO::PARAM_STR	);
+			$sql->bindValue(3,	$this->password,			PDO::PARAM_STR	);
+			$sql->bindValue(4,	$this->registerTime,			PDO::PARAM_INT	);
+			$sql->bindValue(5,	$this->lastActive,			PDO::PARAM_INT	);
+			$sql->bindValue(6,	json_encode((array)$this->group),	PDO::PARAM_STR	);
+			$sql->bindValue(7,	json_encode((object)$this->data),	PDO::PARAM_STR	);
+			$sql->bindValue(8,	$this->id,				PDO::PARAM_STR	);
 			$sql->execute();
 			$sql->closeCursor();
 		} catch (Exception $e) { throw new BW_DatabaseServerError('Fail to update user in DB: '.$e->getMessage(), 500); } }
-
-		public function isAdmin(): bool { return in_array('ADMIN', $this->group); }
-		public function isGuest(): bool { return !$this->id; }
 	}
 
 
@@ -447,7 +564,7 @@
 		 * @param string	$log	Log to append
 		 * @return string	Log in full after append
 		 */
-		public function log(string $log): string { return $this->tLog .= $log; }
+		public function log(string $log): string { return $this->tLog .= $log.PHP_EOL; }
 
 		/** Bind a user to the session. Effects next transaction. 
 		 * @param string	$uid	User ID
@@ -485,11 +602,12 @@
 		 * Commit log to DB. 
 		*/
 		public function __destruct() {
-			$sql = static::$db->prepare('UPDATE `Transaction` SET `Log` = ?, `Status` = ?, `Time` = ? WHERE ID = ?');
+			$sql = static::$db->prepare('UPDATE `Transaction` SET `Log` = ?, `Status` = ?, `Time` = ?, `Memory` = ? WHERE ID = ?');
 			$sql->bindValue(	1,	$this->tLog,							PDO::PARAM_STR	);
 			$sql->bindValue(	2,	http_response_code(),						PDO::PARAM_INT	);
-			$sql->bindValue(	3,	(microtime(true) - $_SERVER["REQUEST_TIME_FLOAT"]) * 1e6,	PDO::PARAM_STR	);
-			$sql->bindValue(	4,	$this->tID,							PDO::PARAM_STR	);
+			$sql->bindValue(	3,	(microtime(true) - $_SERVER["REQUEST_TIME_FLOAT"]) * 1e6,	PDO::PARAM_INT	);
+			$sql->bindValue(	4,	memory_get_peak_usage(false) / 1024,				PDO::PARAM_INT	);
+			$sql->bindValue(	5,	$this->tID,							PDO::PARAM_STR	);
 			$sql->execute();
 			$sql->closeCursor();
 		}
@@ -516,7 +634,143 @@
 		public static function init(): void {
 			throw new BW_DatabaseServerError('No database defined', 500);
 		}
+	}
 
-		private static function __vmap(mixed $value, array $map): mixed { foreach ($map as [$src, $dest]) { if ($value === $src) return $dest; } return $value; }
+	class BearIndex {
+		protected Bearweb_Site $site;
+		public function __construct(string $url, string $category, array $template, array $meta, string $prepend, array $aux) {
+			$this->site = new Bearweb_Site(url: $url, category: $category, template: $template, owner: '', create: Bearweb_Site::TIME_NULL, modify: Bearweb_Site::TIME_CURRENT, meta: $meta, content: $prepend, aux: $aux);
+		}
+		/** Return an indication string if access controlled, redirected, or noindex / nofollow.
+		 * @param array $r The resource to check, directly read from database in array
+		 * @return string 'access', 'r301', 'r302', 'robots' for do not index, or '' otherwise
+		*/
+		public static function dontIndex(array $r): string {
+			foreach(['access', 'r301', 'r302', 'robots'] as $robot) {
+				if (array_key_exists($robot, $r['meta'])) {
+					return $robot;
+				}
+			}
+			return '';
+		}
+		public function update() { $this->site->update(); }
+	}
+	class BearIndex_Bulletin extends BearIndex {
+		protected ?array $lastAddResource = null;
+		protected function divider(?array $resourceLast, array $resourceCurrent): void { return; /* if ($resourceLast != null && $resourceLast['url'] != $resourceCurrent['url']) $this->site->content .= ''; */ }
+		public function __construct(string $url, array $template, array $meta, array $aux) { parent::__construct($url, 'Bulletin', $template, $meta, '', $aux); }
+		public function add(array $r): bool {
+			$this->divider($this->lastAddResource, $r);
+			$url		= htmlspecialchars($r['url'], ENT_COMPAT);
+			$title		= htmlspecialchars($r['meta']['title'] ?? $r['url'], ENT_COMPAT);
+			$description	= htmlspecialchars($r['meta']['description'] ?? '', ENT_COMPAT);
+			$keywords	= htmlspecialchars($r['meta']['keywords'] ?? '', ENT_COMPAT);
+			$hd		= htmlspecialchars($r['meta']['hd'] ?? $r['url'], ENT_COMPAT);
+			$ratio		= ($r['meta']['width'] ?? 512) / ($r['meta']['height'] ?? 512);
+			$this->site->content .= '<figure style="aspect-ratio:'.($ratio).'"><img src="/'.$url.'" data-title="'.$title.'" data-description="'.$description.'" data-keywords="'.$keywords.'" data-hd="/'.$hd.'" loading="lazy" /></figure>';
+			$this->lastAddResource = $r;
+			return true;
+		}
+	}
+	class BearIndex_Catalog extends BearIndex {
+		public function __construct(string $url, array $template, array $meta, array $aux) { parent::__construct($url, 'Catalog', $template, $meta, '', $aux); }
+		public function add(array $r): bool {
+			$url		= htmlspecialchars($r['url'], ENT_COMPAT);
+			$bgimg		= htmlspecialchars($r['meta']['bgimg'] ?? '', ENT_COMPAT);
+			$title		= htmlspecialchars($r['meta']['title'] ?? $r['url'], ENT_COMPAT);
+			$description	= htmlspecialchars($r['meta']['description'] ?? '', ENT_COMPAT);
+			$keywords	= htmlspecialchars($r['meta']['keywords'] ?? '', ENT_COMPAT);
+			$owner		= htmlspecialchars($r['owner'], ENT_COMPAT);
+			$modify		= date('M j, Y',$r['modify']);
+			$this->site->content .= '<a href="/'.$url.'" style="--bgimg:'.$bgimg.'"><h2>'.$title.'</h2><p>'.$description.'</p><p class="content_keywords">'.$keywords.'</p><p><i>--by '.$owner.' @ '.$modify.'</i></p></a>';
+			return true;
+		}
+	}
+	class BearIndex_User extends BearIndex  {
+		public function __construct(string $url, array $meta) { parent::__construct($url, 'Index', ['object', 'blob'], $meta, '<?xml version="1.0" encoding="UTF-8" ?><resourceset>', ['mime' => 'text/xml']); }
+		public function add(array $r): bool {
+			$url		= htmlspecialchars($r['url'], ENT_COMPAT);
+			$category	= htmlspecialchars($r['category'], ENT_COMPAT);
+			$create		= htmlspecialchars($r['create'], ENT_COMPAT); // Should be number, but in case DB manually modified, it may hold string 
+			$modify		= htmlspecialchars($r['modify'], ENT_COMPAT);
+			$title		= htmlspecialchars($r['meta']['title'] ?? $r['url'], ENT_COMPAT);
+			$robots		= static::dontIndex($r); // No special characters in ['access', 'r301', 'r302', 'robots', '']
+			$owner		= htmlspecialchars($r['owner'], ENT_COMPAT);
+			$this->site->content .= '<resource><url>'.$url.'</url><category>'.$category.'</category><create>'.$create.'</create><modify>'.$modify.'</modify><title>'.$title.'</title><robots>'.$robots.'</robots><owner>'.$owner.'</owner></resource>';
+			return true;
+		}
+		public function update() {
+			$this->site->content .= '</resourceset>';
+			parent::update();
+		}
+	}
+	class BearIndex_SitemapRss extends BearIndex {
+		protected string $domain;
+		public function __construct(string $url, array $meta, string $domain, string $title, string $description, string $copyright, string $email) {
+			$this->domain = htmlspecialchars($domain, ENT_COMPAT);
+			parent::__construct(
+			$url, 'Index', ['object', 'blob'], $meta,
+			'<?xml version="1.0" encoding="UTF-8" ?><rss version="2.0"><channel>'.
+			'<title>'.htmlspecialchars($title,ENT_COMPAT).'</title><link>'.$this->domain.'</link><description>'.htmlspecialchars($description,ENT_COMPAT).'</description><copyright>'.htmlspecialchars($copyright,ENT_COMPAT).'</copyright><generator>Bearweb</generator>'.
+			'<image><link>'.$this->domain.'</link><title>'.htmlspecialchars($title,ENT_COMPAT).'</title><url>'.$this->domain.'favicon.ico</url></image>'.
+			'<lastBuildDate>'.date(DATE_RSS,$_SERVER['REQUEST_TIME']).'</lastBuildDate><webMaster>'.htmlspecialchars($email,ENT_COMPAT).'</webMaster>',
+			['mime' => 'text/xml']
+			);
+		}
+		public function add(array $r): bool {
+			$title		= htmlspecialchars($r['meta']['title'] ?? $r['url'], ENT_COMPAT);
+			$url		= htmlspecialchars($r['url'], ENT_COMPAT);
+			$owner		= htmlspecialchars($r['owner'], ENT_COMPAT);
+			$category	= htmlspecialchars($r['category'], ENT_COMPAT);
+			$description	= htmlspecialchars($r['meta']['description'] ?? '', ENT_COMPAT);
+			$modify		= date(DATE_RSS,$r['modify']);
+			$this->site->content .= '<item><title>'.$title.'</title><link>'.$this->domain.$url.'</link><guid>'.$this->domain.$url.'</guid><author>'.$owner.'</author><category>'.$category.'</category><description>'.$description.'</description><pubDate>'.$modify.'</pubDate></item>';
+			return true;
+		}
+		public function update() {
+			$this->site->content .= '</channel></rss>';
+			parent::update();
+		}
+	}
+	class BearIndex_SitemapTxt extends BearIndex {
+		protected string $domain;
+		public function __construct(string $url, array $meta, string $domain) {
+			$this->domain = htmlspecialchars($domain, ENT_COMPAT);
+			parent::__construct($url, 'Index', ['object', 'blob'], $meta, '', ['mime' => 'text/plain']);
+		}
+		public function add(array $r): bool {
+			if (static::dontIndex($r)) return false;
+			$this->site->content .= $this->domain.$r['url'].PHP_EOL;
+			return true;
+		}
+	}
+	class BearIndex_SitemapXml extends BearIndex {
+		protected string $domain;
+		public function __construct(string $url, array $meta, string $domain) {
+			$this->domain = htmlspecialchars($domain, ENT_COMPAT);
+			parent::__construct(
+				$url, 'Index', ['object', 'blob'], $meta,
+				'<?xml version="1.0" encoding="UTF-8" ?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">',
+				['mime' => 'text/xml']
+			);
+		}
+		public function add(array $r): bool {
+			if (static::dontIndex($r)) return false;
+			$url		= htmlspecialchars($r['url'], ENT_COMPAT);
+			$modify		= date(DATE_W3C,$r['modify']);
+			$this->site->content .= '<url><loc>'.$this->domain.$url.'</loc><lastmod>'.$modify.'</lastmod></url>';
+			return true;
+		}
+		public function update() {
+			$this->site->content .= '</urlset>';
+			parent::update();
+		}
+	}
+	function _bear_reindex(array $index) {
+		foreach(Bearweb_Site::$db->query('SELECT `url`, `category`, `owner`, `create`, `modify`, `meta` FROM `Sitemap` ORDER BY `modify` DESC') as $r) { // Note: to reduce system load, we will work with raw data
+			$r['meta'] = json_decode($r['meta'], true);
+			foreach ($index as $x) $x->add($r);
+		}
+		foreach ($index as $x) $x->update($r);
 	}
 ?>

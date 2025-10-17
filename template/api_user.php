@@ -1,105 +1,78 @@
 <?php
-	function checkBadPost(string $type, string $postKey): mixed {
-		if (!isset($_POST[$postKey])) {
-			http_response_code(400);
-			return ['Error' => 'Missing POST fields: '.$postKey];
-		}
-		$data = $_POST[$postKey];
-		if ($type == 'ID') {
-			if (!( strlen($data) >= 6 && strlen($data) <= 16 && ctype_alnum(str_replace(['-', '_'], '', $data)) )) {
-				http_response_code(400);
-				return ['Error' => 'Bad format (ID) POST fields: '.$postKey];
-			}
-		} else if ($type == 'Pass') {
-			if (!( strlen(base64_decode($data, true)) == 48 )) {
-				http_response_code(400);
-				return ['Error' => 'Bad format (Password = SHA384 base64) POST fields: '.$postKey];
-			}
-		} else {
-			http_response_code(500);
-			return ['Error' => 'Unknown type: '.$postKey];
-		}
-		return null;
-	}
-	function checkNoUser($user) {
-		if (!$user) {
-			http_response_code(404);
-			return ['Error' => 'No such user'];
-		}
-		return null;
+	if (!isset($_POST['id']) || !Bearweb_User::validID(($_POST['id']))) {
+		http_response_code(400);
+		return ['error' => 'Missing or bad ID'];
 	}
 
-	switch ($BW->site->meta[0]) {
-		case 'My':
-			if ($BW->user->isGuest()) {
-				http_response_code(401);
-				return ['User' => null];
+	switch ($BW->site->meta['task']) {
+		case 'get':
+			$user = Bearweb_User::query($_POST['id']);
+			if (!$user) {
+				http_response_code(404);
+				return ['error' => 'No such user'];
 			}
-			return ['User' => [
-				'ID' => $BW->user->id,
-				'Name' => $BW->user->name,
-				'RegisterTime' => $BW->user->registerTime,
-				'LastActive' => $BW->user->lastActive,
-				'Group' => $BW->user->group,
-				'Avatar' => $BW->user->avatar
-			]];
+			http_response_code(200);
+			return [
+				'id'		=> $user->id,
+				'name'		=> $user->name,
+				'salt'		=> $user->salt, # Anyone can access the salt as pre condition of login, so it is ok to expose it in this API
+				'registerTime'	=> $user->registerTime,
+				'lastActive'	=> $user->lastActive,
+				'group'		=> $user->group
+			] + ($user->id == $_POST['id'] ? [
+				'data'		=> $user->data
+			] : []);
 
-		case 'Logoff':
+		case 'logoff':
 			$BW->session->bindUser('');
 			http_response_code(401);
-			return ['User' => null];
+			return [];
 
-		case 'LoginKey':
-			if ($x = checkBadPost('ID', 'ID')) return $x;
-			$user = Bearweb_User::query($_POST['ID']);
-			if ($x = checkNoUser($user)) return $x;
-			return ['User' => [
-				'ID' => $user->id,
-				'Salt' => $user->salt
-			]];
-
-		case 'Login': # Also for password update
-			if ($x = checkBadPost('ID', 'ID')) return $x;
-			if ($x = checkBadPost('Pass', 'Password')) return $x;
-			if ($x = checkBadPost('Pass', 'PasswordNew')) return $x;
-			$user = Bearweb_User::query($_POST['ID']);
-			if ($x = checkNoUser($user)) return $x;
-			if ( hash('sha384', $BW->session->sKey.$user->password, true) != base64_decode($_POST['Password']) ) {
+		case 'login': # Also for password update
+			if (!isset($_POST['password']) || !Bearweb_User::validPassword(($_POST['password']))) {
+				http_response_code(400);
+				return ['error' => 'Missing or bad Password'];
+			}
+			if (!isset($_POST['passwordnew']) || !Bearweb_User::validPassword(($_POST['passwordnew']))) {
+				http_response_code(400);
+				return ['error' => 'Missing or bad Password'];
+			}
+			$user = Bearweb_User::query($_POST['id']);
+			if (!$user) {
+				http_response_code(404);
+				return ['error' => 'No such user'];
+			}
+			if ( hash('sha384', $BW->session->sKey.$user->password, true) != base64_decode($_POST['password']) ) {
 				http_response_code(401);
 				$BW->session->updateKey();
-				return ['Error' => 'Wrong Password'];
+				return ['error' => 'Wrong Password'];
 			}
-			(new Bearweb_User(
-				id: $user->id,
-				salt: $BW->session->sKey,
-				password: $_POST['PasswordNew'],
-				lastActive: Bearweb_User::TIME_CURRENT
-			))->update();
+			$user->salt = $BW->session->sKey;
+			$user->password = $_POST['passwordnew'];
+			$user->lastActive = Bearweb_User::TIME_CURRENT;
+			$user->update(); // If failed, user password and salt remains unchange and session will not bind to user
 			$BW->session->bindUser($user->id);
 			http_response_code(202);
-			return ['User' => ['ID' => $user->id]];
+			return ['id' => $user->id];
 
-		case 'Register':
-			if ($x = checkBadPost('ID', 'ID')) return $x;
-			if ($x = checkBadPost('Pass', 'Password')) return $x;
-			if (Bearweb_User::query($_POST['ID'])) {
+		case 'register':
+			if (!isset($_POST['password']) || !Bearweb_User::validPassword(($_POST['password']))) {
+				http_response_code(400);
+				return ['error' => 'Missing or bad Password'];
+			}
+			if (Bearweb_User::query($_POST['id'])) {
 				http_response_code(409);
-				return ['Error' => 'User ID already used'];
+				return ['error' => 'User ID already used'];
 			}
 			$user = new Bearweb_User(
-				id: $_POST['ID'],
-				name: $_POST['ID'],
+				id: $_POST['id'],
+				name: $_POST['id'],
 				salt: $BW->session->sKey,
-				password: $_POST['Password'],
-				registerTime: Bearweb_User::TIME_CURRENT,
-				lastActive: Bearweb_User::TIME_CURRENT,
-				group: [],
-				data: [],
-				avatar: null
+				password: $_POST['password']
 			);
 			$user->insert();
 			http_response_code(201);
-			return ['User' => ['ID' => $user->id]];
+			return ['id' => $user->id];
 
 		default:
 			throw new BW_WebServerError('Unknown task in Meta', 500);
