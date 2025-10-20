@@ -98,7 +98,8 @@
 		public static function query(string $url): ?static {
 			if (array_key_exists($url, static::FixedMap)) {
 				$site = static::FixedMap[$url];
-				$site['content'] = $site['content'] ?? static::__file_read($url);
+				if (array_key_exists('content', $site) && $site['content'] === null)
+					$site['content'] = static::__file_read($url);
 				return new static(...$site, url: $url);
 			}
 			return parent::query($url);

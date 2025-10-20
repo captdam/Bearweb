@@ -299,7 +299,7 @@
 		}
 		protected static function __file_read(string $url): string {
 			if (!is_file(static::Dir_Resource.$url))
-				throw new BW_DatabaseServerError('Blob file not existed', 500);
+				throw new BW_DatabaseServerError('Blob file not existed: '.$url, 500);
 			return file_get_contents(static::Dir_Resource.$url);
 		}
 		protected static function __file_delete(string $url): void {
