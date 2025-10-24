@@ -194,7 +194,6 @@
 		 * @throws BW_DatabaseServerError	Cannot read sitemap DB
 		*/
 		public static function query(string $url): ?static {
-			$site = null;
 			try {
 				$sql = static::$db->prepare('SELECT * FROM `Sitemap` WHERE `url` = ?');
 				$sql->bindValue(	1,	$url,	PDO::PARAM_STR	);
@@ -225,7 +224,7 @@
 		/** Insert this resource into sitemap db.
 		 * @throws BW_DatabaseServerError Fail to insert into sitemap db
 		 */
-		public function insert(): void { try { static::$db->beginTransaction();
+		public function insert(): void { try {
 			$sql = static::$db->prepare('INSERT INTO `Sitemap` (
 				`url`, `category`, `template`,
 				`owner`, `create`, `modify`, `meta`,
@@ -240,21 +239,21 @@
 			$sql->bindValue(7,	json_encode((object)$this->meta),	PDO::PARAM_STR	);
 			$sql->bindValue(9,	json_encode((object)$this->aux),	PDO::PARAM_STR	);
 			if (strlen($this->content) >= static::Size_FileBlob) {
-				static::__file_write($this->url, $this->content);
+				static::__file_write($this->url, $this->content); // If file write failed, throw error and db remains unchanged
 				$sql->bindValue(8, null, PDO::PARAM_NULL);
 			} else {
-				static::__file_delete($this->url, $this->content);
+				static::__file_delete($this->url);
 				$sql->bindValue(8, $this->content, PDO::PARAM_STR);
 			}
 			$sql->execute();
 			$sql->closeCursor();
-		static::$db->commit(); } catch (Exception $e) { static::$db->rollBack(); throw new BW_DatabaseServerError('Cannot insert into sitemap database: '.$e->getMessage(), 500); } }
+		} catch (Exception $e) { throw new BW_DatabaseServerError('Cannot insert into sitemap database: '.$e->getMessage(), 500); } }
 
 		/** Update this resource in sitemap db. 
 		 * It is not necessary to query this resource, create a dummy resource with url and fields to modify (leave other field null to keep orginal data). 
 		 * @throws BW_DatabaseServerError Fail to update sitemap db
 		 */
-		public function update(): void { try { static::$db->beginTransaction();
+		public function update(): void { try {
 			$sql = static::$db->prepare('UPDATE `Sitemap` SET
 				`category` = ?,	`template` = ?,
 				`owner` = ?,	`create` = ?,	`modify` = ?,	`meta` = ?,
@@ -269,33 +268,34 @@
 			$sql->bindValue(8,	json_encode((object)$this->aux),	PDO::PARAM_STR	);
 			$sql->bindValue(9,	$this->url,				PDO::PARAM_STR	);
 			if (strlen($this->content) >= static::Size_FileBlob) {
-				static::__file_write($this->url, $this->content);
+				static::__file_write($this->url, $this->content); // If file write failed, throw error and db remains unchanged
 				$sql->bindValue(7, null, PDO::PARAM_NULL);
 			} else {
-				static::__file_delete($this->url, $this->content);
+				static::__file_delete($this->url);
 				$sql->bindValue(7, $this->content, PDO::PARAM_STR);
 			}
 			$sql->execute();
 			$sql->closeCursor();
-		static::$db->commit(); } catch (Exception $e) { static::$db->rollBack(); throw new BW_DatabaseServerError('Cannot update sitemap database: '.$e->getMessage(), 500); } }
+		} catch (Exception $e) { throw new BW_DatabaseServerError('Cannot update sitemap database: '.$e->getMessage(), 500); } }
 
 		/** Delete this resource. 
 		 * It is not necessary to query this resource, create a dummy resource with url to specify resource in sitemap db. 
 		 * @throws BW_DatabaseServerError Fail to delete from sitemap db
 		 */
-		public function delete(): void { try { static::$db->beginTransaction();
+		public function delete(): void { try {
 			$sql = static::$db->prepare('DELETE FROM `Sitemap` WHERE `URL` = ?');
 			$sql->bindValue(1,	$this->url,	PDO::PARAM_STR	);
-			static::__file_delete($this->url, $this->content);
+			static::__file_delete($this->url);
 			$sql->execute();
 			$sql->closeCursor();
-		static::$db->commit(); } catch (Exception $e) { static::$db->rollBack(); throw new BW_DatabaseServerError('Cannot delete from sitemap database: '.$e->getMessage(), 500); } }
+		} catch (Exception $e) { throw new BW_DatabaseServerError('Cannot delete blob file from sitemap database: '.$e->getMessage(), 500); } }
 
 		protected static function __file_write(string $url, string $content): void {
 			$dir = dirname(static::Dir_Resource.$url);
 			if (!is_dir($dir))
 				mkdir($dir, 0755, true);
-			file_put_contents(static::Dir_Resource.$url, $content);
+			if (!file_put_contents(static::Dir_Resource.$url, $content))
+				throw new BW_DatabaseServerError('Cannot write to blob file: '.$url, 500);
 		}
 		protected static function __file_read(string $url): string {
 			if (!is_file(static::Dir_Resource.$url))
@@ -304,7 +304,7 @@
 		}
 		protected static function __file_delete(string $url): void {
 			if (is_file(static::Dir_Resource.$url))
-				unlink(static::Dir_Resource.$url);
+				unlink(static::Dir_Resource.$url); // Should success, just forget about it for now, deal with it next time when overwrite
 		}
 	}
 
