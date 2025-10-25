@@ -32,8 +32,8 @@ class BearAPI {
 	}
 }
 class BearAPI_Resource extends BearAPI {
-	static async get(url, encode) { // Get (read) a resource from server, encode = b64 for base64 encoded data (binary)
-		const res = await this.xhr('/api/resource/get?encode=' + encode, {url: url});
+	static async get(url, encode, progress) { // Get (read) a resource from server, encode = b64 for base64 encoded data (binary)
+		const res = await this.xhr('/api/resource/get?encode=' + encode, {url: url}, progress);
 		if (res.status != 200) this.throwError(res.status, res.json.error);
 		res.json.meta = res.json.meta == '[]' ? '{}' : res.json.meta;
 		res.json.aux = res.json.aux == '[]' ? '{}' : res.json.aux;
@@ -44,8 +44,8 @@ class BearAPI_Resource extends BearAPI {
 		if (res.status != 201) this.throwError(res.status, res.json.error);
 		return res.json;
 	}
-	static async update(data, encode) { // Update a resource, data = {url: "url", category: "category"...}, encode = b64 for base64 encoded data (binary)
-		const res = await this.xhr('/api/resource/update?encode=' + encode, data);
+	static async update(data, encode, progress) { // Update a resource, data = {url: "url", category: "category"...}, encode = b64 for base64 encoded data (binary)
+		const res = await this.xhr('/api/resource/update?encode=' + encode, data, progress);
 		if (res.status != 202) this.throwError(res.status, res.json.error);
 		return res.json;
 	}
