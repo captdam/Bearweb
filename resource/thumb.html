@@ -1,0 +1,248 @@
+<div class="main_title"><h1>File picker</h1></div>
+<div id="localfile" class="sidebyside">
+	<img id="localfile_content" />
+	<div>
+		<h2>URL prefix</h2><input id="localfile_url" placeholder="parent/self" required />
+		<h2>Category</h2><select id="localfile_category" required></select>
+		<h2>Title</h2><input id="localfile_title" placeholder="Name of Image" />
+		<h2>Keywords</h2><input id="localfile_keywords" placeholder="keyword1, keyword2, keyword3" />
+		<h2>Description</h2><input id="localfile_description" placeholder="Some description about this image." />
+		<div class="layflat">
+			<button id="localfile_btn">Open media file</button>
+			<button id="localfile_upload">Upload</button>
+		</div>
+		<div style="display:none">
+			<input id="localfile_picker" type="file" accept="image/*" />
+		</div>
+		<p>Use this page to upload a photo with its thumbnail and metadata in JPEG. This works well for color photo (like scenic); but sucks on simple geometries (like engineering drawing), you should use PNG with index color or SVG for them.</p>
+		<p>play around the dimension and quality to see the size and rendered quality. Slightly worse quality can offen save a great deal of file size, especially for thumbnail which should be download fast.</p>
+	</div>
+</div>
+
+<div class="main_title"><h1 id="thumb_title">Thumbnail</h1></div>
+<div id="thumb_config">
+	<label>Width</label>
+	<input id="thumb_config_width" type="number" min="0" max="0" value="0" />
+	<label>Height</label>
+	<input id="thumb_config_height" type="number" min="0" max="0" value="0" />
+	<label>Quality</label>
+	<input id="thumb_config_quality" type="number" min="0" max="100" value="40" />
+	<label>Size</label>
+	<input id="thumb_config_size" disabled value="0" />
+	<label>State</label>
+	<input id="thumb_config_state" disabled value="-" />
+</div>
+<div id="thumb" class="main_wide">
+	<img id="thumb_img" />
+</div>
+
+<div class="main_title"><h1 id="hd_title">HD</h1></div>
+<div id="hd_config">
+	<label>Width</label>
+	<input id="hd_config_width" type="number" min="0" max="0" value="0" />
+	<label>Height</label>
+	<input id="hd_config_height" type="number" min="0" max="0" value="0" />
+	<label>Quality</label>
+	<input id="hd_config_quality" type="number" min="0" max="100" value="92" />
+	<label>Size</label>
+	<input id="hd_config_size" disabled value="0" />
+	<label>State</label>
+	<input id="hd_config_state" disabled value="-" />
+</div>
+<div id="hd" class="main_wide">
+	<img id="hd_img" />
+</div>
+
+<script>
+	// Allowed category
+	(() => {
+		let raw = _('meta[name=keywords]').content.split(/\, */);
+		let set = []
+		while (raw.length > 0) {
+			set.push({category: raw.shift(), color: raw.shift()});
+		}
+		return set;
+	})().map(x => {
+		_('#localfile_category').append(dom({
+			_: 'option',
+			value: x.category,
+			textContent: x.category,
+			style: 'background:'+x.color
+		}));
+	});
+
+	// File picker
+	const localfile = file => {
+		_('#localfile_content').src = URL.createObjectURL(file);
+	};
+	_('#localfile_btn').onclick = event => { event.preventDefault(); _('#localfile_picker').click(); };
+	_('#localfile_btn').ondragover = event => { event.preventDefault(); };
+	_('#localfile_btn').ondrop = event => { event.preventDefault(); localfile(event.dataTransfer.items[0].getAsFile()); }
+	_('#localfile_content').onclick = event => { event.preventDefault(); _('#localfile_picker').click(); };
+	_('#localfile_content').ondragover = event => { event.preventDefault(); };
+	_('#localfile_content').ondrop = event => { event.preventDefault(); localfile(event.dataTransfer.items[0].getAsFile()); }
+	_('#localfile_picker').onchange = event => { event.preventDefault(); localfile(event.target.files[0]); }
+	
+	// Source file loaded
+	_('#localfile_content').onload = event => {
+		const width = event.target.naturalWidth;
+		const height = event.target.naturalHeight;
+		__('#thumb_config_width').max = width;
+		_('#thumb_config_height').max = height;
+		_('#thumb_config_width').value = Math.round(Math.min(width / 4, 512));
+		_('#thumb_config_width').dispatchEvent(new Event('change'));
+		renderThumb();
+		_('#hd_config_width').max = width;
+		_('#hd_config_height').max = height;
+		_('#hd_config_width').value = width;
+		_('#hd_config_width').dispatchEvent(new Event('change'));
+		renderHd();
+	};
+
+	// Render
+	const render = (dom_dest, dom_src, width, height, quality, dom_size) => {
+		const canvas = dom({_: 'canvas', width: width, height: height});
+		canvas.getContext('2d').drawImage(dom_src, 0, 0, dom_src.naturalWidth, dom_src.naturalHeight, 0, 0, width, height);
+		canvas.toBlob(blob => {
+			dom_dest.src = URL.createObjectURL(blob);
+			dom_dest.width = width;
+			dom_dest.height = height;
+			dom_size.value = blob.size.toLocaleString();
+		}, 'image/jpeg', quality / 100);
+	};
+	const renderThumb = () => { render(_('#thumb_img'), _('#localfile_content'), _('#thumb_config_width').value, _('#thumb_config_height').value, _('#thumb_config_quality').value, _('#thumb_config_size')); };
+	const renderHd = () => { render(_('#hd_img'), _('#localfile_content'), _('#hd_config_width').value, _('#hd_config_height').value, _('#hd_config_quality').value, _('#hd_config_size')); };
+	_('#thumb_config_width').onchange = event => { _('#thumb_config_height').value = Math.round(event.target.value / _('#localfile_content').naturalWidth * _('#localfile_content').naturalHeight); renderThumb(); };
+	_('#thumb_config_height').onchange = event => { _('#thumb_config_width').value = Math.round(event.target.value / _('#localfile_content').naturalHeight * _('#localfile_content').naturalWidth); renderThumb(); };
+	_('#thumb_config_quality').onchange = event => { renderThumb(); };
+	_('#hd_config_width').onchange = event => { _('#hd_config_height').value = Math.round(event.target.value / _('#localfile_content').naturalWidth * _('#localfile_content').naturalHeight); renderHd(); };
+	_('#hd_config_height').onchange = event => { _('#hd_config_width').value = Math.round(event.target.value / _('#localfile_content').naturalHeight * _('#localfile_content').naturalWidth); renderHd(); };
+	_('#hd_config_quality').onchange = event => { renderHd(); };
+
+	// Upload
+	_('#localfile_url').onchange = event => { _('#thumb_title').textContent = event.target.value + '.thumb.jpeg'; _('#hd_title').textContent = event.target.value + '.jpeg'; };
+	_('#localfile_upload').onclick = async event => {
+		_('#hd_config_state').value = 'Waiting...';
+		_('#thumb_config_state').value = 'Waiting...';
+
+		const url_html = _('#localfile_url').value + '.html';
+		const url_hd = _('#localfile_url').value + '.jpg';
+		const url_thumb = _('#localfile_url').value + '.thumb.jpg';
+		
+		let rollback = [];
+		const rollbackResources = () => {
+			console.log(rollback);
+			rollback.map(async url => {
+				await BearAPI_Resource.delete(url);
+				dialog_warning('Rollback', 'Resource '+url_html+' deleted!');
+			});
+		}
+
+		const getBase64 = blob => { return new Promise(res => {
+			const reader = new FileReader();
+			reader.onload = () => { res(reader.result.split(',', 2)[1]); };
+			reader.readAsDataURL(blob);
+		}); };
+
+		try {
+			await BearAPI_Resource.create(url_html);
+			dialog_success('Page', 'Page '+url_html+' created!');
+			rollback.push(url_html);
+		} catch (e) {
+			dialog_error(e.name, e.message);
+			rollbackResources();
+			return;
+		}
+
+		try {
+			await BearAPI_Resource.create(url_hd);
+			dialog_success('HD Image', 'File '+url_hd+' created!');
+			rollback.push(url_hd);
+		} catch (e) {
+			dialog_error(e.name, e.message);
+			rollbackResources();
+			return;
+		}
+
+		try {
+			await BearAPI_Resource.create(url_thumb);
+			dialog_success('Thumbnail', 'File '+url_thumb+' created!');
+			rollback.push(url_thumb);
+		} catch (e) {
+			dialog_error(e.name, e.message);
+			rollbackResources();
+			return;
+		}
+
+		try {
+			await BearAPI_Resource.update({
+				url:		url_hd,
+				category:	'Content',
+				meta:		'{}',
+				aux:		'{"mime":"image/jpeg"}',
+				content:	await getBase64(await (await fetch(_('#hd_img').src)).blob())
+			}, 'b64', event => {
+				if (event.lengthComputable)
+					_('#hd_config_state').value = event.loaded < event.total ? 'Uploading ' + Math.floor(event.loaded/event.total*100) + '% - ' + event.loaded + ' / ' + event.total : 'Upload finished, waiting server processing';
+			});
+			dialog_success('HD Image', 'File '+url_hd+' created!');
+		} catch (e) {
+			dialog_error(e.name, e.message);
+			rollbackResources();
+			return;
+		}
+
+		try {
+			await BearAPI_Resource.update({
+				url:		url_thumb,
+				category:	'Content',
+				meta:		'{}',
+				aux:		'{"mime":"image/jpeg"}',
+				content:	await getBase64(await (await fetch(_('#thumb_img').src)).blob())
+			}, 'b64', event => {
+				if (event.lengthComputable)
+					_('#thumb_config_state').value = event.loaded < event.total ? 'Uploading ' + Math.floor(event.loaded/event.total*100) + '% - ' + event.loaded + ' / ' + event.total : 'Upload finished, waiting server processing';
+			});
+			dialog_success('Thumbnail', 'File '+url_thumb+' created!');
+		} catch (e) {
+			dialog_error(e.name, e.message);
+			rollbackResources();
+			return;
+		}
+
+		try { // Update page at the end, so an "index" requested by others won't index this page and the images before this finished
+			await BearAPI_Resource.update({
+				url:		url_html,
+				category:	_('#localfile_category').value,
+				meta:		JSON.stringify({
+					title:		_('#localfile_title').value,
+					description:	_('#localfile_description').value,
+					keywords:	_('#localfile_keywords').value,
+					thumb:		url_thumb,
+					hd:		url_hd,
+					width:		_('#localfile_content').naturalWidth,
+					height:		_('#localfile_content').naturalHeight
+
+				}),
+				aux:		JSON.stringify({}),
+				content:	''
+			});
+			dialog_success('Page', 'Page '+url_html+' created!');
+		} catch (e) {
+			dialog_error(e.name, e.message);
+			rollbackResources();
+			return;
+		}
+
+		await BearAPI_Resource.reindex();
+	};
+
+</script>
+<style>
+	input { min-width: 20ch; }
+
+	#localfile_content { width: calc(100% - 5px); height: 100%; max-height: 100%; object-fit: contain; border: solid 2px #000; }
+	#localfile input,#localfile select { width: 100%; }
+	#thumb,#hd { overflow: auto; text-align: center; height: 40vh; }
+
+</style>

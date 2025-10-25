@@ -104,6 +104,12 @@
 				'robots' => 'noindex, nofollow',
 				'keywords' => 'Content, grey, Name1, color1, Name2, color2' // Add yours ------------------------------------------------
 			], 'content' => null],
+			'thumb.html' => ['category' => 'CMD', 'template' => ['page-en','direct'], 'meta' => [
+				'title' => 'Thumbnail uploader',
+				'access' => [1],
+				'robots' => 'noindex, nofollow',
+				'keywords' => 'Name1, color1, Name2, color2' // Add yours ------------------------------------------------
+			], 'content' => null],
 		];
 
 		public static function init(): void {
