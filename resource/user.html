@@ -1,0 +1,58 @@
+<div id="header" class="main_title">
+	<h1>Hello...</h1>
+</div>
+<div id="info" class="main_content"><form onsubmit="logoff(event)">
+	<div><label for="info_id">ID</label><input type="text" id="info_id" name="ID" readonly></div>
+	<div><label for="info_name">Name</label><input type="text" id="info_name" readonly></div>
+	<div><label for="info_registerTime">Member since</label><input type="text" id="info_registerTime" readonly></div>
+	<div><label for="info_lastActive">Last Active</label><input type="text" id="info_lastActive" readonly></div>
+	<div><label>Group</label><span id="info_group"></span></div>
+	<div class="layflat"><button type="submit">Logoff</button></div>
+</form></div>
+<div id="login_and_register" style="grid-template-columns: 1fr 1fr;" class="sidebyside">
+	<form id="form_login" onsubmit="login(event)">
+		<h2>Login</h2>
+		<div><label>ID</label><input id="login_id" name="id" type="text" required></div>
+		<div><label>Password</label><input id="login_password" name="password" type="password" required></div>
+		<div class="layflat"><button type="submit">Login</button></div>
+	</form>
+	<form id="form_register" onsubmit="register(event)">
+		<h2>Register</h2>
+		<div><label>ID</label><input id="register_id" name="ID" type="text" required=""></div>
+		<div><label>Password</label><input id="register_password" name="Password" type="password" required=""></div>
+		<div><label>Repeat password</label><input id="register_passwordCheck" name="PasswordCheck" type="password" required=""></div>
+		<div class="layflat"><button type="submit">Register</button></div>
+	</form>
+</div>
+<script>
+	'use strict';
+	(async () => {if (_('html').dataset.suser) {
+		try {
+			const user = await BearAPI_User.get(_('html').dataset.suser);
+			_('#header h1').textContent = 'Hello ' + user.id;
+			_('#info_id').value = user.id;
+			_('#info_name').value = user.name;
+			_('#info_registerTime').value = timestamp2str(user.registerTime);
+			_('#info_lastActive').value = timestamp2str(user.lastActive);
+			_('#info_group').textContent = user.group.join(', ');
+			_('#login_and_register').style.display = 'none';
+		dialog_success('OK', 'User info loaded') } catch (e) { dialog_error(e.name, e.message); }
+	} else {
+		_('#header h1').textContent = 'Login in / Register';
+		_('#info').style.display = 'none';
+	}})();
+
+	const logoff = async event => { event.preventDefault(); try {
+		const res = await BearAPI_User.logoff();
+	dialog_success('OK', 'Logoff success'); setTimeout(() => location.reload(), 1000); } catch (e) { dialog_error(e.name, e.message); } };
+
+	const login = async event => { event.preventDefault(); try {
+		const res = await BearAPI_User.login(_('#login_id').value, _('#login_password').value);
+	dialog_success('OK', 'Login success'); setTimeout(() => location.reload(), 1000); } catch (e) { dialog_error(e.name, e.message); } };
+
+	const register = async event => { event.preventDefault(); try {
+		if (_('#register_password').value != _('#register_passwordCheck').value)
+			throw new Error('Register failed: Repeat password is different');
+		const res = await BearAPI_User.register(_('#register_id').value, _('#register_password').value);
+	dialog_success('OK', 'Register success'); setTimeout(() => location.reload(), 1000); } catch (e) { dialog_error(e.name, e.message); } };
+</script>

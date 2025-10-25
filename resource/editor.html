@@ -1,0 +1,266 @@
+<div id="header" class="main_title">
+	<h1>Moderator workspace</h1>
+</div>
+<div class="main_content sidebyside" style="grid-template-columns: 400px 1fr">
+	<div>
+		<div>
+			<h2>List</h2>
+			<div class="layflat">
+				<input id="list_filter" placeholder="Type keywords to filter result" style="width: 100%" />
+				<button id="list_reload">Reload</button>
+			</div>
+		</div>
+		<form id="form_create">
+			<h2>Create</h2>
+			<div class="layflat">
+				<input type="text" id="create_url" name="url" style="width: 100%" />
+				<button type="submit">Create</button>
+			</div>
+		</form>
+		<form id="form_modify">
+			<h2>Modify (File only)</h2>
+			<embed type="text/plain" src="data:,Preview" style="width: 395px; height: 395px; object-fit: contain; border: solid 2px #000;" id="modify_content" />
+			<div><label for="modify_url">URL</label><input type="text" id="modify_url" name="url" readonly></div>
+			<div><label for="modify_category">Category</label><select name="category" id="modify_category" required></select></div>
+			<div><label for="modify_meta">Meta </label><textarea type="text" name="meta" id="modify_meta"></textarea></div>
+			<div><label for="modify_aux">Aux </label><textarea type="text" name="aux" id="modify_aux"></textarea></div>
+			<div class="layflat">
+				<button id="form_modify_localfile">Open file</button>
+				<button id="form_modify_submit" type="submit">Modify</button>
+				<button id="form_modify_delete">Delete</button>
+				<button id="form_modify_reindex">Reindex</button>
+			</div>
+		</form>
+		<hr /><div id="modify_meta_description" class="info"></div>
+		<hr /><div id="modify_aux_description" class="info"></div>
+		<input type="file" id="form_modify_localfilepicker" style="display:none" />
+	</div>
+	<div id="list" class="tablewrap" style="max-height:100vh;overflow-y:auto;"><table>
+		<thead><tr>
+			<th scope="col">Robots</th>
+			<th scope="col">Category</th>
+			<th scope="col">Title</th>
+			<th scope="col">URL</th>
+			<th scope="col">Owner</th>
+			<th scope="col">Modify</th>
+			<th scope="col">Create</th>
+		</tr></thead>
+		<tbody></tbody>
+	</table></div>
+</div>
+<script>
+	// Allowed category
+	const categorySet = (() => {
+		let raw = _('meta[name=keywords]').content.split(/\, */);
+		let set = []
+		while (raw.length > 0) {
+			set.push({category: raw.shift(), color: raw.shift()});
+		}
+		return set;
+	})();
+	categorySet.map(x => { _('#modify_category').append(dom({_:'option', value: x.category, textContent: x.category, style: 'background:'+x.color})); });
+	
+
+	// Resource list
+	const form_modify_load = async url => { try {
+		const resource = await BearAPI_Resource.get(url, 'b64');
+		_('#modify_url').value = resource.url;
+		_('#modify_category').value = resource.category;
+		_('#modify_meta').value = JSON.stringify(resource.meta, null, ' ');
+		if (_('#modify_meta').value == '[]') _('#modify_meta').value = '{}';
+		_('#modify_meta').dispatchEvent(new Event('change'));
+		_('#modify_aux').value = JSON.stringify(resource.aux, null, ' ');
+		if (_('#modify_aux').value == '[]') _('#modify_aux').value = '{}';
+		_('#modify_aux').dispatchEvent(new Event('change'));
+		_('#modify_content').type = resource.aux.mime ?? 'text/plain';
+		_('#modify_content').src = 'data:'+_('#modify_content').type+';base64,'+resource.content;
+	dialog_success('OK', 'Read resource success') } catch (e) { dialog_error(e.name, e.message); } };
+	_('#list_reload').onclick = async event => { try {
+		let list = [];
+		const xhr = await fetch('/u/'+_('html').dataset.suser+'/resource.private', {cache: 'reload'});
+		if (xhr.status != 200) throw new Error('Cannot load user resource list');
+		(new DOMParser()).parseFromString(await xhr.text(), 'text/xml').firstChild.childNodes.forEach(node => {
+			list.push({
+				url: node.getElementsByTagName('url')[0].textContent,
+				title: node.getElementsByTagName('title')[0].textContent,
+				category: node.getElementsByTagName('category')[0].textContent,
+				owner: node.getElementsByTagName('owner')[0].textContent,
+				create: timestamp2str(node.getElementsByTagName('create')[0].textContent),
+				modify: timestamp2str(node.getElementsByTagName('modify')[0].textContent),
+				robots: node.getElementsByTagName('robots')[0].textContent
+			});
+		});
+		list.sort( (a, b) => a.url.localeCompare(b.url) < 0 );
+		let tbody = [];
+		list.forEach(res => {
+			tbody.push(dom({_: 'tr', children: [
+				{_: 'td', textContent: res.robots, style: 'background:' + (c => {
+					if (c == '') return 'lightgreen';
+					if (['r301', 'r302', 'robots'].includes(c)) return 'lightgray';
+					if (c == 'access') return 'pink';
+					return 'red';
+				})(res.robots)},
+				{_: 'td', textContent: res.category, style: 'background:' + (c => {
+					for (let i = 0; i < categorySet.length; i++) {
+						if (c == categorySet[i]['category'])
+							return categorySet[i]['color'];
+					}
+					return 'none';
+				})(res.category)},
+				{_: 'td', textContent: res.title, children: [
+					{_: 'a', textContent: '<', title: 'Load in modifier', onclick: async () => { await form_modify_load(res.url) }},
+					{_: 'a', textContent: '↗', title: 'Open in new tab', href: '/'+res.url, target: '_blank'}
+				]},
+				{_: 'td', textContent: res.url},
+				{_: 'td', textContent: res.owner},
+				{_: 'td', textContent: res.modify},
+				{_: 'td', textContent: res.create}
+			]}));
+		});
+		_('#list tbody').replaceChildren(...tbody);
+		_('#list_filter').dispatchEvent(new Event('keyup'));
+	dialog_success(200, 'List reloaded'); } catch (e) { dialog_error(0, 'List failed: ' + e); throw e; } };
+	_('#list_reload').click();
+	_('#list_filter').onkeyup = event => filter(__('#list tbody tr'), event.target.value);
+	_('#list_filter').dispatchEvent(new Event('keyup'));
+
+	// Create new resource
+	_('#form_create').onsubmit = async event => { event.preventDefault(); try {
+		const resource = await BearAPI_Resource.create(_('#create_url').value);
+	dialog_success('OK', 'Create resource success: URL = '+resource.url) } catch (e) { dialog_error(e.name, e.message); } };
+
+	// Load local file
+	const form_modify_file = file => {
+		const reader = new FileReader();
+		reader.onloadend = x => {
+			const mime = x.target.result.substring(5, x.target.result.indexOf(';'));
+			_('#modify_content').type = mime;
+			_('#modify_content').src = x.target.result;
+			let aux = JSON.parse(_('#modify_aux').value);
+			aux.mime = mime;
+			_('#modify_aux').value = JSON.stringify(aux, null, ' '); _('#modify_aux').dispatchEvent(new Event('change'));
+		};
+		reader.readAsDataURL(file);
+	};
+	_('#form_modify_localfile').onclick = event => { event.preventDefault(); _('#form_modify_localfilepicker').click(); };
+	_('#form_modify_localfilepicker').onchange = event => { event.preventDefault(); form_modify_file(event.target.files[0]); }
+	_('#modify_content').ondragover = event => { event.preventDefault(); };
+	_('#modify_content').ondrop = event => { event.preventDefault(); form_modify_file(event.dataTransfer.items[0].getAsFile()); }
+
+	// Form JSON inputs
+	const form_modify_meta_descript = (dom_text, dom_description) => {
+		const colorOK = 'lightgreen', colorBad = 'pink';
+		const styleOK = 'background:'+colorOK, styleBad = 'background:'+colorBad;
+		dom_text.style.background = colorBad;
+		dom_description.replaceChildren(dom({_: 'div', style: styleBad, textContent: 'Bad meta JSON'}));
+		const meta = JSON.parse(dom_text.value);
+		let d = [], ok = true;
+		dom_description.replaceChildren(dom({_: 'div', style: styleOK, textContent: 'Meta JSON format OK'}));
+		if (Object.hasOwn(meta, 'title')) {
+			dom_description.append(dom({_: 'div', style: styleOK, textContent: 'Title: ' + meta.title}));
+		}
+		if (Object.hasOwn(meta, 'keywords')) {
+			dom_description.append(dom({_: 'div', style: styleOK, textContent: meta.keywords.split(/\, */).length + ' keywords: ' + meta.keywords}));
+		}
+		if (Object.hasOwn(meta, 'description')) {
+			dom_description.append(dom({_: 'div', style: styleOK, textContent: 'Description: ' + meta.description}));
+		}
+		if (Object.hasOwn(meta, 'r301')) {
+			dom_description.append(dom({_: 'div', style: styleOK, textContent: 'R301 Moved Permanently: ' + meta.r301}));
+		}
+		if (Object.hasOwn(meta, 'r302')) {
+			dom_description.append(dom({_: 'div', style: styleOK, textContent: 'R302 Moved Temporarily: ' + meta.r302}));
+		}
+		if (Object.hasOwn(meta, 'robots')) {
+			dom_description.append(dom({_: 'div', style: styleOK, textContent: 'SEO info: ' + meta.robots}));
+		}
+		if (Object.hasOwn(meta, 'access')) {
+			let user = [];
+			meta.access.map(u => user.push(u.textContent));
+			dom_description.append(dom({_: 'div', style: 'background:orange', textContent: 'Access controlled: ' + (user.length ? (user.length + ' users/groups: ' + user.join(', ')) : 'NOBODY EXCEPT YOU AND ADMIN')}));
+		}
+		if (Object.hasOwn(meta, 'lang')) {
+			dom_description.append(dom({_: 'div', style: styleOK, textContent: 'Language: ' + meta.lang}));
+		}
+		if (Object.hasOwn(meta, 'bgimg')) {
+			dom_description.append(dom({_: 'div', style: styleOK, textContent: 'Background image: ' + meta.bgimg}));
+		}
+		dom_text.style.background = ok ? colorOK : colorBad;
+	};
+	_('#modify_meta').onchange = event => { form_modify_meta_descript(event.target, _('#modify_meta_description')); };
+	_('#modify_meta').onkeyup = event => { form_modify_meta_descript(event.target, _('#modify_meta_description')); };
+	const form_modify_aux_descript = (dom_text, dom_description) => {
+		const colorOK = 'lightgreen', colorBad = 'pink';
+		const styleOK = 'background:'+colorOK, styleBad = 'background:'+colorBad;
+		dom_text.style.background = colorBad;
+		dom_description.replaceChildren(dom({_: 'div', style: styleBad, textContent: 'Bad meta JSON'}));
+		const meta = JSON.parse(dom_text.value);
+		let d = [], ok = true;
+		dom_description.replaceChildren(dom({_: 'div', style: styleOK, textContent: 'Meta JSON format OK'}));
+		if (Object.hasOwn(meta, 'mime')) {
+			dom_description.append(dom({_: 'div', style: styleOK, textContent: 'MIME: ' + meta.mime}));
+		}
+		if (Object.hasOwn(meta, 'lang-zh')) {
+			dom_description.append(dom({_: 'div', style: styleOK, textContent: 'Language ZH: /' + meta['lang-zh']}));
+		}
+		if (Object.hasOwn(meta, 'lang-en')) {
+			dom_description.append(dom({_: 'div', style: styleOK, textContent: 'Language EN: /' + meta['lang-en']}));
+		}
+		dom_text.style.background = ok ? colorOK : colorBad;
+	};
+	_('#modify_aux').onchange = event => { form_modify_aux_descript(event.target, _('#modify_aux_description')); };
+	_('#modify_aux').onkeyup = event => { form_modify_aux_descript(event.target, _('#modify_aux_description')); };
+
+	// Update resource
+	_('#form_modify').onsubmit = async event => { event.preventDefault(); try {
+		_('#form_modify_submit').disabled = true;
+		_('#form_modify_submit').textContent = 'Uploading';
+		const resource = await BearAPI_Resource.update({
+			url:		_('#modify_url').value,
+			category:	_('#modify_category').value,
+			meta:		_('#modify_meta').value,
+			aux:		_('#modify_aux').value,
+			content:	_('#modify_content').src.split(',', 2)[1]
+		}, 'b64');
+		_('#form_modify_submit').disabled = false;
+		_('#form_modify_submit').textContent = 'Modify';
+	dialog_success('OK', 'Update resource success') } catch (e) { _('#form_modify_submit').disabled = false; dialog_error(e.name, e.message); } };
+
+	// Reindex
+	_('#form_modify_reindex').onclick = async event => { event.preventDefault(); try {
+		const resource = await BearAPI_Resource.reindex();
+		_('#list_reload').click();
+	dialog_success('OK', 'Reindex resource success!') } catch (e) { dialog_error(e.name, e.message); } };
+
+	// Delete
+	const dialog_delete = dom({_: 'form', classList: 'bearform', children: [
+		{_: 'h2', textContent: 'Delete resource'},
+		{_: 'p', textContent: 'To confirm, type resource URL below:'},
+		{_: 'div', children: [
+			{_: 'label', for: 'dialog_delete_want', textContent: 'Confirm'},
+			{_: 'code', id: 'dialog_delete_want', textContent: ''}
+		]},
+		{_: 'div', children: [
+			{_: 'label', for: 'dialog_delete_url', textContent: 'Repeat'},
+			{_: 'input', id: 'dialog_delete_url', onchange: event => { _('#dialog_delete_confirm').disabled = _('#dialog_delete_want').textContent != _('#dialog_delete_url').value; }, onkeyup: event => { event.target.dispatchEvent(new Event('change')); } }
+		]},
+		{_: 'div', classList: 'layflat', children: [
+			{_: 'button', style: 'background:pink', id: 'dialog_delete_confirm', textContent: 'Delete', onclick: async event => { event.preventDefault();
+				try {
+					const resource = await BearAPI_Resource.delete(_('#dialog_delete_url').value);
+					dialog_success('OK', 'Resource delete');
+					modal();
+				} catch (e) {
+					dialog_error(e.name, e.message);
+				}
+			}},
+			{_: 'button', style: 'background:lightgreen', textContent: 'Cancel', onclick: event => { event.preventDefault(); modal(); }}
+		]}
+	]});
+	_('#form_modify_delete').onclick = event => { event.preventDefault();
+		_('#dialog_delete_want', dialog_delete).textContent = _('#modify_url').value;
+		_('#dialog_delete_url', dialog_delete).value = '';
+		_('#dialog_delete_url', dialog_delete).dispatchEvent(new Event('change'));
+		modal(dialog_delete);
+	};
+</script>
