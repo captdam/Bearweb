@@ -1,5 +1,5 @@
 <div class="main_title"><h1>File picker</h1></div>
-<div id="localfile" class="sidebyside">
+<div id="localfile" class="sidebyside" style="grid-template-columns: 1fr 2fr;">
 	<img id="localfile_content" />
 	<div>
 		<h2>URL prefix</h2><input id="localfile_url" placeholder="parent/self" required />
@@ -220,8 +220,7 @@
 					keywords:	_('#localfile_keywords').value,
 					thumb:		url_thumb,
 					hd:		url_hd,
-					width:		_('#localfile_content').naturalWidth,
-					height:		_('#localfile_content').naturalHeight
+					ratio:		_('#localfile_content').naturalWidth / _('#localfile_content').naturalHeight
 
 				}),
 				aux:		JSON.stringify({}),
@@ -239,7 +238,7 @@
 
 </script>
 <style>
-	input { min-width: 20ch; }
+	input { min-width: 10ch; }
 
 	#localfile_content { width: calc(100% - 5px); height: 100%; max-height: 100%; object-fit: contain; border: solid 2px #000; }
 	#localfile input,#localfile select { width: 100%; }

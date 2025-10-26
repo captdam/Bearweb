@@ -665,9 +665,10 @@
 			$title		= htmlspecialchars($r['meta']['title'] ?? $r['url'], ENT_COMPAT);
 			$description	= htmlspecialchars($r['meta']['description'] ?? '', ENT_COMPAT);
 			$keywords	= htmlspecialchars($r['meta']['keywords'] ?? '', ENT_COMPAT);
-			$hd		= htmlspecialchars($r['meta']['hd'] ?? $r['url'], ENT_COMPAT);
-			$ratio		= ($r['meta']['width'] ?? 512) / ($r['meta']['height'] ?? 512);
-			$this->site->content .= '<figure style="aspect-ratio:'.($ratio).'"><img src="/'.$url.'" data-title="'.$title.'" data-description="'.$description.'" data-keywords="'.$keywords.'" data-hd="/'.$hd.'" loading="lazy" /></figure>';
+			$thumb		= htmlspecialchars($r['meta']['thumb'] ?? '', ENT_COMPAT);
+			$hd		= htmlspecialchars($r['meta']['hd'] ?? '', ENT_COMPAT);
+			$ratio		= $r['meta']['ratio'] ?? 1;
+			$this->site->content .= '<figure style="aspect-ratio:'.($ratio).'"><img src="/'.$thumb.'" data-title="'.$title.'" data-description="'.$description.'" data-keywords="'.$keywords.'" data-hd="/'.$hd.'" loading="lazy" /></figure>';
 			$this->lastAddResource = $r;
 			return true;
 		}
