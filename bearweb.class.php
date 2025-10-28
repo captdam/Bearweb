@@ -113,7 +113,7 @@
 
 		/** Template used to process the given resourc [main_template, sub_template, 2nd_sub_template...] */
 		public array $template {
-			set (string|array $value) => is_string($value) ? json_decode($value, false) : $value;
+			set (string|array $value) => is_string($value) ? (json_decode($value, false) ?? []) : $value;
 		}
 
 		/** Owner's user ID of the given resource; Only the owner and user in "ADMIN" group can modify this resource */
@@ -131,7 +131,7 @@
 
 		/** Meta data, used by framework and index [meta => data...] */
 		public array $meta {
-			set (string|array $value) => is_string($value) ? json_decode($value, true) : $value;
+			set (string|array $value) => is_string($value) ? (json_decode($value, true) ?? []) : $value;
 		}
 
 		/** Resource content, the content should be directly output to reduce server process load */
@@ -139,7 +139,7 @@
 
 		/** Resource auxiliary data, template defined data array [key => value...] */
 		public array $aux {
-			set (string|array $value) => is_string($value) ? json_decode($value, true) : $value;
+			set (string|array $value) => is_string($value) ?(json_decode($value, true) ?? []) : $value;
 		}
 
 		/** Create a resource object. 
@@ -336,12 +336,12 @@
 
 		/** User group [114, 514, ...], group must be int (to differentiate from string id), group 0 is for admin */
 		public array	$group {
-			set (string|array $value) => is_string($value) ? json_decode($value, false) : $value;
+			set (string|array $value) => is_string($value) ? (json_decode($value, false) ?? []) : $value;
 		}
 
 		/** User data [meta => data...] */
 		public array	$data {
-			set (string|array $value) => is_string($value) ? json_decode($value, true) : $value;
+			set (string|array $value) => is_string($value) ? (json_decode($value, true) ?? []) : $value;
 		}
 
 		/** Create a user object. 
@@ -767,7 +767,7 @@
 	}
 	function _bear_reindex(array $index) {
 		foreach(Bearweb_Site::$db->query('SELECT `url`, `category`, `owner`, `create`, `modify`, `meta` FROM `Sitemap` ORDER BY `modify` DESC') as $r) { // Note: to reduce system load, we will work with raw data
-			$r['meta'] = json_decode($r['meta'], true);
+			$r['meta'] = json_decode($r['meta'], true) ?? [];
 			foreach ($index as $x) $x->add($r);
 		}
 		foreach ($index as $x) $x->update($r);
