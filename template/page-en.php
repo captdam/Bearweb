@@ -11,7 +11,7 @@
 	</div>
 <?php elseif ($BW->site->template[1] == 'direct'): ?>
 	<?= $BW->site->content ?>
-<?php elseif ($BW->site->template[1] == 'content'): ?>
+<?php elseif ($BW->site->template[1] == 'article'): ?>
 	<div>
 		<h1><?=$BW->site->meta['title']??''?></h1>
 		<p><?=$BW->site->meta['description']??''?></p>
