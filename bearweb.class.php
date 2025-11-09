@@ -113,7 +113,7 @@
 
 		/** Template used to process the given resourc [main_template, sub_template, 2nd_sub_template...] */
 		public array $template {
-			set (string|array $value) => is_string($value) ? (json_decode($value, false) ?? []) : $value;
+			set (string|array $value) => is_string($value) ? (json_decode($value, false) ?? ['object', 'blob']) : $value;
 		}
 
 		/** Owner's user ID of the given resource; Only the owner and user in "ADMIN" group can modify this resource */
@@ -232,12 +232,12 @@
 			) VALUES (	?, ?, ?,	?, ?, ?, ?,	?, ?)');
 			$sql->bindValue(1,	$this->url,				PDO::PARAM_STR	);
 			$sql->bindValue(2,	$this->category,			PDO::PARAM_STR	);
-			$sql->bindValue(3,	json_encode((array)$this->template),	PDO::PARAM_STR	);
+			$sql->bindValue(3,	static::encodeJSON($this->template),	PDO::PARAM_STR	);
 			$sql->bindValue(4,	$this->owner,				PDO::PARAM_STR	);
 			$sql->bindValue(5,	$this->create,				PDO::PARAM_INT	);
 			$sql->bindValue(6,	$this->modify,				PDO::PARAM_INT	);
-			$sql->bindValue(7,	json_encode((object)$this->meta),	PDO::PARAM_STR	);
-			$sql->bindValue(9,	json_encode((object)$this->aux),	PDO::PARAM_STR	);
+			$sql->bindValue(7,	static::encodeJSON($this->meta),	PDO::PARAM_STR	);
+			$sql->bindValue(9,	static::encodeJSON($this->aux),		PDO::PARAM_STR	);
 			if (strlen($this->content) >= static::Size_FileBlob) {
 				static::__file_write($this->url, $this->content); // If file write failed, throw error and db remains unchanged
 				$sql->bindValue(8, null, PDO::PARAM_NULL);
@@ -260,12 +260,12 @@
 				`content` = ?,	`aux` =	 ?
 			WHERE `URL` = ?');
 			$sql->bindValue(1,	$this->category,			PDO::PARAM_STR	);
-			$sql->bindValue(2,	json_encode((array)$this->template),	PDO::PARAM_STR	);
+			$sql->bindValue(2,	static::encodeJSON($this->template),	PDO::PARAM_STR	);
 			$sql->bindValue(3,	$this->owner,				PDO::PARAM_STR	);
 			$sql->bindValue(4,	$this->create,				PDO::PARAM_INT	);
 			$sql->bindValue(5,	$this->modify,				PDO::PARAM_INT	);
-			$sql->bindValue(6,	json_encode((object)$this->meta),	PDO::PARAM_STR	);
-			$sql->bindValue(8,	json_encode((object)$this->aux),	PDO::PARAM_STR	);
+			$sql->bindValue(6,	static::encodeJSON($this->meta),	PDO::PARAM_STR	);
+			$sql->bindValue(8,	static::encodeJSON($this->aux),		PDO::PARAM_STR	);
 			$sql->bindValue(9,	$this->url,				PDO::PARAM_STR	);
 			if (strlen($this->content) >= static::Size_FileBlob) {
 				static::__file_write($this->url, $this->content); // If file write failed, throw error and db remains unchanged
@@ -423,8 +423,8 @@
 			$sql->bindValue(4,	$this->password,			PDO::PARAM_STR	);
 			$sql->bindValue(5,	$this->registerTime,			PDO::PARAM_INT	);
 			$sql->bindValue(6,	$this->lastActive,			PDO::PARAM_INT	);
-			$sql->bindValue(7,	json_encode((array)$this->group),	PDO::PARAM_STR	);
-			$sql->bindValue(8,	json_encode((object)$this->data),	PDO::PARAM_STR	);
+			$sql->bindValue(7,	static::encodeJSON($this->group),	PDO::PARAM_STR	);
+			$sql->bindValue(8,	static::encodeJSON($this->data),	PDO::PARAM_STR	);
 			$sql->execute();
 			$sql->closeCursor();
 		} catch (Exception $e) { throw strpos($e->getMessage(), 'UNIQUE') ? new BW_ClientError('User ID has been used', 409) : new BW_DatabaseServerError('Cannot insert new user into DB: '.$e->getMessage(), 500); } }
@@ -445,8 +445,8 @@
 			$sql->bindValue(3,	$this->password,			PDO::PARAM_STR	);
 			$sql->bindValue(4,	$this->registerTime,			PDO::PARAM_INT	);
 			$sql->bindValue(5,	$this->lastActive,			PDO::PARAM_INT	);
-			$sql->bindValue(6,	json_encode((array)$this->group),	PDO::PARAM_STR	);
-			$sql->bindValue(7,	json_encode((object)$this->data),	PDO::PARAM_STR	);
+			$sql->bindValue(6,	static::encodeJSON($this->group),	PDO::PARAM_STR	);
+			$sql->bindValue(7,	static::encodeJSON($this->data),	PDO::PARAM_STR	);
 			$sql->bindValue(8,	$this->id,				PDO::PARAM_STR	);
 			$sql->execute();
 			$sql->closeCursor();
@@ -634,6 +634,8 @@
 		public static function init(): void {
 			throw new BW_DatabaseServerError('No database defined', 500);
 		}
+
+		public static function encodeJSON(array $x) { return count($x) ? ( array_is_list($x) ? json_encode((array)$x) : json_encode((object)$x) ) : ''; }
 	}
 
 	class BearIndex {
