@@ -104,6 +104,9 @@
 		final const ACCESS_RO = 1;		# Readonly, and executable
 		final const ACCESS_RW = -1;		# Read and write
 
+		/** Resource not saved in DB (resource with fixed content and metadata like APIs, JSs, CSSs...) */
+		const FixedMap = [];
+
 		/** Resource URL, PK */
 		public string $url;
 
@@ -195,6 +198,10 @@
 		 * @throws BW_DatabaseServerError	Cannot read sitemap DB
 		*/
 		public static function query(string $url): ?static {
+			if (array_key_exists($url, static::FixedMap)) {
+				$site = static::FixedMap[$url];
+				return new static(...$site, url: $url);
+			}
 			try {
 				$sql = static::$db->prepare('SELECT * FROM `Sitemap` WHERE `url` = ?');
 				$sql->bindValue(	1,	$url,	PDO::PARAM_STR	);
@@ -203,7 +210,6 @@
 				$sql->closeCursor();
 				if (!$site)
 					return null;
-				//$site['content'] = $site['content'] ?? static::__file_read($site['url']);
 				return new static(...$site);
 			} catch (Exception $e) { throw new BW_DatabaseServerError('Cannot read sitemap database: '.$e->getMessage(), 500); }
 		}
@@ -226,6 +232,8 @@
 		 * @throws BW_DatabaseServerError Fail to insert into sitemap db
 		 */
 		public function insert(): void { try {
+			if (array_key_exists($this->url, static::FixedMap))
+				throw new Exception('Cannot modify hard-coded resource.', 405);
 			$sql = static::$db->prepare('INSERT INTO `Sitemap` (
 				`url`, `category`, `template`,
 				`owner`, `create`, `modify`, `meta`,
@@ -255,6 +263,8 @@
 		 * @throws BW_DatabaseServerError Fail to update sitemap db
 		 */
 		public function update(): void { try {
+			if (array_key_exists($this->url, static::FixedMap))
+				throw new Exception('Cannot modify hard-coded resource.', 405);
 			$sql = static::$db->prepare('UPDATE `Sitemap` SET
 				`category` = ?,	`template` = ?,
 				`owner` = ?,	`create` = ?,	`modify` = ?,	`meta` = ?,
@@ -284,6 +294,8 @@
 		 * @throws BW_DatabaseServerError Fail to delete from sitemap db
 		 */
 		public function delete(): void { try {
+			if (array_key_exists($this->url, static::FixedMap))
+				throw new Exception('Cannot modify hard-coded resource.', 405);
 			$sql = static::$db->prepare('DELETE FROM `Sitemap` WHERE `URL` = ?');
 			$sql->bindValue(1,	$this->url,	PDO::PARAM_STR	);
 			static::__file_delete($this->url);

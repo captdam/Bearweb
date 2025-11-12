@@ -119,34 +119,6 @@
 				PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC
 			]); } catch (Exception $e) { throw new BW_DatabaseServerError('Fail to open DB: '.$e->getMessage(), 500); }
 		}
-
-		public static function query(string $url): ?static {
-			if (array_key_exists($url, static::FixedMap)) {
-				$site = static::FixedMap[$url];
-				if (array_key_exists('content', $site) && $site['content'] === null)
-					$site['content'] = static::__file_read($url);
-				return new static(...$site, url: $url);
-			}
-			return parent::query($url);
-		}
-
-		public function insert(): void {
-			if (array_key_exists($this->url, static::FixedMap))
-				throw new BW_ClientError('Cannot modify hard-coded resource.', 405);
-			parent::insert();
-		}
-
-		public function update(): void {
-			if (array_key_exists($this->url, static::FixedMap))
-				throw new BW_ClientError('Cannot modify hard-coded resource.', 405);
-			parent::update();
-		}
-
-		public function delete(): void {
-			if (array_key_exists($this->url, static::FixedMap))
-				throw new BW_ClientError('Cannot modify hard-coded resource.', 405);
-			parent::delete();
-		}
 	}
 
 	class Bearweb_Session extends _Bearweb_Session {
