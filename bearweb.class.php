@@ -86,7 +86,6 @@
 
 		protected function createErrorPage(string $title, string $detail, int $code = 0): void {
 			if ($code) http_response_code($code);
-			header('X-Debug: 123');
 			$this->site = new Bearweb_Site(meta: ['robots'=> 'noindex, nofollow'], content: '<!DOCTYPE html><meta name="robots" content="noindex" /><h1>'.$title.'</h1><p>'.$detail.'</p>', aux: ['mime' => 'text/html']);
 		}
 
@@ -135,7 +134,9 @@
 		}
 
 		/** Resource content, the content should be directly output to reduce server process load */
-		public string $content;
+		public ?string $content {
+			get => is_null($this->content) ? static::__file_read($this->url) : $this->content; // Read the file (very large) only whwn required
+		}
 
 		/** Resource auxiliary data, template defined data array [key => value...] */
 		public array $aux {
@@ -150,7 +151,7 @@
 		 * @param string 	$create		Create timestamp. Default this::TIME_NULL for no actual time, use this::TIME_CURRENT to use current timestamp
 		 * @param string 	$modify		Modify timestamp. Default this::TIME_NULL for no actual time, use this::TIME_CURRENT to use current timestamp
 		 * @param string|array 	$meta		Meta data, used by framework and index [meta => data...]: JSON or array. Default []
-		 * @param string	$content	Resource content, the content should be directly output to reduce server process load. Default ''
+		 * @param ?string	$content	Resource content, the content should be directly output to reduce server process load. Default ''
 		 * @param string 	$aux		Resource auxiliary data, template defined data array [key => value...]: JSON or array. Default []
 		 */
 		public function __construct(
@@ -161,7 +162,7 @@
 			int		$create = self::TIME_NULL,
 			int		$modify = self::TIME_NULL,
 			array|string	$meta = [],
-			string		$content = '',
+			?string		$content = '',
 			array|string	$aux = []
 		) {
 			$this->url	= $url;
@@ -202,7 +203,7 @@
 				$sql->closeCursor();
 				if (!$site)
 					return null;
-				$site['content'] = $site['content'] ?? static::__file_read($site['url']);
+				//$site['content'] = $site['content'] ?? static::__file_read($site['url']);
 				return new static(...$site);
 			} catch (Exception $e) { throw new BW_DatabaseServerError('Cannot read sitemap database: '.$e->getMessage(), 500); }
 		}
