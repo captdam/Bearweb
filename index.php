@@ -47,7 +47,10 @@
 			} else if ($this->site->template[0] == 'object') {
 				header('Content-Type: '.($this->site->aux['mime'] ?? 'text/plain'));
 				if ($this->site->template[1] == 'blob') {
-					echo $this->site->content;
+					ob_end_clean();
+					header('Content-Length: '.$this->site->getContentLength());
+					$this->site->dumpContent();
+					ob_start();
 				} else {
 					$template = Bearweb_Site::Dir_Template.'object_'.$this->site->template[1].'.php';
 					if (!file_exists($template)) throw new BW_WebServerError('Secondary object template not found: '.$this->site->template[1], 500);

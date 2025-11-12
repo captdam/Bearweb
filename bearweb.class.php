@@ -59,7 +59,6 @@
 				
 				// Invoke template
 				$this->invokeTemplate();
-				header('Content-Length: '.ob_get_length());
 				
 			} catch (Exception $e) { ob_clean(); ob_start();
 				$this->session->log($e->getMessage());
@@ -74,6 +73,8 @@
 				}
 				$this->invokeTemplate();
 			}
+
+			ob_end_flush();
 		}
 
 		protected function invokeTemplate(): void {
@@ -214,6 +215,17 @@
 			} catch (Exception $e) { throw new BW_DatabaseServerError('Cannot read sitemap database: '.$e->getMessage(), 500); }
 		}
 
+		/** Get content length. 
+		 * @return int Content length in bytes
+		 */
+		public function getContentLength(): int { return is_null(get_mangled_object_vars($this)['content']) ? static::__file_size($this->url) : strlen($this->content); }
+
+		/** Directly output the content. 
+		 * This is useful for large content. Large content is saved in file, using this function prevent loading it into RAM; instead, the content is directly dumpped to output. 
+		 * You should use this::getContentLength() to obtain Content-Length header first, then disable output buffer and execute this function to minimize RAM footprint. 
+		 */
+		public function dumpContent(): void { echo is_null(get_mangled_object_vars($this)['content']) ? static::__file_dump($this->url) : $this->content; }
+
 		/** Test user access privilege level. 
 		 * @param Bearweb_User $user Bearweb_User object with user ID and group
 		 * @return int ACCESS_NONE, ACCESS_RO or ACCESS_RW (owner/admin)
@@ -312,12 +324,23 @@
 		}
 		protected static function __file_read(string $url): string {
 			if (!is_file(static::Dir_Resource.$url))
-				throw new BW_DatabaseServerError('Blob file not existed: '.$url, 500);
+				throw new BW_DatabaseServerError('Cannot read from blob file: '.$url, 500);
 			return file_get_contents(static::Dir_Resource.$url);
 		}
 		protected static function __file_delete(string $url): void {
 			if (is_file(static::Dir_Resource.$url))
-				unlink(static::Dir_Resource.$url); // Should success, just forget about it for now, deal with it next time when overwrite
+				unlink(static::Dir_Resource.$url); // Should success; if failed, just forget about it for now, deal with it next time when overwrite
+		}
+		protected static function __file_size(string $url): int {
+			if (!is_file(static::Dir_Resource.$url))
+				throw new BW_DatabaseServerError('Cannot read from blob file: '.$url, 500);
+			return filesize(static::Dir_Resource.$url);
+		}
+		protected static function __file_dump(string $url): string {
+			if (!is_file(static::Dir_Resource.$url))
+				throw new BW_DatabaseServerError('Cannot read from blob file: '.$url, 500);
+			readfile(static::Dir_Resource.$url);
+			return ''; // Return empty string for compatibility
 		}
 	}
 
