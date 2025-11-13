@@ -240,79 +240,115 @@
 			return self::ACCESS_NONE;
 		}
 
-		/** Insert this resource into sitemap db.
+		/** Insert this resource into sitemap db. 
+		 * This function will use transaction. You should not be in a transaction while call this function. 
 		 * @throws BW_DatabaseServerError Fail to insert into sitemap db
 		 */
 		public function insert(): void { try {
 			if (array_key_exists($this->url, static::FixedMap))
-				throw new Exception('Cannot modify hard-coded resource.', 405);
-			$sql = static::$db->prepare('INSERT INTO `Sitemap` (
-				`url`, `category`, `template`,
-				`owner`, `create`, `modify`, `meta`,
-				`content`, `aux`
-			) VALUES (	?, ?, ?,	?, ?, ?, ?,	?, ?)');
-			$sql->bindValue(1,	$this->url,				PDO::PARAM_STR	);
-			$sql->bindValue(2,	$this->category,			PDO::PARAM_STR	);
-			$sql->bindValue(3,	static::encodeJSON($this->template),	PDO::PARAM_STR	);
-			$sql->bindValue(4,	$this->owner,				PDO::PARAM_STR	);
-			$sql->bindValue(5,	$this->create,				PDO::PARAM_INT	);
-			$sql->bindValue(6,	$this->modify,				PDO::PARAM_INT	);
-			$sql->bindValue(7,	static::encodeJSON($this->meta),	PDO::PARAM_STR	);
-			$sql->bindValue(9,	static::encodeJSON($this->aux),		PDO::PARAM_STR	);
-			if (strlen($this->content) >= static::Size_FileBlob) {
-				static::__file_write($this->url, $this->content); // If file write failed, throw error and db remains unchanged
-				$sql->bindValue(8, null, PDO::PARAM_NULL);
-			} else {
-				static::__file_delete($this->url);
-				$sql->bindValue(8, $this->content, PDO::PARAM_STR);
+				throw new Exception('Cannot modify hard-coded resource.');
+			if (static::$db->inTransaction())
+				throw new Exception('Not allowed in transaction.');
+			static::$db->beginTransaction();
+			try {
+				$sql = static::$db->prepare('INSERT INTO `Sitemap` (
+					`url`, `category`, `template`,
+					`owner`, `create`, `modify`, `meta`,
+					`content`, `aux`
+				) VALUES (	?, ?, ?,	?, ?, ?, ?,	?, ?)');
+				$sql->bindValue(1,	$this->url,				PDO::PARAM_STR	);
+				$sql->bindValue(2,	$this->category,			PDO::PARAM_STR	);
+				$sql->bindValue(3,	static::encodeJSON($this->template),	PDO::PARAM_STR	);
+				$sql->bindValue(4,	$this->owner,				PDO::PARAM_STR	);
+				$sql->bindValue(5,	$this->create,				PDO::PARAM_INT	);
+				$sql->bindValue(6,	$this->modify,				PDO::PARAM_INT	);
+				$sql->bindValue(7,	static::encodeJSON($this->meta),	PDO::PARAM_STR	);
+				$sql->bindValue(9,	static::encodeJSON($this->aux),		PDO::PARAM_STR	);
+				if (strlen($this->content) >= static::Size_FileBlob) {
+					$sql->bindValue(8, null, PDO::PARAM_NULL);
+				} else {
+					$sql->bindValue(8, $this->content, PDO::PARAM_STR);
+				}
+				$sql->execute();
+				if (strlen($this->content) >= static::Size_FileBlob) {
+					static::__file_write($this->url, $this->content);
+				} else {
+					static::__file_delete($this->url);
+				}
+				static::$db->commit();
+			} catch (Exception $e) {
+				static::$db->rollBack();
+				throw $e;
 			}
-			$sql->execute();
 			$sql->closeCursor();
 		} catch (Exception $e) { throw new BW_DatabaseServerError('Cannot insert into sitemap database: '.$e->getMessage(), 500); } }
 
 		/** Update this resource in sitemap db. 
 		 * It is not necessary to query this resource, create a dummy resource with url and fields to modify (leave other field null to keep orginal data). 
+		 * This function will use transaction. You should not be in a transaction while call this function. 
 		 * @throws BW_DatabaseServerError Fail to update sitemap db
 		 */
 		public function update(): void { try {
 			if (array_key_exists($this->url, static::FixedMap))
-				throw new Exception('Cannot modify hard-coded resource.', 405);
-			$sql = static::$db->prepare('UPDATE `Sitemap` SET
-				`category` = ?,	`template` = ?,
-				`owner` = ?,	`create` = ?,	`modify` = ?,	`meta` = ?,
-				`content` = ?,	`aux` =	 ?
-			WHERE `URL` = ?');
-			$sql->bindValue(1,	$this->category,			PDO::PARAM_STR	);
-			$sql->bindValue(2,	static::encodeJSON($this->template),	PDO::PARAM_STR	);
-			$sql->bindValue(3,	$this->owner,				PDO::PARAM_STR	);
-			$sql->bindValue(4,	$this->create,				PDO::PARAM_INT	);
-			$sql->bindValue(5,	$this->modify,				PDO::PARAM_INT	);
-			$sql->bindValue(6,	static::encodeJSON($this->meta),	PDO::PARAM_STR	);
-			$sql->bindValue(8,	static::encodeJSON($this->aux),		PDO::PARAM_STR	);
-			$sql->bindValue(9,	$this->url,				PDO::PARAM_STR	);
-			if (strlen($this->content) >= static::Size_FileBlob) {
-				static::__file_write($this->url, $this->content); // If file write failed, throw error and db remains unchanged
-				$sql->bindValue(7, null, PDO::PARAM_NULL);
-			} else {
-				static::__file_delete($this->url);
-				$sql->bindValue(7, $this->content, PDO::PARAM_STR);
+				throw new Exception('Cannot modify hard-coded resource.');
+			if (static::$db->inTransaction())
+				throw new Exception('Not allowed in transaction.');
+			static::$db->beginTransaction();
+			try {
+				$sql = static::$db->prepare('UPDATE `Sitemap` SET
+					`category` = ?,	`template` = ?,
+					`owner` = ?,	`create` = ?,	`modify` = ?,	`meta` = ?,
+					`content` = ?,	`aux` =	 ?
+				WHERE `URL` = ?');
+				$sql->bindValue(1,	$this->category,			PDO::PARAM_STR	);
+				$sql->bindValue(2,	static::encodeJSON($this->template),	PDO::PARAM_STR	);
+				$sql->bindValue(3,	$this->owner,				PDO::PARAM_STR	);
+				$sql->bindValue(4,	$this->create,				PDO::PARAM_INT	);
+				$sql->bindValue(5,	$this->modify,				PDO::PARAM_INT	);
+				$sql->bindValue(6,	static::encodeJSON($this->meta),	PDO::PARAM_STR	);
+				$sql->bindValue(8,	static::encodeJSON($this->aux),		PDO::PARAM_STR	);
+				$sql->bindValue(9,	$this->url,				PDO::PARAM_STR	);
+				if (strlen($this->content) >= static::Size_FileBlob) {
+					$sql->bindValue(7, null, PDO::PARAM_NULL);
+				} else {
+					$sql->bindValue(7, $this->content, PDO::PARAM_STR);
+				}
+				$sql->execute();
+				if (strlen($this->content) >= static::Size_FileBlob) {
+					static::__file_write($this->url, $this->content);
+				} else {
+					static::__file_delete($this->url);
+				}
+				static::$db->commit();
+			} catch (Exception $e) {
+				static::$db->rollBack();
+				throw $e;
 			}
-			$sql->execute();
 			$sql->closeCursor();
 		} catch (Exception $e) { throw new BW_DatabaseServerError('Cannot update sitemap database: '.$e->getMessage(), 500); } }
 
 		/** Delete this resource. 
 		 * It is not necessary to query this resource, create a dummy resource with url to specify resource in sitemap db. 
+		 * This function will use transaction. You should not be in a transaction while call this function. 
 		 * @throws BW_DatabaseServerError Fail to delete from sitemap db
 		 */
 		public function delete(): void { try {
 			if (array_key_exists($this->url, static::FixedMap))
-				throw new Exception('Cannot modify hard-coded resource.', 405);
-			$sql = static::$db->prepare('DELETE FROM `Sitemap` WHERE `URL` = ?');
-			$sql->bindValue(1,	$this->url,	PDO::PARAM_STR	);
-			static::__file_delete($this->url);
-			$sql->execute();
-			$sql->closeCursor();
+				throw new Exception('Cannot modify hard-coded resource.');
+			if (static::$db->inTransaction())
+				throw new Exception('Not allowed in transaction.');
+			static::$db->beginTransaction();
+			try {
+				$sql = static::$db->prepare('DELETE FROM `Sitemap` WHERE `URL` = ?');
+				$sql->bindValue(1,	$this->url,	PDO::PARAM_STR	);
+				$sql->execute();
+				$sql->closeCursor();
+				static::__file_delete($this->url);
+				static::$db->commit();
+			} catch (Exception $e) {
+				static::$db->rollBack();
+				throw $e;
+			}
 		} catch (Exception $e) { throw new BW_DatabaseServerError('Cannot delete blob file from sitemap database: '.$e->getMessage(), 500); } }
 
 		protected static function __file_write(string $url, string $content): void {
@@ -724,7 +760,8 @@
 		}
 	}
 	class BearIndex_User extends BearIndex  {
-		public function __construct(string $url, array $meta) { parent::__construct($url, 'Index', ['object', 'blob'], $meta, '<?xml version="1.0" encoding="UTF-8" ?><resourceset>', ['mime' => 'text/xml']); }
+		public function __construct(string $url, array $meta, string $user) { parent::__construct($url, 'Index', ['object', 'blob'], $meta, '<?xml version="1.0" encoding="UTF-8" ?><resourceset>', ['mime' => 'text/xml']); $this->site->owner = $user; }
+		
 		public function add(array $r): bool {
 			$url		= htmlspecialchars($r['url'], ENT_COMPAT);
 			$category	= htmlspecialchars($r['category'], ENT_COMPAT);
