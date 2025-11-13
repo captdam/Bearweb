@@ -342,13 +342,13 @@
 				$sql = static::$db->prepare('DELETE FROM `Sitemap` WHERE `URL` = ?');
 				$sql->bindValue(1,	$this->url,	PDO::PARAM_STR	);
 				$sql->execute();
-				$sql->closeCursor();
 				static::__file_delete($this->url);
 				static::$db->commit();
 			} catch (Exception $e) {
 				static::$db->rollBack();
 				throw $e;
 			}
+			$sql->closeCursor();
 		} catch (Exception $e) { throw new BW_DatabaseServerError('Cannot delete blob file from sitemap database: '.$e->getMessage(), 500); } }
 
 		protected static function __file_write(string $url, string $content): void {
@@ -760,7 +760,7 @@
 		}
 	}
 	class BearIndex_User extends BearIndex  {
-		public function __construct(string $url, array $meta, string $user) { parent::__construct($url, 'Index', ['object', 'blob'], $meta, '<?xml version="1.0" encoding="UTF-8" ?><resourceset>', ['mime' => 'text/xml']); $this->site->owner = $user; }
+		public function __construct(string $url, array $meta) { parent::__construct($url, 'Index', ['object', 'blob'], $meta, '<?xml version="1.0" encoding="UTF-8" ?><resourceset>', ['mime' => 'text/xml']); }
 		
 		public function add(array $r): bool {
 			$url		= htmlspecialchars($r['url'], ENT_COMPAT);
