@@ -180,17 +180,9 @@
 			$this->aux	= $aux;
 		}
 
-		/** URL is valid.
-		 * URL is 128 length or less, allows [A-Za-z0-9 or -_:/.], last character is not /, trimed
+		/** URL is valid. /^[A-Za-z0-9\-\_\:\/\.]{0,128}$/, no './' at any place. 
 		 */
-		public static function validURL(string $url): bool {
-			return $url === '' || (
-				strlen($url) <= 128 &&
-				ctype_alnum( str_replace(['-', '_', ':', '/', '.'], '', $url) ) &&
-				substr($url, -1) != '/' &&
-				trim($url) == $url
-			);
-		}
+		public static function validURL(string $url): bool { return preg_match('/^[A-Za-z0-9\-\_\:\/\.]{0,128}$/', $url) && !preg_match('/\.\//', $url); }
 
 		/** Query a resource from sitemap db. 
 		 * Note: Data in DB is volatile, instance only reflects the data at time of DB fetch, it may be changed by another transaction (e.g. Resource modify API) and other process. 
@@ -351,31 +343,27 @@
 			$sql->closeCursor();
 		} catch (Exception $e) { throw new BW_DatabaseServerError('Cannot delete blob file from sitemap database: '.$e->getMessage(), 500); } }
 
+		protected static function __file_path(string $url): string {
+			return static::Dir_Resource.str_replace('/', '#', $url); // Convert into flat filepath. # is not allowed in url (used for tag) but allowed in filename
+		}
 		protected static function __file_write(string $url, string $content): void {
-			$dir = dirname(static::Dir_Resource.$url);
-			if (!is_dir($dir))
-				mkdir($dir, 0755, true);
-			if (!file_put_contents(static::Dir_Resource.$url, $content))
+			if (file_put_contents(static::__file_path($url), $content, LOCK_EX) === false)
 				throw new BW_DatabaseServerError('Cannot write to blob file: '.$url, 500);
 		}
 		protected static function __file_read(string $url): string {
-			if (!is_file(static::Dir_Resource.$url))
+			$content = file_get_contents(static::__file_path($url));
+			if ($content === false)
 				throw new BW_DatabaseServerError('Cannot read from blob file: '.$url, 500);
-			return file_get_contents(static::Dir_Resource.$url);
+			return $content;
 		}
 		protected static function __file_delete(string $url): void {
-			if (is_file(static::Dir_Resource.$url))
-				unlink(static::Dir_Resource.$url); // Should success; if failed, just forget about it for now, deal with it next time when overwrite
+			unlink(static::__file_path($url));
 		}
 		protected static function __file_size(string $url): int {
-			if (!is_file(static::Dir_Resource.$url))
-				throw new BW_DatabaseServerError('Cannot read from blob file: '.$url, 500);
-			return filesize(static::Dir_Resource.$url);
+			return filesize(static::__file_path($url));
 		}
 		protected static function __file_dump(string $url): string {
-			if (!is_file(static::Dir_Resource.$url))
-				throw new BW_DatabaseServerError('Cannot read from blob file: '.$url, 500);
-			readfile(static::Dir_Resource.$url);
+			readfile(static::__file_path($url));
 			return ''; // Return empty string for compatibility
 		}
 	}
