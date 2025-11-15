@@ -343,27 +343,43 @@
 			$sql->closeCursor();
 		} catch (Exception $e) { throw new BW_DatabaseServerError('Cannot delete blob file from sitemap database: '.$e->getMessage(), 500); } }
 
-		protected static function __file_path(string $url): string {
-			return static::Dir_Resource.str_replace('/', '#', $url); // Convert into flat filepath. # is not allowed in url (used for tag) but allowed in filename
-		}
+		protected static function __file_path(string $url): string { return static::Dir_Resource.str_replace('/', '#', $url); } // Convert into flat filepath. # is not allowed in url (used for tag) but allowed in filename
 		protected static function __file_write(string $url, string $content): void {
 			if (file_put_contents(static::__file_path($url), $content, LOCK_EX) === false)
 				throw new BW_DatabaseServerError('Cannot write to blob file: '.$url, 500);
 		}
 		protected static function __file_read(string $url): string {
-			$content = file_get_contents(static::__file_path($url));
+			$file = fopen(static::__file_path($url), 'rb');
+			flock($file, LOCK_SH);
+			clearstatcache(true, static::__file_path($url));
+			$content = fread($file, filesize(static::__file_path($url)));
 			if ($content === false)
 				throw new BW_DatabaseServerError('Cannot read from blob file: '.$url, 500);
+			flock($file, LOCK_UN);
+			fclose($file);
 			return $content;
 		}
 		protected static function __file_delete(string $url): void {
+			if (!is_file(static::__file_path($url)))
+				return;
+			$file = fopen(static::__file_path($url), 'rb');
+			flock($file, LOCK_EX);
+			ftruncate($file, 0);
+			fflush($file);
+			flock($file, LOCK_UN);
+			fclose($file);
 			unlink(static::__file_path($url));
 		}
 		protected static function __file_size(string $url): int {
+			clearstatcache(true, static::__file_path($url));
 			return filesize(static::__file_path($url));
 		}
 		protected static function __file_dump(string $url): string {
-			readfile(static::__file_path($url));
+			$file = fopen(static::__file_path($url), 'rb');
+			flock($file, LOCK_SH);
+			fpassthru($file);
+			flock($file, LOCK_UN);
+			fclose($file);
 			return ''; // Return empty string for compatibility
 		}
 	}
