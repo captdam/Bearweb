@@ -44,7 +44,7 @@ class BearAPI_Resource extends BearAPI {
 		if (res.status != 201) this.throwError(res.status, res.json.error);
 		return res.json;
 	}
-	static async update(data, encode, progress) { // Update a resource, data = {url: "url", category: "category"...}, encode = b64 for base64 encoded data (binary)
+	static async update(data, encode, progress) { // Update a resource, data = {url: "url", category: "category"..., content: Blob("content")}, encode = b64 for base64 encoded content (binary)
 		const res = await this.xhr('/api/resource/update?encode=' + encode, data, progress);
 		if (res.status != 202) this.throwError(res.status, res.json.error);
 		return res.json;

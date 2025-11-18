@@ -19,7 +19,7 @@
 		</form>
 		<form id="form_modify">
 			<h2>Modify (File only)</h2>
-			<embed type="text/plain" src="data:,Preview" style="width: 395px; height: 395px; object-fit: contain; border: solid 2px #000;" id="modify_content" />
+			<embed type="text/plain" charset="UTF-8" src="data:,Preview" style="width: 395px; height: 395px; object-fit: contain; border: solid 2px #000;" id="modify_content" />
 			<div><label for="modify_url">URL</label><input type="text" id="modify_url" name="url" readonly></div>
 			<div><label for="modify_category">Category</label><select name="category" id="modify_category" required></select></div>
 			<div><label for="modify_meta">Meta </label><textarea type="text" name="meta" id="modify_meta"></textarea></div>
@@ -220,11 +220,15 @@
 			category:	_('#modify_category').value,
 			meta:		_('#modify_meta').value,
 			aux:		_('#modify_aux').value,
-			content:	_('#modify_content').src.split(',', 2)[1]
-		}, 'b64');
+			content:	new Blob([Uint8Array.fromBase64(_('#modify_content').src.split(',', 2)[1])])
+		});
 		_('#form_modify_submit').disabled = false;
 		_('#form_modify_submit').textContent = 'Modify';
-	dialog_success('OK', 'Update resource success') } catch (e) { _('#form_modify_submit').disabled = false; dialog_error(e.name, e.message); } };
+	dialog_success('OK', 'Update resource success') } catch (e) {
+		_('#form_modify_submit').disabled = false;
+		_('#form_modify_submit').textContent = 'Modify';
+		dialog_error(e.name, e.message);
+	} };
 
 	// Reindex
 	_('#form_modify_reindex').onclick = async event => { event.preventDefault(); try {

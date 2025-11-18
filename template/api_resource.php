@@ -1,4 +1,16 @@
 <?php
+	try {
+		[$_POST, $_FILES] = request_parse_body([		
+			'max_file_uploads'	=> '1',
+			'max_input_vars'	=> '20',
+			'post_max_size'		=> '4M',
+			'upload_max_filesize'	=> '32M'
+		]);
+	} catch (Exception $e) {
+		http_response_code(400);
+		return ['error' => 'Invalid post data'];
+	}
+
 	if (!isset($_POST['url']) || !Bearweb_Site::validURL($_POST['url'])) {
 		http_response_code(400);
 		return ['error' => 'Missing or bad URL'];
@@ -49,14 +61,15 @@
 				http_response_code(400);
 				return ['error' => 'Type undefined or not allowed'];
 			}
-			if (!isset($_POST['meta']) || !json_validate($_POST['meta']) || !isset($_POST['content']) || !isset($_POST['aux']) || !json_validate($_POST['aux'])) {
+			if (!isset($_POST['meta']) || !json_validate($_POST['meta']) || !isset($_POST['aux']) || !json_validate($_POST['aux'])) {
 				http_response_code(400);
-				return ['error' => 'Missing or bad field(s): meta, content, aux'];
+				return ['error' => 'Missing or bad field(s): meta, aux'];
 			}
-			$content = $_POST['content'];
-			if ($encode == 'b64') {
-				$content = base64_decode($_POST['content']);
+			if ($_FILES['content']['error'] ?? '-1' || is_uploaded_file($_FILES['content']['tmp_name'])) { // content.error must existed, error must be 0
+				http_response_code(400);
+				return ['error' => 'Missing or bad content'];
 			}
+			$content = $encode == 'b64' ? base64_decode(file_get_contents($_FILES['content']['tmp_name'])) : file_get_contents($_FILES['content']['tmp_name']);
 			$resource = Bearweb_Site::query($_POST['url']);
 			if (!$resource) {
 				http_response_code(404);

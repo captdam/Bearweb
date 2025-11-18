@@ -2,7 +2,7 @@
 <div id="localfile" class="sidebyside" style="grid-template-columns: 1fr 2fr;">
 	<img id="localfile_content" />
 	<div>
-		<h2>URL prefix</h2><input id="localfile_url" placeholder="parent/self" required />
+		<h2>URL prefix 1</h2><input id="localfile_url" placeholder="20121231-myperfectphoto" required />
 		<h2>Category</h2><select id="localfile_category" required></select>
 		<h2>Title</h2><input id="localfile_title_en" placeholder="Name of Image" />
 		<h2>名称</h2><input id="localfile_title_zh" placeholder="图片名称" />
@@ -123,7 +123,7 @@
 	_('#hd_config_quality').onchange = event => { renderHd(); };
 
 	// Upload
-	_('#localfile_url').onchange = event => { _('#thumb_title').textContent = event.target.value + '.thumb.jpeg'; _('#hd_title').textContent = event.target.value + '.jpeg'; };
+	_('#localfile_url').onchange = event => { _('#thumb_title').textContent = event.target.value + '.thumb.jpg'; _('#hd_title').textContent = event.target.value + '.jpg'; };
 	_('#localfile_upload').onclick = async event => {
 		_('#hd_config_state').value = 'Waiting...';
 		_('#thumb_config_state').value = 'Waiting...';
@@ -199,8 +199,8 @@
 				category:	'Content',
 				meta:		'{}',
 				aux:		'{"mime":"image/jpeg"}',
-				content:	await getBase64(await (await fetch(_('#hd_img').src)).blob())
-			}, 'b64', event => {
+				content:	new Blob([Uint8Array.fromBase64( await getBase64(await (await fetch(_('#hd_img').src)).blob()) )])
+			}, '', event => {
 				if (event.lengthComputable)
 					_('#hd_config_state').value = event.loaded < event.total ? 'Uploading ' + Math.floor(event.loaded/event.total*100) + '% - ' + event.loaded + ' / ' + event.total : 'Upload finished, waiting server processing';
 			});
@@ -217,8 +217,8 @@
 				category:	'Content',
 				meta:		'{}',
 				aux:		'{"mime":"image/jpeg"}',
-				content:	await getBase64(await (await fetch(_('#thumb_img').src)).blob())
-			}, 'b64', event => {
+				content:	new Blob([Uint8Array.fromBase64( await getBase64(await (await fetch(_('#thumb_img').src)).blob()) )])
+			}, '', event => {
 				if (event.lengthComputable)
 					_('#thumb_config_state').value = event.loaded < event.total ? 'Uploading ' + Math.floor(event.loaded/event.total*100) + '% - ' + event.loaded + ' / ' + event.total : 'Upload finished, waiting server processing';
 			});
@@ -246,7 +246,7 @@
 					"lang-en":	url_en,
 					"lang-zh":	url_zh
 				}),
-				content:	''
+				content:	new Blob([])
 			});
 			dialog_success('Page', 'Page '+url_en+' created!');
 		} catch (e) {
@@ -272,7 +272,7 @@
 					"lang-en":	url_en,
 					"lang-zh":	url_zh
 				}),
-				content:	''
+				content:	new Blob([])
 			});
 			dialog_success('Page', 'Page '+url_zh+' created!');
 		} catch (e) {

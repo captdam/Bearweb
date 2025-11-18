@@ -1,4 +1,16 @@
 <?php
+	try {
+		[$_POST, $_FILES] = request_parse_body([		
+			'max_file_uploads'	=> '0',
+			'max_input_vars'	=> '5',
+			'post_max_size'		=> '2048',
+			'upload_max_filesize'	=> '0'
+		]);
+	} catch (Exception $e) {
+		http_response_code(400);
+		return ['error' => 'Invalid post data'];
+	}
+	
 	if (!isset($_POST['id']) || !Bearweb_User::validID(($_POST['id']))) {
 		http_response_code(400);
 		return ['error' => 'Missing or bad ID'];
