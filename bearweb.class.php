@@ -422,6 +422,75 @@
 			if (!(is_file($path) ? unlink($path) : true))
 				throw new BW_DatabaseServerError('Cannot unlink blob file: '.$this->url, 500);
 		}
+
+		public function util_html_head(string $domain = 'https://example.com/', string $sitename = 'Example Site') {
+			$meta_title = htmlspecialchars($this->meta['title'] ?? '', ENT_COMPAT);
+			$meta_keywords = htmlspecialchars($this->meta['keywords'] ?? '', ENT_COMPAT);
+			$meta_description = htmlspecialchars($this->meta['description'] ?? '', ENT_COMPAT);
+			echo '<title>',$meta_title,' - ',$sitename,'</title>',
+			'<meta property="og:title" content="',$meta_title,'" />',
+			'<meta property="og:site_name" content="',$sitename,'" />',
+			'<meta name="keywords" content="',$meta_keywords,'" />',
+			'<meta name="description" content="',$meta_description,'" />',
+			'<meta property="og:description" content="',$meta_description,'" />',
+			'<meta name="viewport" content="width=device-width, initial-scale=1.0" />',
+			'<meta charset="utf-8" />',
+			'<link href="/web/style.css" rel="stylesheet" type="text/css" />',
+			'<script src="/web/bearapi.js"></script>',
+			'<script src="/web/bearweb.js"></script>',
+			'<link rel="canonical" href="',$domain,$this->url,'" />',
+			'<meta property="og:url" content="',$domain,$this->url,'" />',
+			( array_key_exists('robots', $this->meta) ? ('<meta name="robots" content="'.htmlspecialchars($this->meta['robots'], ENT_COMPAT).'" />') : '' ),
+			( array_key_exists('bgimg', $this->meta) ? ('<meta property="__og:image" content="'.htmlspecialchars($this->meta['bgimg'], ENT_COMPAT).'" />') : '' ),
+			( $this->owner ? ('<meta name="author" content="'.htmlspecialchars($this->owner, ENT_COMPAT).'" />') : '' ),
+			( array_key_exists('lang-en', $this->meta) ? ('<link rel="alternate" hreflang="en" href="/'.htmlspecialchars($this->aux['lang-en'], ENT_COMPAT).'" type="text/html" />') : '' ),
+			( array_key_exists('lang-zh', $this->meta) ? ('<link rel="alternate" hreflang="en" href="/'.htmlspecialchars($this->aux['lang-zh'], ENT_COMPAT).'" type="text/html" />') : '' );
+		}
+
+		public function util_html_inplaceEditor() { echo'
+			<div style="background:var(--content-bgcolor1)"><form id="editor" onsubmit="event.preventDefault()" dataset-resource=""><h1>Editor</h1>
+				<textarea type="text" name="content" id="editor_content" style="width:100%;height:300px;"></textarea>
+				<div class="layflat" style="margin-top:1em">
+					<button id="editor_reload" type="button">Reload</button>
+					<button id="editor_render" type="button">Render</button>
+					<button id="editor_submit" type="submit">Submit</button>
+				</div>
+				<script>
+					_(\'#editor_reload\').onclick = async event => { try {
+						const resource = await BearAPI_Resource.get(window.location.pathname.substr(1));
+						_(\'#editor_content\').value = resource.content;
+					dialog_success(200, \'Reloaded\'); } catch (e) { dialog_error(0, \'Reload failed: \' + e); throw e; } };
+					_(\'#editor_render\').onclick = event => { try {
+						_(\'main\').replaceChildren(...(((src => { // Allows insert into DOM for live view
+							const x = (new DOMParser()).parseFromString(src, \'text/html\').body;
+							if (_(\'parsererror\', x))
+								throw new Error(_(\'parsererror\', x).textContent);
+							if (_(\'sourcetext\', x))
+								throw new Error(_(\'sourcetext\', x).textContent);
+							return x;
+						})(_(\'#editor_content\').value)).children));
+					dialog_success(200, \'Rendered\'); } catch (e) { dialog_error(0, \'Render failed: \' + e); throw e; } };
+					_(\'#editor_submit\').onclick = async event => { try {
+						const content = (src => { // Use XML instead of HTML because output is more clean. First child of XML is the inner XML, then get all children
+							const x = (new DOMParser()).parseFromString(\'<xml>\' + src + \'</xml>\', \'text/xml\').children[0];
+							if (_(\'parsererror\', x))
+								throw new Error(_(\'parsererror\', x).textContent);
+							if (_(\'sourcetext\', x))
+								throw new Error(_(\'sourcetext\', x).textContent);
+							return x;
+						})(_(\'#editor_content\').value);
+						let resource = await BearAPI_Resource.get(window.location.pathname.substr(1));
+						const response = await BearAPI_Resource.update({
+							url:		resource.url,
+							category:	resource.category,
+							meta:		JSON.stringify(resource.meta),
+							aux:		JSON.stringify(resource.aux),
+							content:	new Blob([_(\'#editor_content\').value])
+						});
+					dialog_success(200, \'Submitted\'); } catch (e) { dialog_error(0, \'Submit failed: \' + e); throw e; } };
+				</script>
+			</form></div>
+		';}
 	}
 
 

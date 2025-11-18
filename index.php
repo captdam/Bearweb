@@ -11,39 +11,10 @@
 			$BW = $this;
 			if (substr($this->site->template[0], 0, 4) == 'page') {
 				header('Content-Type: text/html');
-				{
-					$domain = 'https://example.com/';
-					$sitename = 'Example Site';
-					$session_user = htmlspecialchars($BW->session->sUser, ENT_COMPAT);
-					$meta_title = htmlspecialchars($BW->site->meta['title'] ?? '', ENT_COMPAT);
-					$meta_keywords = htmlspecialchars($BW->site->meta['keywords'] ?? '', ENT_COMPAT);
-					$meta_description = htmlspecialchars($BW->site->meta['description'] ?? '', ENT_COMPAT);
-					echo '<!DOCTYPE html><html lang="en" data-suser="',$session_user,'"><head>',
-					'<title>',$meta_title,' - ',$sitename,'</title>',
-					'<meta property="og:title" content="',$meta_title,'" />',
-					'<meta property="og:site_name" content="',$sitename,'" />',
-					'<meta name="keywords" content="',$meta_keywords,'" />',
-					'<meta name="description" content="',$meta_description,'" />',
-					'<meta property="og:description" content="',$meta_description,'" />',
-					'<meta name="viewport" content="width=device-width, initial-scale=1.0" />',
-					'<meta charset="utf-8" />',
-					'<link href="/web/style.css" rel="stylesheet" type="text/css" />',
-					'<script src="/web/bearapi.js"></script>',
-					'<script src="/web/bearweb.js"></script>',
-					'<link rel="canonical" href="',$domain,$BW->site->url,'" />',
-					'<meta property="og:url" content="',$domain,$BW->site->url,'" />',
-					( array_key_exists('robots', $BW->site->meta) ? ('<meta name="robots" content="'.htmlspecialchars($BW->site->meta['robots'], ENT_COMPAT).'" />') : '' ),
-					( array_key_exists('bgimg', $BW->site->meta) ? ('<meta property="__og:image" content="'.htmlspecialchars($BW->site->meta['bgimg'], ENT_COMPAT).'" />') : '' ),
-					( $BW->site->owner ? ('<meta name="author" content="'.htmlspecialchars($BW->site->owner, ENT_COMPAT).'" />') : '' ),
-					( array_key_exists('lang-en', $BW->site->meta) ? ('<link rel="alternate" hreflang="en" href="/'.htmlspecialchars($BW->site->aux['lang-en'], ENT_COMPAT).'" type="text/html" />') : '' ),
-					( array_key_exists('lang-zh', $BW->site->meta) ? ('<link rel="alternate" hreflang="en" href="/'.htmlspecialchars($BW->site->aux['lang-zh'], ENT_COMPAT).'" type="text/html" />') : '' ),
-					'</head><body>';
-				}
 				$template = Bearweb_Site::Dir_Template.$this->site->template[0].'.php';
 				if (!file_exists($template))
 					throw new BW_WebServerError('Template not found: '.$this->site->template[0], 500);
 				include $template;
-				echo '</body></html>';
 			} else if ($this->site->template[0] == 'object') {
 				header('Content-Type: '.($this->site->aux['mime'] ?? 'text/plain'));
 				if ($this->site->template[1] == 'blob') {

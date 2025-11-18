@@ -1,8 +1,15 @@
+
+<!DOCTYPE html><html lang="en" data-suser="<?= htmlspecialchars($BW->session->sUser, ENT_COMPAT) ?>"><head>
+	<?= $BW->site->util_html_head('https://example.com/', 'Example Site') ?>
+</head><body>
+
+
 <?php if ($BW->site->owner && $BW->site->access($BW->user) == Bearweb_Site::ACCESS_RW): ?>
-<div>
-	<p>Example content for resource owner</p>
-</div>
+	<div>
+		<p>Example content for resource owner</p>
+	</div>
 <?php endif; ?>
+
 <main>
 <?php if ($BW->site->template[1] == 'error'): ?>
 	<div>
@@ -26,3 +33,5 @@
 	?>
 <?php endif; ?>
 </main>
+
+</body></html>
