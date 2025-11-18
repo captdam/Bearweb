@@ -1,4 +1,4 @@
-<?php	header('X-Powered-By: Bearweb 7.2.251016');
+<?php	header('X-Powered-By: Bearweb 7.2.251117');
 
 	class _Bearweb {
 		const HideServerError = false;
@@ -137,9 +137,9 @@
 			set (string|array $value) => is_string($value) ? (json_decode($value, true) ?? []) : $value;
 		}
 
-		/** Resource content, the content should be directly output to reduce server process load */
-		public ?string $content {
-			get => is_null($this->content) ? static::__file_read($this->url) : $this->content; // Read the file (very large) only whwn required
+		/** Resource content (always get string), the content should be directly output to reduce server process load, consider use $this->dumpContent() to directly dump to output to save RAM */
+		public mixed $content { // FEATURE REQUEST: resource|string
+			get => is_string(get_mangled_object_vars($this)['content']) ? $this->content : $this->__file_read(-1);
 		}
 
 		/** Resource auxiliary data, template defined data array [key => value...] */
@@ -166,7 +166,7 @@
 			int		$create = self::TIME_NULL,
 			int		$modify = self::TIME_NULL,
 			array|string	$meta = [],
-			?string		$content = '',
+			mixed		$content = '', // FEATURE REQUEST: resource|string
 			array|string	$aux = []
 		) {
 			$this->url	= $url;
@@ -185,7 +185,8 @@
 		public static function validURL(string $url): bool { return preg_match('/^[A-Za-z0-9\-\_\:\/\.]{0,128}$/', $url) && !preg_match('/\.\//', $url); }
 
 		/** Query a resource from sitemap db. 
-		 * Note: Data in DB is volatile, instance only reflects the data at time of DB fetch, it may be changed by another transaction (e.g. Resource modify API) and other process. 
+		 * Note: Data (in both DB and file) is volatile. This instance only reflects the data at time of DB fetch; file read only reflects the data at time of read for file-backed resource. 
+		 * Data may be changed by another transaction (e.g. Resource modify API) or another process. 
 		 * @param string $url			Resource URL
 		 * @return ?Bearweb_Site		A Bearweb site resource, or null if resource not exist
 		 * @throws BW_DatabaseServerError	Cannot read sitemap DB
@@ -193,6 +194,8 @@
 		public static function query(string $url): ?static {
 			if (array_key_exists($url, static::FixedMap)) {
 				$site = static::FixedMap[$url];
+				if (array_key_exists('content', $site) && $site['content'] === null)
+					$site['content'] = fopen(static::__file_path($url), 'rb');
 				return new static(...$site, url: $url);
 			}
 			try {
@@ -203,6 +206,7 @@
 				$sql->closeCursor();
 				if (!$site)
 					return null;
+				$site['content'] = $site['content'] ?? fopen(static::__file_path($site['url']), 'rb');
 				return new static(...$site);
 			} catch (Exception $e) { throw new BW_DatabaseServerError('Cannot read sitemap database: '.$e->getMessage(), 500); }
 		}
@@ -210,13 +214,23 @@
 		/** Get content length. 
 		 * @return int Content length in bytes
 		 */
-		public function getContentLength(): int { return is_null(get_mangled_object_vars($this)['content']) ? static::__file_size($this->url) : strlen($this->content); }
+		public function getContentLength(): int { return is_string(get_mangled_object_vars($this)['content']) ? strlen($this->content) : $this->__file_size(); }
 
 		/** Directly output the content. 
 		 * This is useful for large content. Large content is saved in file, using this function prevent loading it into RAM; instead, the content is directly dumpped to output. 
 		 * You should use this::getContentLength() to obtain Content-Length header first, then disable output buffer and execute this function to minimize RAM footprint. 
+		 * @param int $len = -1 Dump up to len bytes of content, pass -1 to dump all the content
+		 * @param bool $header = flase Send Content-Length HTTP header
 		 */
-		public function dumpContent(): void { echo is_null(get_mangled_object_vars($this)['content']) ? static::__file_dump($this->url) : $this->content; }
+		public function dumpContent(int $len = -1, bool $header = false): void {
+			if (is_string(get_mangled_object_vars($this)['content'])) {
+				if ($header)
+					header('Content-Length: '.strlen($this->content));
+				echo $this->content;
+			} else {
+				$this->__file_dump($len, $header);
+			}
+		}
 
 		/** Test user access privilege level. 
 		 * @param Bearweb_User $user Bearweb_User object with user ID and group
@@ -263,9 +277,9 @@
 				}
 				$sql->execute();
 				if (strlen($this->content) >= static::Size_FileBlob) {
-					static::__file_write($this->url, $this->content);
+					$this->__file_write();
 				} else {
-					static::__file_delete($this->url);
+					$this->__file_delete();
 				}
 				static::$db->commit();
 			} catch (Exception $e) {
@@ -307,9 +321,9 @@
 				}
 				$sql->execute();
 				if (strlen($this->content) >= static::Size_FileBlob) {
-					static::__file_write($this->url, $this->content);
+					$this->__file_write();
 				} else {
-					static::__file_delete($this->url);
+					$this->__file_delete();
 				}
 				static::$db->commit();
 			} catch (Exception $e) {
@@ -334,7 +348,7 @@
 				$sql = static::$db->prepare('DELETE FROM `Sitemap` WHERE `URL` = ?');
 				$sql->bindValue(1,	$this->url,	PDO::PARAM_STR	);
 				$sql->execute();
-				static::__file_delete($this->url);
+				$this->__file_delete();
 				static::$db->commit();
 			} catch (Exception $e) {
 				static::$db->rollBack();
@@ -343,44 +357,70 @@
 			$sql->closeCursor();
 		} catch (Exception $e) { throw new BW_DatabaseServerError('Cannot delete blob file from sitemap database: '.$e->getMessage(), 500); } }
 
-		protected static function __file_path(string $url): string { return static::Dir_Resource.str_replace('/', '#', $url); } // Convert into flat filepath. # is not allowed in url (used for tag) but allowed in filename
-		protected static function __file_write(string $url, string $content): void {
-			if (file_put_contents(static::__file_path($url), $content, LOCK_EX) === false)
-				throw new BW_DatabaseServerError('Cannot write to blob file: '.$url, 500);
-		}
-		protected static function __file_read(string $url): string {
-			$file = fopen(static::__file_path($url), 'rb');
+		/** Convert into flat filepath. # is not allowed in url (used for tag) but allowed in filename */
+		protected static function __file_path(string $url): string { return static::Dir_Resource.str_replace('/', '#', $url); }
+
+		/** Read file-backed resource content into RAM, pass -1 (default) to len for full length */
+		protected function __file_read(int $len = -1) {
+			$file = get_mangled_object_vars($this)['content'];
 			flock($file, LOCK_SH);
-			clearstatcache(true, static::__file_path($url));
-			$content = fread($file, filesize(static::__file_path($url)));
+			if ($len < 0) {
+				fseek($file, 0, SEEK_END);
+				$len = ftell($file);
+				if ($len === false)
+					throw new BW_DatabaseServerError('Cannot get size for blob file: '.$this->url, 500);
+			}
+			rewind($file);
+			$content = fread($file,$len);
 			if ($content === false)
-				throw new BW_DatabaseServerError('Cannot read from blob file: '.$url, 500);
+				throw new BW_DatabaseServerError('Cannot read from blob file: '.$this->url, 500);
 			flock($file, LOCK_UN);
-			fclose($file);
 			return $content;
 		}
-		protected static function __file_delete(string $url): void {
-			if (!is_file(static::__file_path($url)))
-				return;
-			$file = fopen(static::__file_path($url), 'rb');
-			flock($file, LOCK_EX);
-			ftruncate($file, 0);
-			fflush($file);
-			flock($file, LOCK_UN);
-			fclose($file);
-			unlink(static::__file_path($url));
-		}
-		protected static function __file_size(string $url): int {
-			clearstatcache(true, static::__file_path($url));
-			return filesize(static::__file_path($url));
-		}
-		protected static function __file_dump(string $url): string {
-			$file = fopen(static::__file_path($url), 'rb');
+		/** Get file-back resource content size */
+		protected function __file_size(): int {
+			$file = get_mangled_object_vars($this)['content'];
 			flock($file, LOCK_SH);
+			fseek($file, 0, SEEK_END);
+			$len = ftell($file);
+			if ($len === false)
+				throw new BW_DatabaseServerError('Cannot get size for blob file: '.$this->url, 500);
+			flock($file, LOCK_UN);
+			return $len;
+		}
+		/** Directly dump file-backed resource content to output, pass -1 (default -1) to len for full length, pass true (default false) to header to set Content-Length header */
+		protected function __file_dump(int $len = -1, bool $header = false): void {
+			$file = get_mangled_object_vars($this)['content'];
+			flock($file, LOCK_SH);
+			if ($len < 0) {
+				fseek($file, 0, SEEK_END);
+				$len = ftell($file);
+				if ($len === false)
+					throw new BW_DatabaseServerError('Cannot get size for blob file: '.$this->url, 500);
+			}
+			if ($header)
+				header('Content-Length: '.$len);
+			rewind($file);
 			fpassthru($file);
 			flock($file, LOCK_UN);
+		}
+
+		/** Update a file-backed resource */
+		protected function __file_write(): void {
+			$file = fopen(static::__file_path($this->url), 'wb');
+			flock($file, LOCK_EX);
+			rewind($file);
+			if (fwrite($file, $this->content) === false)
+				throw new BW_DatabaseServerError('Cannot write to blob file: '.$this->url, 500);
+			flock($file, LOCK_UN);
 			fclose($file);
-			return ''; // Return empty string for compatibility
+		}
+
+		/** Delete a file-backed resource. Return true if file not existed or delete success. Note file pointers still in use are still available */
+		protected function __file_delete(): void {
+			$path = static::__file_path($this->url);
+			if (!(is_file($path) ? unlink($path) : true))
+				throw new BW_DatabaseServerError('Cannot unlink blob file: '.$this->url, 500);
 		}
 	}
 
@@ -607,12 +647,13 @@
 
 			// Create a new transaction
 			$tid = '';
-			$sql = static::$db->prepare('INSERT INTO `Transaction` (`ID`, `Create`, `IP`, `URL`, `Session`, `Log`) VALUES (?,?,?,?,?,\'\') RETURNING `ID`, `Create`, `IP`, `URL`, `Session`, `Log`');
+			$sql = static::$db->prepare('INSERT INTO `Transaction` (`ID`, `Create`, `IP`, `URL`, `Session`, `Log`) VALUES (?,?,?,?,?,?) RETURNING `ID`, `Create`, `IP`, `URL`, `Session`, `Log`');
 			$sql->bindParam(	1,	$tid,							PDO::PARAM_STR	); #By reference
 			$sql->bindValue(	2,	$_SERVER['REQUEST_TIME'],				PDO::PARAM_INT	);
 			$sql->bindValue(	3,	$_SERVER['REMOTE_ADDR'].':'.$_SERVER['REMOTE_PORT'],	PDO::PARAM_STR	);
-			$sql->bindValue(	4,	$url,							PDO::PARAM_STR	); #New session is always issused to new user, it can only be changed by User Login API with existed SID
-			$sql->bindValue(	5,	$session['ID'],						PDO::PARAM_STR	);
+			$sql->bindValue(	4,	$url,							PDO::PARAM_STR	);
+			$sql->bindValue(	5,	$session['ID'],						PDO::PARAM_STR	); #New session is always issused to new user, it can only be changed by User Login API with existed SID
+			$sql->bindValue(	6,	'PID: '.getmypid().PHP_EOL,				PDO::PARAM_STR	);
 			static::insertRetry(5, function() use (&$tid, $sql) { $tid = static::keygen(); $sql->execute(); }, new Exception('Retry too much for transaction ID'));
 			$transaction = $sql->fetch();
 			$sql->closeCursor();
