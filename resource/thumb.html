@@ -12,7 +12,10 @@
 		<h2>简述</h2><input id="localfile_description_zh" placeholder="图片的简介." />
 		<div class="layflat">
 			<button id="localfile_btn">Open media file</button>
-			<button id="localfile_upload">Upload</button>
+			<button id="localfile_upload">Upload (Category)</button>
+			<button id="localfile_upload_thumb">Thumb only</button>
+			<button id="localfile_upload_hd">HD only</button>
+			<button id="localfile_upload_thumbhd">Thumb + HD only</button>
 		</div>
 		<div style="display:none">
 			<input id="localfile_picker" type="file" accept="image/*" />
@@ -29,7 +32,7 @@
 	<label>Height</label>
 	<input id="thumb_config_height" type="number" min="0" max="0" value="0" />
 	<label>Quality</label>
-	<input id="thumb_config_quality" type="number" min="0" max="100" value="40" />
+	<input id="thumb_config_quality" type="number" min="0" max="100" value="75" />
 	<label>Size</label>
 	<input id="thumb_config_size" disabled value="0" />
 	<label>State</label>
@@ -124,12 +127,12 @@
 
 	// Upload
 	_('#localfile_url').onchange = event => { _('#thumb_title').textContent = event.target.value + '.thumb.jpg'; _('#hd_title').textContent = event.target.value + '.jpg'; };
-	_('#localfile_upload').onclick = async event => {
+	const upload = async (enable_cat, enable_thumb, enable_hd) => {
 		_('#hd_config_state').value = 'Waiting...';
 		_('#thumb_config_state').value = 'Waiting...';
 
-		if (!(/^[A-Za-z0-9\_\-\:\/\.]{6,32}$/.test(_('#localfile_url').value)) || _('#localfile_url').value.substr(0,1) == '.') {
-			dialog_error('Bad URL prefix: need 6-32 chars long, allows [A-Za-z0-9_-:/.], not starting with .(dot)');
+		if (!(/^[A-Za-z0-9\_\-\:\/\.]{6,64}$/.test(_('#localfile_url').value)) || _('#localfile_url').value.substr(0,1) == '.') {
+			dialog_error('Bad URL prefix: need 6-64 chars long, allows [A-Za-z0-9_-:/.], not starting with .(dot)');
 			return;
 		}
 
@@ -153,136 +156,151 @@
 			reader.readAsDataURL(blob);
 		}); };
 
-		try {
-			await BearAPI_Resource.create(url_en);
-			dialog_success('Page-en', 'Page '+url_en+' created!');
-			rollback.push(url_en);
-		} catch (e) {
-			dialog_error(e.name, e.message);
-			rollbackResources();
-			return;
+		if (enable_cat) {
+			try {
+				await BearAPI_Resource.create(url_en);
+				dialog_success('Page-en', 'Page '+url_en+' created!');
+				rollback.push(url_en);
+			} catch (e) {
+				dialog_error(e.name, e.message);
+				rollbackResources();
+				return;
+			}
+			try {
+				await BearAPI_Resource.create(url_zh);
+				dialog_success('Page-zh', 'Page '+url_zh+' created!');
+				rollback.push(url_zh);
+			} catch (e) {
+				dialog_error(e.name, e.message);
+				rollbackResources();
+				return;
+			}
 		}
 
-		try {
-			await BearAPI_Resource.create(url_zh);
-			dialog_success('Page-zh', 'Page '+url_zh+' created!');
-			rollback.push(url_zh);
-		} catch (e) {
-			dialog_error(e.name, e.message);
-			rollbackResources();
-			return;
+		if (enable_hd) {
+			try {
+				await BearAPI_Resource.create(url_hd);
+				dialog_success('HD Image', 'File '+url_hd+' created!');
+				rollback.push(url_hd);
+			} catch (e) {
+				dialog_error(e.name, e.message);
+				rollbackResources();
+				return;
+			}
 		}
 
-		try {
-			await BearAPI_Resource.create(url_hd);
-			dialog_success('HD Image', 'File '+url_hd+' created!');
-			rollback.push(url_hd);
-		} catch (e) {
-			dialog_error(e.name, e.message);
-			rollbackResources();
-			return;
+		if (enable_thumb) {
+			try {
+				await BearAPI_Resource.create(url_thumb);
+				dialog_success('Thumbnail', 'File '+url_thumb+' created!');
+				rollback.push(url_thumb);
+			} catch (e) {
+				dialog_error(e.name, e.message);
+				rollbackResources();
+				return;
+			}
 		}
 
-		try {
-			await BearAPI_Resource.create(url_thumb);
-			dialog_success('Thumbnail', 'File '+url_thumb+' created!');
-			rollback.push(url_thumb);
-		} catch (e) {
-			dialog_error(e.name, e.message);
-			rollbackResources();
-			return;
+		if (enable_hd) {
+			try {
+				await BearAPI_Resource.update({
+					url:		url_hd,
+					category:	'Content',
+					meta:		'{}',
+					aux:		'{"mime":"image/jpeg"}',
+					content:	new Blob([Uint8Array.fromBase64( await getBase64(await (await fetch(_('#hd_img').src)).blob()) )])
+				}, '', event => {
+					if (event.lengthComputable)
+						_('#hd_config_state').value = event.loaded < event.total ? 'Uploading ' + Math.floor(event.loaded/event.total*100) + '% - ' + event.loaded + ' / ' + event.total : 'Upload finished, waiting server processing';
+				});
+				dialog_success('HD Image', 'File '+url_hd+' created!');
+			} catch (e) {
+				dialog_error(e.name, e.message);
+				rollbackResources();
+				return;
+			}
 		}
 
-		try {
-			await BearAPI_Resource.update({
-				url:		url_hd,
-				category:	'Content',
-				meta:		'{}',
-				aux:		'{"mime":"image/jpeg"}',
-				content:	new Blob([Uint8Array.fromBase64( await getBase64(await (await fetch(_('#hd_img').src)).blob()) )])
-			}, '', event => {
-				if (event.lengthComputable)
-					_('#hd_config_state').value = event.loaded < event.total ? 'Uploading ' + Math.floor(event.loaded/event.total*100) + '% - ' + event.loaded + ' / ' + event.total : 'Upload finished, waiting server processing';
-			});
-			dialog_success('HD Image', 'File '+url_hd+' created!');
-		} catch (e) {
-			dialog_error(e.name, e.message);
-			rollbackResources();
-			return;
+		if (enable_thumb) {
+			try {
+				await BearAPI_Resource.update({
+					url:		url_thumb,
+					category:	'Content',
+					meta:		'{}',
+					aux:		'{"mime":"image/jpeg"}',
+					content:	new Blob([Uint8Array.fromBase64( await getBase64(await (await fetch(_('#thumb_img').src)).blob()) )])
+				}, '', event => {
+					if (event.lengthComputable)
+						_('#thumb_config_state').value = event.loaded < event.total ? 'Uploading ' + Math.floor(event.loaded/event.total*100) + '% - ' + event.loaded + ' / ' + event.total : 'Upload finished, waiting server processing';
+				});
+				dialog_success('Thumbnail', 'File '+url_thumb+' created!');
+			} catch (e) {
+				dialog_error(e.name, e.message);
+				rollbackResources();
+				return;
+			}
 		}
 
-		try {
-			await BearAPI_Resource.update({
-				url:		url_thumb,
-				category:	'Content',
-				meta:		'{}',
-				aux:		'{"mime":"image/jpeg"}',
-				content:	new Blob([Uint8Array.fromBase64( await getBase64(await (await fetch(_('#thumb_img').src)).blob()) )])
-			}, '', event => {
-				if (event.lengthComputable)
-					_('#thumb_config_state').value = event.loaded < event.total ? 'Uploading ' + Math.floor(event.loaded/event.total*100) + '% - ' + event.loaded + ' / ' + event.total : 'Upload finished, waiting server processing';
-			});
-			dialog_success('Thumbnail', 'File '+url_thumb+' created!');
-		} catch (e) {
-			dialog_error(e.name, e.message);
-			rollbackResources();
-			return;
-		}
+		if (enable_cat) { // Update pages at the end, so an "index" requested by others won't index this page and the images before this finished
+			try {
+				await BearAPI_Resource.update({
+					url:		url_en,
+					category:	_('#localfile_category').value + '-en',
+					meta:		JSON.stringify({
+						title:		_('#localfile_title_en').value,
+						description:	_('#localfile_description_en').value,
+						keywords:	_('#localfile_keywords_en').value,
+						thumb:		url_thumb,
+						hd:		url_hd,
+						ratio:		_('#localfile_content').naturalWidth / _('#localfile_content').naturalHeight
 
-		try { // Update pages at the end, so an "index" requested by others won't index this page and the images before this finished
-			await BearAPI_Resource.update({
-				url:		url_en,
-				category:	_('#localfile_category').value + '-en',
-				meta:		JSON.stringify({
-					title:		_('#localfile_title_en').value,
-					description:	_('#localfile_description_en').value,
-					keywords:	_('#localfile_keywords_en').value,
-					thumb:		url_thumb,
-					hd:		url_hd,
-					ratio:		_('#localfile_content').naturalWidth / _('#localfile_content').naturalHeight
+					}),
+					aux:		JSON.stringify({
+						"lang-en":	url_en,
+						"lang-zh":	url_zh
+					}),
+					content:	new Blob([])
+				});
+				dialog_success('Page', 'Page '+url_en+' created!');
+			} catch (e) {
+				dialog_error(e.name, e.message);
+				rollbackResources();
+				return;
+			}
+			try {
+				await BearAPI_Resource.update({
+					url:		url_zh,
+					category:	_('#localfile_category').value + '-zh',
+					meta:		JSON.stringify({
+						title:		_('#localfile_title_zh').value,
+						description:	_('#localfile_description_zh').value,
+						keywords:	_('#localfile_keywords_zh').value,
+						thumb:		url_thumb,
+						hd:		url_hd,
+						ratio:		_('#localfile_content').naturalWidth / _('#localfile_content').naturalHeight
 
-				}),
-				aux:		JSON.stringify({
-					"lang-en":	url_en,
-					"lang-zh":	url_zh
-				}),
-				content:	new Blob([])
-			});
-			dialog_success('Page', 'Page '+url_en+' created!');
-		} catch (e) {
-			dialog_error(e.name, e.message);
-			rollbackResources();
-			return;
-		}
-
-		try {
-			await BearAPI_Resource.update({
-				url:		url_zh,
-				category:	_('#localfile_category').value + '-zh',
-				meta:		JSON.stringify({
-					title:		_('#localfile_title_zh').value,
-					description:	_('#localfile_description_zh').value,
-					keywords:	_('#localfile_keywords_zh').value,
-					thumb:		url_thumb,
-					hd:		url_hd,
-					ratio:		_('#localfile_content').naturalWidth / _('#localfile_content').naturalHeight
-
-				}),
-				aux:		JSON.stringify({
-					"lang-en":	url_en,
-					"lang-zh":	url_zh
-				}),
-				content:	new Blob([])
-			});
-			dialog_success('Page', 'Page '+url_zh+' created!');
-		} catch (e) {
-			dialog_error(e.name, e.message);
-			rollbackResources();
-			return;
+					}),
+					aux:		JSON.stringify({
+						"lang-en":	url_en,
+						"lang-zh":	url_zh
+					}),
+					content:	new Blob([])
+				});
+				dialog_success('Page', 'Page '+url_zh+' created!');
+			} catch (e) {
+				dialog_error(e.name, e.message);
+				rollbackResources();
+				return;
+			}
 		}
 
 		await BearAPI_Resource.reindex();
+		dialog_success('Index', 'Index rebuilt!');
 	};
+	_('#localfile_upload').onclick = event => upload(true, true, true);
+	_('#localfile_upload_thumb').onclick = event => upload(false, true, false);
+	_('#localfile_upload_hd').onclick = event => upload(false, false, true);
+	_('#localfile_upload_thumbhd').onclick = event => upload(false, true, true);
 
 </script>
 <style>
