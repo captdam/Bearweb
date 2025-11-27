@@ -182,8 +182,8 @@
 		if (Object.hasOwn(meta, 'lang')) {
 			dom_description.append(dom({_: 'div', style: styleOK, textContent: 'Language: ' + meta.lang}));
 		}
-		if (Object.hasOwn(meta, 'bgimg')) {
-			dom_description.append(dom({_: 'div', style: styleOK, textContent: 'Background image: ' + meta.bgimg}));
+		if (Object.hasOwn(meta, 'img')) {
+			dom_description.append(dom({_: 'div', style: styleOK, textContent: 'Background image: /' + meta.img}));
 		}
 		dom_text.style.background = ok ? colorOK : colorBad;
 	};

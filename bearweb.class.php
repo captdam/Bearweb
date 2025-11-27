@@ -441,7 +441,7 @@
 			'<link rel="canonical" href="',$domain,$this->url,'" />',
 			'<meta property="og:url" content="',$domain,$this->url,'" />',
 			( array_key_exists('robots', $this->meta) ? ('<meta name="robots" content="'.htmlspecialchars($this->meta['robots'], ENT_COMPAT).'" />') : '' ),
-			( array_key_exists('bgimg', $this->meta) ? ('<meta property="__og:image" content="'.htmlspecialchars($this->meta['bgimg'], ENT_COMPAT).'" />') : '' ),
+			( array_key_exists('img', $this->meta) ? ('<meta property="__og:image" content="'.htmlspecialchars($this->meta['img'], ENT_COMPAT).'" />') : '' ),
 			( $this->owner ? ('<meta name="author" content="'.htmlspecialchars($this->owner, ENT_COMPAT).'" />') : '' ),
 			( array_key_exists('lang-en', $this->meta) ? ('<link rel="alternate" hreflang="en" href="/'.htmlspecialchars($this->aux['lang-en'], ENT_COMPAT).'" type="text/html" />') : '' ),
 			( array_key_exists('lang-zh', $this->meta) ? ('<link rel="alternate" hreflang="en" href="/'.htmlspecialchars($this->aux['lang-zh'], ENT_COMPAT).'" type="text/html" />') : '' );
@@ -821,6 +821,7 @@
 			throw new BW_DatabaseServerError('No database defined', 500);
 		}
 
+		/** Use {} for object and [] for array, '' for empty data */
 		public static function encodeJSON(array $x) { return count($x) ? ( array_is_list($x) ? json_encode((array)$x) : json_encode((object)$x) ) : ''; }
 	}
 
@@ -863,13 +864,13 @@
 		public function __construct(string $url, array $template, array $meta, array $aux) { parent::__construct($url, 'Catalog', $template, $meta, '', $aux); }
 		public function add(array $r): bool {
 			$url		= htmlspecialchars($r['url'], ENT_COMPAT);
-			$bgimg		= htmlspecialchars($r['meta']['bgimg'] ?? '', ENT_COMPAT);
+			$img		= htmlspecialchars($r['meta']['img'] ?? '', ENT_COMPAT);
 			$title		= htmlspecialchars($r['meta']['title'] ?? $r['url'], ENT_COMPAT);
 			$description	= htmlspecialchars($r['meta']['description'] ?? '', ENT_COMPAT);
 			$keywords	= htmlspecialchars($r['meta']['keywords'] ?? '', ENT_COMPAT);
 			$owner		= htmlspecialchars($r['owner'], ENT_COMPAT);
 			$modify		= date('M j, Y',$r['modify']);
-			$this->site->content .= '<a href="/'.$url.'" style="--bgimg:'.$bgimg.'"><h2>'.$title.'</h2><p>'.$description.'</p><p class="content_keywords">'.$keywords.'</p><p><i>--by '.$owner.' @ '.$modify.'</i></p></a>';
+			$this->site->content .= '<a href="/'.$url.'" style="--bgimg:url(/'.$img.')"><h2>'.$title.'</h2><p>'.$description.'</p><p class="content_keywords">'.$keywords.'</p><p><i>--by '.$owner.' @ '.$modify.'</i></p></a>';
 			return true;
 		}
 	}
