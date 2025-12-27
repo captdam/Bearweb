@@ -333,6 +333,57 @@
 			$sql->closeCursor();
 		} catch (Exception $e) { throw new BW_DatabaseServerError('Cannot update sitemap database: '.$e->getMessage(), 500); } }
 
+		/** Insert or update this resource into sitemap db. 
+		 * This function will use transaction. You should not be in a transaction while call this function. 
+		 * @throws BW_DatabaseServerError Fail to insert into sitemap db
+		 */
+		public function upsert(): void { try {
+			if (array_key_exists($this->url, static::FixedMap))
+				throw new Exception('Cannot modify hard-coded resource.');
+			if (static::$db->inTransaction())
+				throw new Exception('Not allowed in transaction.');
+			static::$db->beginTransaction();
+			try {
+				$sql = static::$db->prepare('INSERT INTO `Sitemap` (
+					`url`, `category`, `template`,
+					`owner`, `create`, `modify`, `meta`,
+					`content`, `aux`
+				) VALUES (
+					:url, :category, :template,
+					:owner, :create, :modify, :meta,
+					:content, :aux
+				) ON CONFLICT DO UPDATE SET
+					`category` = :category, `template` = :template,
+					`owner` = :owner, `create` = :create, `modify` = :modify, `meta` = :meta,
+					`content` = :content, `aux` = :aux'
+				);
+				$sql->bindValue(':url',		$this->url,				PDO::PARAM_STR	);
+				$sql->bindValue(':category',	$this->category,			PDO::PARAM_STR	);
+				$sql->bindValue(':template',	static::encodeJSON($this->template),	PDO::PARAM_STR	);
+				$sql->bindValue(':owner',	$this->owner,				PDO::PARAM_STR	);
+				$sql->bindValue(':create',	$this->create,				PDO::PARAM_INT	);
+				$sql->bindValue(':modify',	$this->modify,				PDO::PARAM_INT	);
+				$sql->bindValue(':meta',	static::encodeJSON($this->meta),	PDO::PARAM_STR	);
+				$sql->bindValue(':aux',		static::encodeJSON($this->aux),		PDO::PARAM_STR	);
+				if (strlen($this->content) >= static::Size_FileBlob) {
+					$sql->bindValue(':content', null, PDO::PARAM_NULL);
+				} else {
+					$sql->bindValue(':content', $this->content, PDO::PARAM_STR);
+				}
+				$sql->execute();
+				if (strlen($this->content) >= static::Size_FileBlob) {
+					$this->__file_write();
+				} else {
+					$this->__file_delete();
+				}
+				static::$db->commit();
+			} catch (Exception $e) {
+				static::$db->rollBack();
+				throw $e;
+			}
+			$sql->closeCursor();
+		} catch (Exception $e) { throw new BW_DatabaseServerError('Cannot insert into sitemap database: '.$e->getMessage(), 500); } }
+
 		/** Delete this resource. 
 		 * It is not necessary to query this resource, create a dummy resource with url to specify resource in sitemap db. 
 		 * This function will use transaction. You should not be in a transaction while call this function. 
@@ -842,7 +893,7 @@
 			}
 			return '';
 		}
-		public function update() { $this->site->update(); }
+		public function upsert() { $this->site->upsert(); }
 	}
 	class BearIndex_Bulletin extends BearIndex {
 		protected ?array $lastAddResource = null;
@@ -888,9 +939,9 @@
 			$this->site->content .= '<resource><url>'.$url.'</url><category>'.$category.'</category><create>'.$create.'</create><modify>'.$modify.'</modify><title>'.$title.'</title><robots>'.$robots.'</robots><owner>'.$owner.'</owner></resource>';
 			return true;
 		}
-		public function update() {
+		public function upsert() {
 			$this->site->content .= '</resourceset>';
-			parent::update();
+			parent::upsert();
 		}
 	}
 	class BearIndex_SitemapRss extends BearIndex {
@@ -916,9 +967,9 @@
 			$this->site->content .= '<item><title>'.$title.'</title><link>'.$this->domain.$url.'</link><guid>'.$this->domain.$url.'</guid><author>'.$owner.'</author><category>'.$category.'</category><description>'.$description.'</description><pubDate>'.$modify.'</pubDate></item>';
 			return true;
 		}
-		public function update() {
+		public function upsert() {
 			$this->site->content .= '</channel></rss>';
-			parent::update();
+			parent::upsert();
 		}
 	}
 	class BearIndex_SitemapTxt extends BearIndex {
@@ -950,9 +1001,9 @@
 			$this->site->content .= '<url><loc>'.$this->domain.$url.'</loc><lastmod>'.$modify.'</lastmod></url>';
 			return true;
 		}
-		public function update() {
+		public function upsert() {
 			$this->site->content .= '</urlset>';
-			parent::update();
+			parent::upsert();
 		}
 	}
 	function _bear_reindex(array $index) {
@@ -960,6 +1011,6 @@
 			$r['meta'] = json_decode($r['meta'], true) ?? [];
 			foreach ($index as $x) $x->add($r);
 		}
-		foreach ($index as $x) $x->update($r);
+		foreach ($index as $x) $x->upsert($r);
 	}
 ?>
