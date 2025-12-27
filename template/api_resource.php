@@ -37,6 +37,7 @@
 			try {
 				$resource = new Bearweb_Site(
 					url: $_POST['url'],
+					category: 'Content',
 					template: ['object', 'blob'],
 					owner: $BW->user->id,
 					create:		Bearweb_Site::TIME_CURRENT,
@@ -46,8 +47,6 @@
 					]
 				);
 				$resource->insert();
-				http_response_code(201);
-				return $resource;
 			} catch (BW_DatabaseServerError $e) {
 				if (strpos($e->getMessage(), 'UNIQUE')) {
 					http_response_code(409);
@@ -55,6 +54,8 @@
 				}
 				throw $e;
 			}
+			http_response_code(201);
+			return $resource;
 
 		case 'update':
 			if (!isset($_POST['category']) || !array_key_exists($_POST['category'], $BW->site->aux['type'])) {
