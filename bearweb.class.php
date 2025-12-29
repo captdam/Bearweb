@@ -494,8 +494,8 @@
 			( array_key_exists('robots', $this->meta) ? ('<meta name="robots" content="'.htmlspecialchars($this->meta['robots'], ENT_COMPAT).'" />') : '' ),
 			( array_key_exists('img', $this->meta) ? ('<meta property="__og:image" content="'.htmlspecialchars($this->meta['img'], ENT_COMPAT).'" />') : '' ),
 			( $this->owner ? ('<meta name="author" content="'.htmlspecialchars($this->owner, ENT_COMPAT).'" />') : '' ),
-			( array_key_exists('lang-en', $this->meta) ? ('<link rel="alternate" hreflang="en" href="/'.htmlspecialchars($this->aux['lang-en'], ENT_COMPAT).'" type="text/html" />') : '' ),
-			( array_key_exists('lang-zh', $this->meta) ? ('<link rel="alternate" hreflang="en" href="/'.htmlspecialchars($this->aux['lang-zh'], ENT_COMPAT).'" type="text/html" />') : '' );
+			( array_key_exists('lang-en', $this->aux) ? ('<link rel="alternate" hreflang="en" href="/'.htmlspecialchars($this->aux['lang-en'], ENT_COMPAT).'" type="text/html" />') : '' ),
+			( array_key_exists('lang-zh', $this->aux) ? ('<link rel="alternate" hreflang="zh" href="/'.htmlspecialchars($this->aux['lang-zh'], ENT_COMPAT).'" type="text/html" />') : '' );
 		}
 
 		public function util_html_inplaceEditor() { echo'
