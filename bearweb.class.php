@@ -474,7 +474,7 @@
 				throw new BW_DatabaseServerError('Cannot unlink blob file: '.$this->url, 500);
 		}
 
-		public function util_html_head(string $domain = 'https://example.com/', string $sitename = 'Example Site') {
+		public function util_html_head(string $domain = 'https://example.com/', string $sitename = 'Example Site', string $srcDomain = 'https://example.com/') {
 			$meta_title = htmlspecialchars($this->meta['title'] ?? '', ENT_COMPAT);
 			$meta_keywords = htmlspecialchars($this->meta['keywords'] ?? '', ENT_COMPAT);
 			$meta_description = htmlspecialchars($this->meta['description'] ?? '', ENT_COMPAT);
@@ -487,8 +487,8 @@
 			'<meta name="viewport" content="width=device-width, initial-scale=1.0" />',
 			'<meta charset="utf-8" />',
 			'<link href="/web/style.css" rel="stylesheet" type="text/css" />',
-			'<script src="/web/bearapi.js"></script>',
-			'<script src="/web/bearweb.js"></script>',
+			'<script src="'.$srcDomain.'web/bearapi.js"></script>',
+			'<script src="'.$srcDomain.'web/bearweb.js"></script>',
 			'<link rel="canonical" href="',$domain,$this->url,'" />',
 			'<meta property="og:url" content="',$domain,$this->url,'" />',
 			( array_key_exists('robots', $this->meta) ? ('<meta name="robots" content="'.htmlspecialchars($this->meta['robots'], ENT_COMPAT).'" />') : '' ),
