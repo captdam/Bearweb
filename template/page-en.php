@@ -96,6 +96,33 @@
 			</div>
 		<?php elseif ($BW->site->template[1] == 'direct'): ?>
 			<?= $BW->site->content ?>
+		<?php elseif ($BW->site->template[1] == 'langsel'): ?>
+			<div>
+				<?php if ($BW->site->template[0] == 'page-zh'): ?>
+					<p>多语言着陆页</p>
+					<h1>跳转中……</h1>
+				<?php else: ?>
+					<p>Multilingual landing page</p>
+					<h1>Redirecting...</h1>
+				<?php endif; ?>
+				<ul><?php
+					foreach (explode(',', $_SERVER['HTTP_ACCEPT_LANGUAGE'] ?? 'en', 65) as $lang) {
+						$lang = explode(';', trim($lang), 2)[0];
+						if (array_key_exists('lang-'.$lang, $BW->site->aux)) {
+							http_response_code(302);
+							header('Location: /'.$BW->site->aux['lang-'.$lang]);
+							echo '<script>window.location=\'/',htmlspecialchars($BW->site->aux['lang-'.$lang], ENT_COMPAT),'\';</script>';
+							break;
+						}
+					}
+					if (array_key_exists('lang-en', $BW->site->aux))
+						echo '<li style="list-style: \'en \'"><a hreflang="en" href="/', htmlspecialchars($BW->site->aux['lang-en'], ENT_COMPAT), '">Here is the English version of this article</a></li>';
+					if (array_key_exists('lang-zh', $BW->site->aux))
+						echo '<li style="list-style: \'中 \'"><a hreflang="zh" href="/', htmlspecialchars($BW->site->aux['lang-zh'], ENT_COMPAT), '">这里是这篇文章的中文版</a></li>';
+					
+				?></ul>
+			</div>
+			<script></script>
 		<?php elseif ($BW->site->template[1] == 'bulletin' || $BW->site->template[1] == 'catalog'): ?>
 			<div class="tintimg home_categoryOverview sidebyside" style="--bgcolor: rgba(0,0,0,0.75); --bgimg:url(/<?= $BW->site->meta['img']??'web/banner.png' ?>); color: #FFF; grid-template-columns: 40ch 1fr;"><div>
 				<h1><?= htmlspecialchars($BW->site->meta['title']??'', ENT_COMPAT) ?></h1>
@@ -125,7 +152,7 @@
 				<?php
 					echo '<ul>';
 						if (array_key_exists('github', $BW->site->aux))
-							echo '<li style="list-style: \'💻 \')">Also on GitHub: <a href="', htmlspecialchars($BW->site->aux['github'], ENT_COMPAT), '" target="_blank">', htmlspecialchars($BW->site->aux['github'], ENT_COMPAT), '</a></li>';
+							echo '<li style="list-style: \'💻 \'">Also on GitHub: <a href="', htmlspecialchars($BW->site->aux['github'], ENT_COMPAT), '" target="_blank">', htmlspecialchars($BW->site->aux['github'], ENT_COMPAT), '</a></li>';
 						if (array_key_exists('lang-en', $BW->site->aux))
 							echo '<li style="list-style: \'en \'"><a hreflang="en" href="/', htmlspecialchars($BW->site->aux['lang-en'], ENT_COMPAT), '">Here is the English version of this article</a></li>';
 						if (array_key_exists('lang-zh', $BW->site->aux))
