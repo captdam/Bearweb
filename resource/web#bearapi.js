@@ -1,4 +1,10 @@
 'use strict';
+
+// Bearweb API.
+// Use this API to talk to the Bearweb back-end APIs.
+// Do not modify this file.
+
+// API core: XHR packet encoder / decoder
 class BearAPI {
 	static async xhr(url, payload, progress) {
 		return await new Promise(callback => {
@@ -31,6 +37,8 @@ class BearAPI {
 		throw e;
 	}
 }
+
+// Create, modify, read and delete resource
 class BearAPI_Resource extends BearAPI {
 	static async get(url, encode, progress) { // Get (read) a resource from server, encode = b64 for base64 encoded data (binary)
 		const res = await this.xhr('/api/resource/get?encode=' + encode, {url: url}, progress);
@@ -60,6 +68,8 @@ class BearAPI_Resource extends BearAPI {
 		return res.json;
 	}
 }
+
+// Create, read, login and logoff user (session bind)
 class BearAPI_User extends BearAPI {
 	static async get(id) {
 		const res = await this.xhr('/api/user/get', {id: id});
