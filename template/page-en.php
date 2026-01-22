@@ -23,7 +23,7 @@
 					<nav id="header_navCat"><ul>
 						<li><a href="/">Bearweb CMS</a></li>
 						<li><a href="/framework/en">Framework</a></li>
-						<li><a href="/templates/zh">Templates</a></li>
+						<li><a href="/templates/en">Templates</a></li>
 					</ul></nav>
 				<?php endif; ?>
 				<nav id="header_navLang"><ul>
@@ -106,7 +106,7 @@
 					<h1>Redirecting...</h1>
 				<?php endif; ?>
 				<ul><?php
-					foreach (explode(',', $_SERVER['HTTP_ACCEPT_LANGUAGE'] ?? 'en', 65) as $lang) {
+					foreach (explode(',', $_SERVER['HTTP_ACCEPT_LANGUAGE'] ?? 'x', 65) as $lang) {
 						$lang = explode(';', trim($lang), 2)[0];
 						if (array_key_exists('lang-'.$lang, $BW->site->aux)) {
 							http_response_code(302);
@@ -124,7 +124,7 @@
 			</div>
 			<script></script>
 		<?php elseif ($BW->site->template[1] == 'bulletin' || $BW->site->template[1] == 'catalog'): ?>
-			<div class="tintimg home_categoryOverview sidebyside" style="--bgcolor: rgba(0,0,0,0.75); --bgimg:url(/<?= $BW->site->meta['img']??'web/banner.png' ?>); color: #FFF; grid-template-columns: 40ch 1fr;"><div>
+			<div class="tintimg home_categoryOverview sidebyside" style="--bgcolor: rgba(0,0,0,0.75); --bgimg:url(/<?= $BW->site->meta['img']??'web/banner.jpeg' ?>); color: #FFF; grid-template-columns: 40ch 1fr;"><div>
 				<h1><?= htmlspecialchars($BW->site->meta['title']??'', ENT_COMPAT) ?></h1>
 			</div><div>
 				<p><?= htmlspecialchars($BW->site->meta['description']??'', ENT_COMPAT) ?></p>
@@ -144,7 +144,7 @@
 					echo '<div class="list_horizontal" id="categorylist">', $BW->site->content, '</div>';
 			?>
 		<?php elseif ($BW->site->template[1] == 'article' || $BW->site->template[1] == 'image'): ?>
-			<div class="tintimg" style="--bgcolor: rgba(255,255,255,0.75); --bgimg: url(/<?= htmlspecialchars($BW->site->meta['img']??'web/banner.png', ENT_COMPAT) ?>); color: #000;">
+			<div class="tintimg" style="--bgcolor: rgba(255,255,255,0.75); --bgimg: url(/<?= htmlspecialchars($BW->site->meta['img']??'web/banner.jpeg', ENT_COMPAT) ?>); color: #000;">
 				<h1><?= htmlspecialchars($BW->site->meta['title']??'', ENT_COMPAT) ?></h1>
 				<p><?= htmlspecialchars($BW->site->meta['description']??'', ENT_COMPAT) ?></p>
 				<p class="content_keywords"><?= htmlspecialchars($BW->site->meta['keywords']??'', ENT_COMPAT) ?></p>
@@ -172,7 +172,7 @@
 			</div>
 			<?php
 				if ($BW->site->template[1] == 'image') {
-					echo '<div class="main_wide" style="text-align: center; background: center/contain no-repeat url(/', htmlspecialchars($BW->site->meta['thumb']??'', ENT_COMPAT), '), #BBB; height: 100vh;">
+					echo '<div class="main_wide" style="padding: 0; text-align: center; background: center/contain no-repeat url(/', htmlspecialchars($BW->site->meta['thumb']??'', ENT_COMPAT), '), #BBB; height: 100vh;">
 						<img src="/', htmlspecialchars($BW->site->meta['hd']??'', ENT_COMPAT), '" style="width: 100%; height: 100%; object-fit: contain; opacity: 0.25;" onload="this.style.opacity=1" />
 					</div>';
 				}
