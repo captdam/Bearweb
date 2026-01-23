@@ -2,7 +2,7 @@
 <div id="localfile" class="sidebyside" style="grid-template-columns: 1fr 2fr;">
 	<img id="localfile_content" />
 	<div>
-		<h2>URL prefix 1</h2><input id="localfile_url" placeholder="20121231-myperfectphoto" required />
+		<h2>URL prefix</h2><input id="localfile_url" placeholder="20121231-myperfectphoto" required />
 		<h2>Category</h2><select id="localfile_category" required></select>
 		<h2>Title</h2><input id="localfile_title_en" placeholder="Name of Image" />
 		<h2>名称</h2><input id="localfile_title_zh" placeholder="图片名称" />
@@ -80,6 +80,7 @@
 	// File picker
 	const localfile = file => {
 		_('#localfile_content').src = URL.createObjectURL(file);
+		_('#localfile_url').value = new Date(Date.now()).toLocaleDateString('en-CA').replaceAll('-','') + '-' + file.name.split('.')[0].substr(0, 15);
 	};
 	_('#localfile_btn').onclick = event => { event.preventDefault(); _('#localfile_picker').click(); };
 	_('#localfile_btn').ondragover = event => { event.preventDefault(); };
@@ -250,7 +251,7 @@
 						title:		_('#localfile_title_en').value,
 						description:	_('#localfile_description_en').value,
 						keywords:	_('#localfile_keywords_en').value,
-						thumb:		url_thumb,
+						img:		url_thumb,
 						hd:		url_hd,
 						ratio:		_('#localfile_content').naturalWidth / _('#localfile_content').naturalHeight
 
@@ -275,7 +276,7 @@
 						title:		_('#localfile_title_zh').value,
 						description:	_('#localfile_description_zh').value,
 						keywords:	_('#localfile_keywords_zh').value,
-						thumb:		url_thumb,
+						img:		url_thumb,
 						hd:		url_hd,
 						ratio:		_('#localfile_content').naturalWidth / _('#localfile_content').naturalHeight
 
