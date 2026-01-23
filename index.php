@@ -5,7 +5,7 @@
 	include_once './bearweb.class.php';
 
 	class Bearweb extends _Bearweb {
-		const HideServerError = true;
+		const HideServerError = false;
 
 		protected function invokeTemplate(): void {
 			$BW = $this;
@@ -51,14 +51,20 @@
 		// const Dir_Resource = './resource/';	# Resource dir
 
 		const FixedMap = [
-			'web/style.css' => ['category' => 'Web', 'create' => 1666331474, 'modify' => 1666331474, 'content' => null, 'aux' => ['mime' => 'text/css']],
-			'web/bearapi.js' => ['category' => 'Web', 'create' => 1666333333, 'modify' => 1760656813, 'content' => null, 'aux' => ['mime' => 'application/javascript']],
-			'web/bearweb.js' => ['category' => 'Web', 'create' => 1666333333, 'modify' => 1760656813, 'content' => null, 'aux' => ['mime' => 'application/javascript']],
+			'favicon.ico' => ['category' => 'Web', 'create' => 1768423263, 'modify' => 1768423263, 'content' => null, 'aux' => ['mime' => 'image/x-icon']],
+			'web/style.css' => ['category' => 'Web', 'create' => 1768423263, 'modify' => 1768423263, 'content' => null, 'aux' => ['mime' => 'text/css']],
+			'web/bearapi.js' => ['category' => 'Web', 'create' => 1768423263, 'modify' => 1768423263, 'content' => null, 'aux' => ['mime' => 'application/javascript']],
+			'web/bearweb.js' => ['category' => 'Web', 'create' => 1768423263, 'modify' => 1768423263, 'content' => null, 'aux' => ['mime' => 'application/javascript']],
+			'web/strip.svg' => ['category' => 'Web', 'create' =>  1768423263, 'modify' =>  1768423263, 'content' => '<svg viewBox="0 0 8 8" width="45px" height="45px" xmlns="http://www.w3.org/2000/svg"><path d="M 0 0 h 8 v 8 h -8 z" fill="#CCC" /><path d="M 0 0 h 2 l -2 2 z" fill="pink" /><path d="M 8 8 h -2 l 2 -2 z" fill="pink" /><path d="M 6 0 h 4 l -8 8 h -4 z" fill="pink" /></svg>', 'aux' => ['mime' => 'image/svg+xml']],
+			'web/rss.svg' => ['category' => 'Web', 'create' =>  1768423263, 'modify' =>  1768423263, 'content' => '<svg viewBox="0 0 8 8" width="1ch" height="1ch" xmlns="http://www.w3.org/2000/svg"><path d="M 0 0 h 8 v 8 h -8 z" fill="orange" /><circle cx="1.5" cy="6.5" r="1" /><path d="M 1 4 A 3 3 0 0 1 4 7" fill="transparent" stroke="#000" stroke-width="1" /><path d="M 1 2 A 5 5 0 0 1 6 7" fill="transparent" stroke="#000" stroke-width="1" /></svg>', 'aux' => ['mime' => 'image/svg+xml']],
+			'web/banner.jpeg' => ['category' => 'Web', 'create' => 1769055184, 'modify' => 1769055184, 'content' => null, 'aux' => ['mime' => 'image/jpeg']],
+			'web/banner.thumb.jpeg' => ['category' => 'Web', 'create' => 1769055184, 'modify' => 1769055184, 'content' => null, 'aux' => ['mime' => 'image/jpeg']],
 
+			/* // Uncomment to enable APIs
 			'api/resource/get' => ['category' => 'API', 'template' => ['api','resource'], 'meta' => ['task' => 'get', 'access' => [1]]],
 			'api/resource/create' => ['category' => 'API', 'template' => ['api','resource'], 'meta' => ['task' => 'create', 'access' => [1]]],
 			'api/resource/update' => ['category' => 'API', 'template' => ['api','resource'], 'meta' => ['task' => 'update', 'access' => [1]], 'aux' => ['type' => [ // Add yours ------------------------------------------------
-				/* List of allowed template */
+				// List of allowed template
 				// 'Name' => ['sitemap->category', sitemap->template[]]
 				'Content' => ['Content',['object','blob']]
 			]]],
@@ -83,6 +89,7 @@
 				'robots' => 'noindex, nofollow',
 				'keywords' => 'Name1, color1, Name2, color2' // Add yours ------------------------------------------------
 			], 'content' => null],
+			*/
 		];
 
 		public static function init(): void {
@@ -121,20 +128,16 @@
 	
 	function bear_reindex() {
 		_bear_reindex([
-			new class extends BearIndex_Catalog {
-				public function __construct() { parent::__construct('catalog', ['page-en', 'catalog'], ['title' => 'Index', 'keywords' => 'keywords', 'description' => 'My site index', 'lang' => 'en', 'bgimg' => 'url(\'/web/banner.png\')'], ['lang-en' => '/catalog']); }
-				public function add(array $r): bool { return in_array($r['category'], ['Category1', 'Category2']) && !static::dontIndex($r) && parent::add($r); }
-			},
 			new class extends BearIndex_SitemapRss {
-				public function __construct() { parent::__construct('rss.xml', [], 'https://example.com/', 'Example Sitemap', 'Example site', 'Copyright Example | CC BY-SA', 'admin@example.com'); }
+				public function __construct() { parent::__construct('rss.xml', [], 'https://bearweb.captdam.com/', 'Bearweb CMS', 'Bearweb Content Management System', 'Copyright Captdam | MIT License', 'admin@example_com'); }
 				public function add(array $r): bool { return !static::dontIndex($r) && parent::add($r); }
 			},
 			new class extends BearIndex_SitemapTxt {
-				public function __construct() { parent::__construct('sitemap.txt', [], 'https://example.com/'); }
+				public function __construct() { parent::__construct('sitemap.txt', [], 'https://bearweb.captdam.com/'); }
 				public function add(array $r): bool { return !static::dontIndex($r) && parent::add($r); }
 			},
 			new class extends BearIndex_SitemapXml {
-				public function __construct() { parent::__construct('sitemap.xml', [], 'https://example.com/'); }
+				public function __construct() { parent::__construct('sitemap.xml', [], 'https://bearweb.captdam.com/'); }
 				public function add(array $r): bool { return !static::dontIndex($r) && parent::add($r); }
 			}
 		]);
