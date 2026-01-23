@@ -481,6 +481,7 @@
 			echo '<title>',$meta_title,' - ',$sitename,'</title>',
 			'<meta property="og:title" content="',$meta_title,'" />',
 			'<meta property="og:site_name" content="',$sitename,'" />',
+			'<meta property="og:type" content="website" />',
 			'<meta name="keywords" content="',$meta_keywords,'" />',
 			'<meta name="description" content="',$meta_description,'" />',
 			'<meta property="og:description" content="',$meta_description,'" />',
@@ -904,9 +905,9 @@
 			$url		= htmlspecialchars($r['url'], ENT_COMPAT);
 			$title		= htmlspecialchars($r['meta']['title'] ?? $r['url'], ENT_COMPAT);
 			$description	= htmlspecialchars($r['meta']['description'] ?? '', ENT_COMPAT);
-			$thumb		= htmlspecialchars($r['meta']['thumb'] ?? '', ENT_COMPAT);
+			$img		= htmlspecialchars($r['meta']['img'] ?? '', ENT_COMPAT);
 			$ratio		= $r['meta']['ratio'] ?? 1;
-			$this->site->content .= '<a href="/'.$url.'" style="aspect-ratio:'.($ratio).'"><img src="/'.$thumb.'" title="'.$title.'" alt="'.$description.'" loading="lazy" /></a>';
+			$this->site->content .= '<a href="/'.$url.'" style="aspect-ratio:'.($ratio).'"><img src="/'.$img.'" title="'.$title.'" alt="'.$description.'" loading="lazy" /></a>';
 			$this->lastAddResource = $r;
 			return true;
 		}

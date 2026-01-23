@@ -143,7 +143,7 @@
 				else
 					echo '<div class="list_horizontal" id="categorylist">', $BW->site->content, '</div>';
 			?>
-		<?php elseif ($BW->site->template[1] == 'article' || $BW->site->template[1] == 'image'): ?>
+		<?php elseif ($BW->site->template[1] == 'article'): ?>
 			<div class="tintimg" style="--bgcolor: rgba(255,255,255,0.75); --bgimg: url(/<?= htmlspecialchars($BW->site->meta['img']??'web/banner.jpeg', ENT_COMPAT) ?>); color: #000;">
 				<h1><?= htmlspecialchars($BW->site->meta['title']??'', ENT_COMPAT) ?></h1>
 				<p><?= htmlspecialchars($BW->site->meta['description']??'', ENT_COMPAT) ?></p>
@@ -157,27 +157,34 @@
 							echo '<li style="list-style: \'en \'"><a hreflang="en" href="/', htmlspecialchars($BW->site->aux['lang-en'], ENT_COMPAT), '">Here is the English version of this article</a></li>';
 						if (array_key_exists('lang-zh', $BW->site->aux))
 							echo '<li style="list-style: \'中 \'"><a hreflang="zh" href="/', htmlspecialchars($BW->site->aux['lang-zh'], ENT_COMPAT), '">这里是这篇文章的中文版</a></li>';
-					echo '</ul>';
-					if ($BW->site->template[1] == 'article') {
-						echo '<h2>Index</h2><nav class="hxIndex_nav" data-index_target="main"></nav>';
-					} else if ($BW->site->template[1] == 'image') {
-						echo' <nav class="layflat">';
-						if (array_key_exists('thumb', $BW->site->meta))
-							echo '<a href="/', htmlspecialchars($BW->site->meta['thumb']??'', ENT_COMPAT), '">Thumb</a>';
-						if (array_key_exists('hd', $BW->site->meta))
-							echo '<a href="/', htmlspecialchars($BW->site->meta['hd']??'', ENT_COMPAT), '">HD</a>';
-						echo '</nav>';
-					}
+					echo '</ul><h2>Index</h2><nav class="hxIndex_nav" data-index_target="main"></nav>';
 				?>
 			</div>
-			<?php
-				if ($BW->site->template[1] == 'image') {
-					echo '<div class="main_wide" style="padding: 0; text-align: center; background: center/contain no-repeat url(/', htmlspecialchars($BW->site->meta['thumb']??'', ENT_COMPAT), '), #BBB; height: 100vh;">
-						<img src="/', htmlspecialchars($BW->site->meta['hd']??'', ENT_COMPAT), '" style="width: 100%; height: 100%; object-fit: contain; opacity: 0.25;" onload="this.style.opacity=1" />
-					</div>';
-				}
-				echo $BW->site->content;
-			?>
+			<?= $BW->site->content ?>
+		<?php elseif ($BW->site->template[1] == 'image'): ?>
+			<div class="main_wide" style="padding: 0; text-align: center; background: center/contain no-repeat url(/'<?= htmlspecialchars($BW->site->meta['img']??'', ENT_COMPAT) ?>), #BBB; height: 100vh;">
+				<img src="/<?= htmlspecialchars($BW->site->meta['hd']??'', ENT_COMPAT) ?>" style="width: 100%; height: 100%; object-fit: contain; opacity: 0.25;" onload="this.style.opacity=1" />
+			</div>
+			<div class="tintimg" style="--bgcolor: rgba(255,255,255,0.75); --bgimg: url(/web/banner.jpeg); color: #000;">
+				<h1><?= htmlspecialchars($BW->site->meta['title']??'', ENT_COMPAT) ?></h1>
+				<p><?= htmlspecialchars($BW->site->meta['description']??'', ENT_COMPAT) ?></p>
+				<p class="content_keywords"><?= htmlspecialchars($BW->site->meta['keywords']??'', ENT_COMPAT) ?></p>
+				<i>--by <?=$BW->site->owner?> @ <?=date('M j, Y',$BW->site->modify)?><?php if ($BW->site->modify != $BW->site->create) echo ' <del>',date('M j, Y',$BW->site->create),'</del>' ?></i>
+				<?php
+					echo '<ul>';
+						if (array_key_exists('lang-en', $BW->site->aux))
+							echo '<li style="list-style: \'en \'"><a hreflang="en" href="/', htmlspecialchars($BW->site->aux['lang-en'], ENT_COMPAT), '">Here is the English version of this article</a></li>';
+						if (array_key_exists('lang-zh', $BW->site->aux))
+							echo '<li style="list-style: \'中 \'"><a hreflang="zh" href="/', htmlspecialchars($BW->site->aux['lang-zh'], ENT_COMPAT), '">这里是这篇文章的中文版</a></li>';
+					echo '</ul><nav class="layflat">';
+					if (array_key_exists('img', $BW->site->meta))
+						echo '<a href="/', htmlspecialchars($BW->site->meta['img']??'', ENT_COMPAT), '">Thumb</a>';
+					if (array_key_exists('hd', $BW->site->meta))
+						echo '<a href="/', htmlspecialchars($BW->site->meta['hd']??'', ENT_COMPAT), '">HD</a>';
+					echo '</nav>';
+				?>
+			</div>
+			<?= $BW->site->content ?>
 		<?php else: throw new BW_WebServerError('Secondary page template not found: '.$BW->site->template[1], 500); endif; ?>
 	</main>
 	<footer class="tintimg" style="--bgcolor: rgba(0,0,0,0.25); --bgimg: url(/web/banner.jpeg); color:#FFF;">
