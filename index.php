@@ -90,6 +90,78 @@
 				'keywords' => 'Name1, color1, Name2, color2' // Add yours ------------------------------------------------
 			], 'content' => null],
 			*/
+
+			/** Following are resource to create the example website, you can delete them */
+			'robots.txt' => ['category' => 'Web', 'create' => 1768423263, 'modify' => 1768423263, 'content' => "User-agent: *\nSitemap: https://bearweb.captdam.com/sitemap.txt\nSitemap: https://bearweb.captdam.com/sitemap.xml\nSitemap: https://bearweb.captdam.com/rss.xml", 'aux' => ['mime' => 'text/plain']],
+
+			'' => ['category' => 'Home', 'template' => ['page-en','langsel'], 'aux' => ['lang-en' => 'en', 'lang-zh' => 'zh']],
+			'en' => ['category' => 'Home', 'template' => ['page-en','direct'], 'meta' => [
+				'title' => 'Bearweb CMS',
+				'description' => 'A light-weight, portable database-driven content management system designed for personal blog and small-size organization website.',
+				'keywords' => 'CMS, Centent Management System, PHP 8.4, Apache2, Database-driven, Blog, Web dev'
+			], 'content' => null, 'aux' => ['lang-en' => 'en', 'lang-zh' => 'zh']],
+			'zh' => ['category' => 'Home', 'template' => ['page-zh','direct'], 'meta' => [
+				'title' => 'Bearweb CMS',
+				'description' => '轻量化，可移植的数据库驱动内容管理系统。专为个人博客与小型组织网站设计。',
+				'keywords' => 'CMS, 内容管理系统, PHP 8.4, Apache2, 数据库驱动, 博客, 网站开发'
+			], 'content' => null, 'aux' => ['lang-en' => 'en', 'lang-zh' => 'zh']],
+
+			'page/en' => ['category' => 'Template', 'template' => ['page-en','article'], 'meta' => [
+				'title' => 'Bearweb Page Template',
+				'description' => 'The Bearweb page template is built on top of the Bearweb CMS framework. The page template provides a simple, responsive design framework to display webpage content (HTML). This article shows how to use the Bearweb page template.',
+				'keywords' => 'Web dev, Data structure, HTML'
+			], 'content' => null, 'aux' => ['lang-en' => 'page/en', 'lang-zh' => 'page/zh']],
+
+			'page/direct' => ['category' => 'Template', 'create' => 1769055184, 'modify' => 1769055184, 'template' => ['page-en','langsel'], 'aux' => ['lang-en' => 'page/direct/en', 'lang-zh' => 'page/direct/zh']],
+			'page/direct/en' => ['category' => 'Template', 'create' => 1769055184, 'modify' => 1769055184, 'template' => ['page-en','direct'], 'meta' => [
+				'title' => 'Example Page',
+				'description' => 'An example webpage',
+				'keywords' => 'webpage, HTML'
+			], 'content' => '<div class="main_title"><h1>Example Page</h1></div><div><h2>Title 1</h2><p>Content 1</p></div><div><h2>Title 2</h2><p>Content 2</p></div>', 'aux' => ['lang-en' => 'page/direct/en', 'lang-zh' => 'page/direct/zh']],
+			'page/direct/zh' => ['category' => 'Template', 'create' => 1769055184, 'modify' => 1769055184, 'template' => ['page-zh','direct'], 'meta' => [
+				'title' => '示例页面',
+				'description' => '一个示例页面',
+				'keywords' => '网页, HTML'
+			], 'content' => '<div class="main_title"><h1>示例页面</h1></div><div><h2>标题1</h2><p>内容1</p></div><div><h2>标题2</h2><p>内容2</p></div>', 'aux' => ['lang-en' => 'page/direct/en', 'lang-zh' => 'page/direct/zh']],
+			'page/direct.en.png' => ['category' => 'Content', 'create' => 1769055184, 'modify' => 1769055184, 'content' => null, 'aux' => ['mime' => 'image/png']],
+			'page/direct.zh.png' => ['category' => 'Content', 'create' => 1769055184, 'modify' => 1769055184, 'content' => null, 'aux' => ['mime' => 'image/png']],
+
+			'page/article' => ['category' => 'Template', 'create' => 1769055184, 'modify' => 1769055184, 'template' => ['page-en','langsel'], 'aux' => ['lang-en' => 'page/article/en', 'lang-zh' => 'page/article/zh']],
+			'page/article/en' => ['category' => 'Template', 'create' => 1769055184, 'modify' => 1769055184, 'template' => ['page-en','article'], 'meta' => [
+				'title' => 'Example Page',
+				'description' => 'An example webpage',
+				'keywords' => 'webpage, HTML'
+			], 'content' => '<div class="main_title"><h1>Example Page</h1></div><div><h2>Title 1</h2><p>Content 1</p></div><div><h2>Title 2</h2><p>Content 2</p></div>', 'aux' => ['lang-en' => 'page/article/en', 'lang-zh' => 'page/article/zh']],
+			'page/article/zh' => ['category' => 'Template', 'create' => 1769055184, 'modify' => 1769055184, 'template' => ['page-zh','article'], 'meta' => [
+				'title' => '示例页面',
+				'description' => '一个示例页面',
+				'keywords' => '网页, HTML'
+			], 'content' => '<div class="main_title"><h1>示例页面</h1></div><div><h2>标题1</h2><p>内容1</p></div><div><h2>标题2</h2><p>内容2</p></div>', 'aux' => ['lang-en' => 'page/article/en', 'lang-zh' => 'page/article/zh']],
+			'page/article.en.png' => ['category' => 'Content', 'create' => 1769055184, 'modify' => 1769055184, 'content' => null, 'aux' => ['mime' => 'image/png']],
+			'page/article.zh.png' => ['category' => 'Content', 'create' => 1769055184, 'modify' => 1769055184, 'content' => null, 'aux' => ['mime' => 'image/png']],
+
+			'page/image' => ['category' => 'Photo', 'create' => 1769055184, 'modify' => 1769055184, 'template' => ['page-en','langsel'], 'aux' => ['lang-en' => 'page/image/en', 'lang-zh' => 'page/image/zh']],
+			'page/image/en' => ['category' => 'Template', 'create' => 1769055184, 'modify' => 1769055184, 'template' => ['page-en','image'], 'meta' => [
+				'title' => 'Example Image',
+				'description' => 'This is a screenshot of the Bearweb CMS source code, it is used as an example here.',
+				'keywords' => 'Source code, Web dev',
+				'thumb' => 'web/banner.thumb.jpeg',
+				'hd' => 'web/banner.jpeg',
+				'ratio' => 1.33333
+			], 'content' => '<div><p>Optional content</p></div>', 'aux' => ['lang-en' => 'page/image/en', 'lang-zh' => 'page/image/zh']],
+			'page/image/zh' => ['category' => 'Template', 'create' => 1769055184, 'modify' => 1769055184, 'template' => ['page-zh','image'], 'meta' => [
+				'title' => '示例图片',
+				'description' => '该图片展示了Bearweb CMS的源码，这张图片在此被用作一个例子。',
+				'keywords' => '源代码, 网站开发',
+				'thumb' => 'web/banner.thumb.jpeg',
+				'hd' => 'web/banner.jpeg',
+				'ratio' => 1.33333
+			], 'content' => '<div><p>可选内容</p></div>', 'aux' => ['lang-en' => 'page/image/en', 'lang-zh' => 'page/image/zh']],
+			'page/image.en.png' => ['category' => 'Content', 'create' => 1769055184, 'modify' => 1769055184, 'content' => null, 'aux' => ['mime' => 'image/png']],
+			'page/image.zh.png' => ['category' => 'Content', 'create' => 1769055184, 'modify' => 1769055184, 'content' => null, 'aux' => ['mime' => 'image/png']],
+
+			'page/langsel.png' => ['category' => 'Content', 'create' => 1769055184, 'modify' => 1769055184, 'content' => null, 'aux' => ['mime' => 'image/png']],
+			'page/error.png' => ['category' => 'Content', 'create' => 1769055184, 'modify' => 1769055184, 'content' => null, 'aux' => ['mime' => 'image/png']],
 		];
 
 		public static function init(): void {
@@ -128,6 +200,24 @@
 	
 	function bear_reindex() {
 		_bear_reindex([
+			new class extends BearIndex_Catalog {
+				public function __construct() { parent::__construct('example/catalog/en', ['page-en', 'catalog'], ['title' => 'Catalog', 'keywords' => 'keywords', 'description' => 'Example catalog', 'bgimg' => 'url(\'/web/banner.jpeg\')'], ['lang-en' => 'example/catalog/en', 'lang-zh' => 'example/catalog/zh']); }
+				public function add(array $r): bool { return in_array($r['category'], ['Photo-en']) && !static::dontIndex($r) && parent::add($r); }
+			},
+			new class extends BearIndex_Catalog {
+				public function __construct() { parent::__construct('example/catalog/zh', ['page-zh', 'catalog'], ['title' => '索引', 'keywords' => 'keywords', 'description' => '示例索引', 'bgimg' => 'url(\'/web/banner.jpeg\')'], ['lang-en' => 'example/catalog/en', 'lang-zh' => 'example/catalog/zh']); }
+				public function add(array $r): bool { return in_array($r['category'], ['Photo-zh']) && !static::dontIndex($r) && parent::add($r); }
+			},
+
+			new class extends BearIndex_Bulletin {
+				public function __construct() { parent::__construct('example/bulletin/en', ['page-en', 'bulletin'], ['title' => 'Images', 'keywords' => 'keywords', 'description' => 'Example images', 'bgimg' => 'url(\'/web/banner.jpeg\')'], ['lang-en' => 'example/bulletin/en', 'lang-zh' => 'example/bulletin/zh']); }
+				public function add(array $r): bool { return in_array($r['category'], ['Photo-en']) && !static::dontIndex($r) && parent::add($r); }
+			},
+			new class extends BearIndex_Bulletin {
+				public function __construct() { parent::__construct('example/bulletin/zh', ['page-zh', 'bulletin'], ['title' => '图片', 'keywords' => 'keywords', 'description' => '示例图片', 'bgimg' => 'url(\'/web/banner.jpeg\')'], ['lang-en' => 'example/bulletin/en', 'lang-zh' => 'example/bulletin/zh']); }
+				public function add(array $r): bool { return in_array($r['category'], ['Photo-zh']) && !static::dontIndex($r) && parent::add($r); }
+			},
+
 			new class extends BearIndex_SitemapRss {
 				public function __construct() { parent::__construct('rss.xml', [], 'https://bearweb.captdam.com/', 'Bearweb CMS', 'Bearweb Content Management System', 'Copyright Captdam | MIT License', 'admin@example_com'); }
 				public function add(array $r): bool { return !static::dontIndex($r) && parent::add($r); }
