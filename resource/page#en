@@ -1,19 +1,12 @@
-<div class="overlay main_wide" style="display: flex; align-items: center; justify-content: center; color: brown; text-shadow: orange 1px 1px 10px, #000 0 0 5px;">
-	<div>
-	<span style="display: block; text-align: center; font-size: 10vw;">DRAFT</span>
-	<span style="display: block; text-align: center; font-size: 30px;">This article is in draft stage. Major content change may be applied later.</span>
-	</div>
-</div>
-
 <div class="main_title">
 	<h1>Template Structure</h1>
 </div>
 <div>
 	<p>The Bearweb page template is formed by 3 files:</p>
 	<ul>
-		<li><code>page.php</code> as the template itself (to output page content in HTML);</li>
-		<li><code>bearweb.js</code> used to create animations and handle user interactions;</li>
-		<li><code>style.css</code> used to define the appearance of the webpage.</li>
+		<li><code>Bearweb_Site::Dir_Template/page.php</code> as the template itself (to output page content in HTML);</li>
+		<li><code>Bearweb_Site::Dir_Resource/bearweb.js</code> used to create animations and handle user interactions;</li>
+		<li><code>Bearweb_Site::Dir_Resource/style.css</code> used to define the appearance of the webpage.</li>
 	</ul>
 	<div class="main_note">
 		<p>Using the Bearweb page template is not mandatory when using the Bearweb CMS. The page template handles the front-end and the Bearweb CMS handles the back-end. You can create your own page template. However, you may want to use this template as reference to learn how to interact with the Bearweb CMS.</p>
@@ -36,15 +29,15 @@
 &lt;/html&gt;
 		</code></pre>
 		<div>
-			<p>A webpage contains two parts: the invisible <code>head</code>, which carries some machine-read metadata; the visible <code>body</code>, which will be rendered and displayed to the user.</p>
-			<p>Note that <code>lang="en"</code> in the <code>html</code> tag shows the language of this page (in this example, English, without region code)</p>
+			<p>A webpage contains two parts: the invisible <code>head</code>, which carries some machine-read metadata; the visible <code>body</code>, which will be rendered and displayed to the visitor.</p>
+			<p>Note that <code>lang="en"</code> in the <code>&lt;html&gt;</code> tag shows the language of this page. In this example, English, without region code.</p>
 			<p>If you are building a multilingual website, you will want to create a template for each language you serve. For example, <code>page-zh.php</code> for Mandarin, where you write <code>&lt;html lang="zh"&gt;</code> in it; <code>page-en.php</code> for English, where you write <code>&lt;html lang="en"&gt;</code> in it.</p>
 			<div class="main_note_ok">
 				<p>As you can imagine, having multiple page templates for languages is a nightmare for maintenance. You will need to modify all templates when you make changes to page templates. One solution is to include all language in one template, for example, in <code>page-en.php</code>, write:</p>
 				<pre><code>
 if ($BW-&gt;site-&gt;template[0] == 'page-zh')
 	echo '&lt;html lang="zh"&gt;';
-else
+else // if ($BW-&gt;site-&gt;template[0] == 'page-en') // default lang
 	echo '&lt;html lang="en"&gt;';
 				</code></pre>
 				<p>Then, set <code>page-zh.php</code> to be a symlink to <code>page-en.php</code>.</p>
@@ -149,7 +142,7 @@ else
 //	'robots' =&gt; 'noindex, nofollow'
 ]
 			</code></pre>
-			<div class="main_note_error"><p>Do not use anything other than <code>noindex</code>, <code>nofollow</code> or <code>noindex, nofollow</code>. Some <a href="https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/meta/name/robots" target="_blank">crawlers cannot understant other attributes</a>.</p></div>
+			<div class="main_note_error"><p>Do not use anything other than <code>noindex</code>, <code>nofollow</code> or <code>noindex, nofollow</code>. <a href="https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/meta/name/robots" target="_blank">Some crawlers cannot understant other attributes。</a></p></div>
 		</div>
 	</div>
 	<div class="sidebyside">
@@ -157,7 +150,7 @@ else
 	&lt;meta property="__og:image" content="/&lt;?=htmlspecialchars($this-&gt;meta['img'], ENT_COMPAT)?&gt;" /&gt;
 		</code></pre>
 		<div>
-			<p>Show a poster, if <code>img</code> in the <code>meta</code> field of the <code>resource</code> object is specified. For example, set <code>'meta' =&gt; ['img' =&gt; 'my/image.jpg']</code></pre> to use <code>/my/image.jpg</code> as the poster. Note the value is the absolute URL without the leading "/".</p>
+			<p>Show a poster, if <code>img</code> in the <code>meta</code> field of the <code>resource</code> object is specified. For example, set <code>'meta' =&gt; ['img' =&gt; 'my/image.jpg']</code> to use <code>/my/image.jpg</code> as the poster. Note the value is the absolute URL without the leading "/".</p>
 		</div>
 	</div>
 	<div class="sidebyside">
@@ -198,9 +191,9 @@ else
 			<p>The &lt;header&gt; section includes:</p>
 			<ul>
 				Sitename - Click to scroll to the top. Hardcoded.
-				Search box - Open a new page with all resources to perform client-side filter.
+				Search box - Open a new page with sitemap to perform client-side filter.
 				Menu - Link to other pages. Hardcoded.
-				Language - Alternative languages for multilingual site. Drive from <code>resource-&gt;meta-&gt;lang-*</code>.
+				Language - Alternative languages for multilingual page. Drive from <code>resource-&gt;meta-&gt;lang-*</code>.
 			</ul>
 		</div>
 	</div>
@@ -212,12 +205,12 @@ else
 		</code></pre>
 		<div>
 			<p>Content in HTML format from the <code>resource-&gt;content</code>. It is rendered depending on its sub-template in <code>resource-&gt;template</code>.</p>
-			<p>You should not use <code style="background:pink">htmlspecialchars($BW-&gt;site-&gt;content, ENT_COMPAT)</code> to escape the resource content, because it includes desired HTML code for the webpage; instead, use:</p>
+			<p>You should not use <code style="background:pink">htmlspecialchars($BW-&gt;site-&gt;content, ENT_COMPAT)</code> to escape the resource content, because it contains desired HTML code as a fragment of the webpage; instead, use:</p>
 			<ul>
 				<li><code style="background:lightgreen">&lt;?= $BW-&gt;site->content ?&gt;</code> or <code style="background:lightgreen">echo $BW-&gt;site-&gt;content;</code> - To output the resource content (for database-backed resources: small-size resources like HTML pages).</li>
 				<li><code style="background:lightgreen">$this-&gt;site-&gt;dumpContent(-1, false);</code> - To dump the resource content directly to client-side (for file-backed resources: large-size resources like images). You are not likely to use this method for HTML page, I don't think any HTML page can be this big.</li>
 			</ul>
-			<p>Depending on <code>Bearweb_Site::Size_FileBlob</code> setting (default 100kB), a resource content may be database-backed or file-backed. Using the wrong output method WORKS (other than possible out-of-memory error) but hits performance. See <a href="https://captdam.com/bearweb-resource-optimization/en" target="_blank">my blog for details</a>.</p>
+			<p>Depending on <code>Bearweb_Site::Size_FileBlob</code> setting (default 100kB), a resource content may be database-backed or file-backed. Using the wrong output method <b>WORKS</a> (other than possible out-of-memory error) but hits performance. See <a href="https://captdam.com/bearweb-resource-optimization/en" target="_blank">my blog for details</a>.</p>
 		</div>
 	</div>
 	<div class="sidebyside">
@@ -245,7 +238,7 @@ else
 
 <div>
 	<h2>Responsive Design</h2>
-	<p>The Bearweb page template uses responsive design in a full front-end approach. The Bearweb page template is not aware of the client-side device, it sends the same HTML to the client, no matter if the client is a laptop or a cellphone. (Yes, I hate those websites that send different pages when using different clients, forcing me to switch devices.) The stylesheet which is running on the client-side determines the appropriate layout to render the page.</p>
+	<p>The Bearweb page template uses responsive design in a full client-side approach. The Bearweb page template is not aware of the client-side device, it sends the same HTML to the client, no matter if the client is a laptop or a cellphone. (Yes, I hate those websites that send different pages when using different clients, forcing me to switch devices.) The stylesheet which is running on the client-side determines the appropriate layout to render the page.</p>
 	<p>There are 3 break points:</p>
 	<ul>
 		<li>Small screen under 768px (exclude) in width, common for cellphones and tablets (portrait). Some menus are grouped; some horizontally side-by-side elements are placed vertically.</li>
@@ -347,11 +340,11 @@ else
 		<div>
 			<p>Display the <code>content</code> field of the <code>resource</code> object in the template. The following code is exactly the same as what we used in the <code>direct</code> example, but renders differently:</p>
 			<pre><code>
-'page/direct/en' =&gt; [
+'page/article/en' =&gt; [
 	'category' =&gt; 'Template',
 	'create' =&gt; 1769055184,
 	'modify' =&gt; 1769055184,
-	'template' =&gt; ['page-en','direct'],
+	'template' =&gt; ['page-en','article'],
 	'meta' =&gt; [
 		'title' =&gt; 'Example Page',
 		'description' =&gt; 'An example webpage',
@@ -372,8 +365,8 @@ else
 		&lt;/div&gt;
 	',
 	'aux' =&gt; [
-		'lang-en' =&gt; 'page/direct/en',
-		'lang-zh' =&gt; 'page/direct/zh'
+		'lang-en' =&gt; 'page/article/en',
+		'lang-zh' =&gt; 'page/article/zh'
 	]
 ];
 			</code></pre>
@@ -385,7 +378,7 @@ else
 				<li>Author from <code>$resource-&gt;owner</code>.</li>
 				<li>Timestamp from <code>$resource-&gt;create</code> and <code>$resource-&gt;modify</code>.</li>
 				<li>Alternative languages from <code>$resource-&gt;lang-*</code>.</li>
-				<li>Article index generated at client-side from the <code>&lt;h*&gt;</code> tags in the article.</li>
+				<li>Article index generated at client-side from the <code>&lt;h*&gt;</code> tags in the article. Click an index will jump to that section in the article.</li>
 				<li>All these information in a block with the background poster from <code>$resource-&gt;meta-&gt;img</code>.</li>
 			</ol>
 			<p><a href="article/en">See example here: article sub-template.</a></p>
@@ -403,9 +396,9 @@ else
 		<div>
 			<p>Details of an image. The <code>image</code> sub-template is similar to the <code>article</code> sub-template. However, it has the following 3 attributes:</p>
 			<ul>
-				<li><code>img</code> (thumbnail) - For a large image, it takes a long time to download; therefore, it is wise to have a thumbnail for it. When the page is loaded, a small, fast-load thumbnail will be displayed first. It is blurry, but allows the visitor to see what this image is about. (Otherwise, the visitor will lose patience and close this page). The large, slow-load HD image will be loaded in the background.</li>
+				<li><code>img</code> (thumbnail) - For a large image, it takes a long time to download; therefore, it is wise to have a thumbnail for it. When the page is loaded, a small, fast-load thumbnail will be displayed first. It is blurry, but allows the visitor to see what this image is about. (Otherwise, the visitor will lose patience and close this page.) The large, slow-load HD image will be loaded in the background.</li>
 				<li><code>hd</code> - The high definition version of the image.</li>
-				<li><code>ratio</code> - Provide the aspect ratio (<code>width</code> / <code>height</code>) of this image. It helps the front-end to provide the correct space when layout the webpage before the image is downloaded. This is used when generate bulletin page.</li>
+				<li><code>ratio</code> - Provide the aspect ratio (<code>width</code> / <code>height</code>) of this image. It helps the browser to provide the correct space when layout the webpage before the image is downloaded. This is used when generate bulletin page.</li>
 			</ul>
 			<pre><code>
 'page/image/en' =&gt; [
@@ -432,6 +425,9 @@ else
 	]
 ];
 			</code></pre>
+			<div class="main_note_warning">
+				<p>For small-size images where thumbnail is not necessary, set both <code>img</code> and <code>hd</code> attributes to the image URL. This allows properly render the webpage and the provide the Open Graph image metadata.</p>
+			</div>
 			<p><a href="image/en">See example here: image sub-template.</a></p>
 		</div>
 	</div>
@@ -464,9 +460,9 @@ else
 				<li><code>h2</code> - Title, you can use the <code>resource-&gt;meta-&gt;title</code> attribute of the article.</li>
 				<li><code>p</code> - Description, you can use the <code>resource-&gt;meta-&gt;description</code> attribute of the article.</li>
 				<li><code>keywords</code> - Keywords, you can use the <code>resource-&gt;meta-&gt;keywords</code> attribute of the article.</li>
-				<li><code>p</code> - Author and timestamp, you can use the <code>resource-&gt;owner</code> <code>resource-&gt;create</code> and <code>resource-&gt;modify</code> attributes of the article.</li>
+				<li><code>p</code> - Author and timestamp, you can use the <code>resource-&gt;owner</code>, <code>resource-&gt;create</code> and <code>resource-&gt;modify</code> attributes of the article.</li>
 			</ul>
-			<p>Furthermore, you can use the search box in the page banner to filter the results by their text content (title, description, keywords).</p>
+			<p>Furthermore, you can use the search box in the page banner to filter the resources by their text content (title, description, keywords).</p>
 			<p><a href="/example/catalog/en">See example here: Catalog example.</a></p>
 		</div>
 	</div>
@@ -524,8 +520,8 @@ else
 			<p>Note the values are absolute URLs without the leading "/".</p>
 			<p>If a language in <code>lang-*</code> matches with the <code>ACCEPT-LANGUAGE</code> HTTP header provided by the visitor's browser, the server will return a <code>302 Found</code> header to the client to initialize a redirect to the appropriate URL. If none of the <code>lang-*</code> matches, the server will return a webpage with a list of options to allow the visitor to select one.</p>
 			<p>If multiple languages matched, the first one in <code>ACCEPT-LANGUAGE</code> (which has higher q rank) will be used.</p>
-			<p>You should not (although you may) use the other fields of this <code>resource</code> object to store something, they will not be used by the template, and they are negative for performance due to database IO and memory usage overhead.</p>
-			<p>When you want to share a multilingual resource, it is a good idea to share the language selection page. This allows the server to provide the appropriate language version.</p>
+			<p>You should not (although you may) use the other fields of this <code>resource</code> object to store something. They will not be used by the template, and they are negative for performance due to database IO and memory usage overhead.</p>
+			<p>When you want to share a multilingual resource, it <i>may</i> be a good idea to share the language selection page. This allows the server to provide the appropriate language version, but inconsistency.</p>
 			<p><a href="/">See example here: landing page to the homepage, accepts "en" and "zh".</a></p>
 		</div>
 	</div>

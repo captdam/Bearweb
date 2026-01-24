@@ -1,0 +1,547 @@
+<div class="main_title">
+	<h1>模板结构</h1>
+</div>
+<div>
+	<p>Bearweb网页模板包含3个文件：</p>
+	<ul>
+		<li><code>Bearweb_Site::Dir_Template/page.php</code>作为模板本身，输出页面内容的HTML；</li>
+		<li><code>Bearweb_Site::Dir_Resource/bearweb.js</code>用于创建动画与管理用户操作；</li>
+		<li><code>Bearweb_Site::Dir_Resource/style.css</code>定义页面外观。</li>
+	</ul>
+	<div class="main_note">
+		<p>使用Bearweb CMS并不需要搭配使用Bearweb网页模板。网页模板只控制前端输出，而Bearweb CMS则只负责后端。你可以创建你自己的模板。尽管如此，仍然推荐参考本模板里模板如何与Bearweb CMS交互。</p>
+	</div>
+</div>
+
+<div>
+	<h2>HTML</h2>
+	<p>网页模板的最终目标就是以HTML网页的格式输出我们的数据（一个PHP的<code>resource</code>对象）。关于<code>resource</code>对象的变量，参考这个文档。</p><!-- TODO: Link to db structure -->
+	<div class="sidebyside">
+		<pre><code>
+&lt;!DOCTYPE html&gt;
+&lt;html lang="zh"&gt;
+	&lt;head&gt;
+		&lt;!-- 我的head --&gt;
+	&lt;/dead&gt;
+	&lt;body&gt;
+		&lt;!-- 我的body --&gt;
+	&lt;/body&gt;
+&lt;/html&gt;
+		</code></pre>
+		<div>
+			<p>一个网页包含两部分：不可见的<code>head</code>部分，主要包含一些机器读的元素据；可见的<code>body</code>部分，将会被渲染并显示给用户。</p>
+			<p>注意此处我们在<code>&lt;html&gt;</code>中使用<code>lang="en"</code>来表示当前页面的语言。这个例子中为中文，无特定地区。</p>
+			<p>如果要创建一个多语网站，你将需要为每一个语言都创建一个模板。例如，使用<code>page-zh.php</code>作为中文模板，并包含<code>&lt;html lang="zh"&gt;</code>；使用<code>page-en.php</code>作为英文模板，并包含<code>&lt;html lang="en"&gt;</code>。</p>
+			<div class="main_note_ok">
+				<p>如你所见，为多语网站创建多个网页模板给维护带来了不小的麻烦。如果要修改模板，你将需要修改所有文件。一个解决方案是在单一模板中包换所有语言，例如，在<code>page-en.php</code>中，我们可以写：</p>
+				<pre><code>
+if ($BW-&gt;site-&gt;template[0] == 'page-zh')
+	echo '&lt;html lang="zh"&gt;';
+else // if ($BW-&gt;site-&gt;template[0] == 'page-en') // 默认语言
+	echo '&lt;html lang="en"&gt;';
+				</code></pre>
+				<p>接下来，创建一个名为<code>page-zh.php</code>的快捷方式，并指向<code>page-en.php</code>。</p>
+				<p>如果使用<code>page-en.php</code>，那么只有<code>template[0] == 'page-en'</code>这个if条件内的代码才会被执行。如果使用<code>page-zh.php</code>，那么将会被链接到<code>page-en.php</code>，并只会执行<code>template[0] == 'page-zh'</code>这个if条件内的代码。</p>
+			</div>
+		</div>
+	</div>
+</div>
+<div>
+	<h3>HTML <code>&lt;head&gt;</code></h3>
+	<p><code>&lt;head&gt;</code>包含了元素据。Bearweb页面模板将会：</p>
+	<div class="sidebyside">
+		<pre><code>
+&lt;head&gt;
+	&lt;?php
+		// $this = resource
+		string $domain = 'https://example.com/'
+		string $sitename = 'Example Site';
+		string $srcDomain = 'https://example.com/';
+		$meta_title = htmlspecialchars($this-&gt;meta['title'] ?? '', ENT_COMPAT);
+		$meta_keywords = htmlspecialchars($this-&gt;meta['keywords'] ?? '', ENT_COMPAT);
+		$meta_description = htmlspecialchars($this-&gt;meta['description'] ?? '', ENT_COMPAT);
+	?&gt;
+		</code></pre>
+		<div>
+			<p>要输出<code>&lt;head&gt;</code>，我们可以使用<code>resource</code>对象内的帮助函数<code>public function util_html_head(...)</code>。</p>
+			<p>你可以使用<code>$this-&gt;property</code>来获取一个变量，或是使用<code>htmlspecialchars($this-&gt;property, ENT_COMPAT)</code>来在输出为HTML前转义变量内的HTML关键字。</p>
+			<p>另外，在网页模板中，你需要硬编码<code>$domain</code>、<code>$sitename</code>和JS文件源的<code>$srcDomain</code>。</p>
+		</div>
+	</div>
+	<div class="sidebyside">
+		<pre><code>
+	&lt;title&gt;&lt;?= $meta_title ?&gt; - &lt;?= $sitename ?&gt;&lt;/title&gt;
+	&lt;meta property="og:title" content="&lt;?= $meta_title ?&gt;" /&gt;
+	&lt;meta property="og:site_name" content="&lt;?= $sitename ?&gt;" /&gt;
+	&lt;meta property="og:type" content="website" /&gt;
+	&lt;meta name="keywords" content="&lt;?= $meta_keywords ?&gt;" /&gt;
+	&lt;meta name="description" content="&lt;?= $meta_description ?&gt;" /&gt;
+	&lt;meta property="og:description" content="&lt;?= $meta_description ?&gt;" /&gt;
+		</code></pre>
+		<div>
+			<p>输出页面标题、站点名、关键字、简述。</p>
+			<p>对于所有的网页，你都应该在<code>resource</code>对象的<code>meta</code>变量中定义<code>title</code>、<code>keywords</code>、<code>description</code>。例如：</p>
+			<pre><code>
+'meta' =&gt; [
+	'title' =&gt; '示例页面的标题',
+	'description' =&gt; '关于该页面的简介。',
+	'keywords' =&gt; '关键字1, 关键字2, 关键字3'
+]
+			</code></pre>
+			<div class="main_note_warning"><p>使用<b>英文</b>的逗号（<code>,</code>）（ASCII 0x2C）来间隔关键字。</p></div>
+		</div>
+	</div>
+	<div class="sidebyside">
+		<pre><code>
+	&lt;meta name="viewport" content="width=device-width, initial-scale=1.0" /&gt;
+	&lt;meta charset="utf-8" /&gt;
+		</code></pre>
+		<div>
+			<p>使用UTF-8编码（现代网页都应该使用该编码）。</p>
+			<p>为移动设备创建视口。</p>
+		</div>
+	</div>
+	<div class="sidebyside">
+		<pre><code>
+	&lt;link href="/web/style.css" rel="stylesheet" type="text/css" /&gt;
+		</code></pre>
+		<div>
+			<p>定义样式文件。因为CSS的<code>url()</code>函数使用样式文件的URL作为base URL，因此，我们只能使用与网页相同的域名来提供样式文件。</p>
+		</div>
+	</div>
+	<div class="sidebyside">
+		<pre><code>
+	&lt;script src="&lt;?= $srcDomain ?&gt;web/bearapi.js"&gt;&lt;/script&gt;
+	&lt;script src="&lt;?= $srcDomain ?&gt;web/bearweb.js"&gt;&lt;/script&gt;
+		</code></pre>
+		<div>
+			<p>定义JavaScript文件。我们可以使用外部域名来提供这些文件，参考<code>$srcDomain</code>。</p>
+		</div>
+	</div>
+	<div class="sidebyside">
+		<pre><code>
+	&lt;link rel="canonical" href="&lt;?= $domain.$this-&gt;url ?&gt;" /&gt;
+	&lt;meta property="og:url" content="&lt;?= $domain.$this-&gt;url ?&gt;" /&gt;
+		</code></pre>
+		<div>
+			<p>设置<code>$domain</code>/<code>$this-&gt;url</code>为默认地址。这在有多个URL（例如<code>example.com/resource</code>与<code>www.example.com/resource</code>）指向同一个资源的情况下定义一个规范的地址，搜索引擎将会使用这里显示的地址进行收录。</p>
+		</div>
+	</div>
+	<div class="sidebyside">
+		<pre><code>
+	&lt;meta name="robots" content="&lt;?=htmlspecialchars($this-&gt;meta['robots'], ENT_COMPAT)?&gt;" /&gt;
+		</code></pre>
+		<div>
+			<p>禁用爬虫收录/爬取本页面。这里请求爬虫不要收录/爬取，但是有的坏爬虫根本不管。</p>
+			<p>大多数情况下，你都会希望你的页面被收录。要达到这个目的，在<code>resource</code>对象的<code>meta</code>变量中不要定义<code>robots</code>。</p>
+			<p>如果要禁用爬虫收录/爬取，设置：</p>
+			<pre><code>
+'meta' =&gt; [
+	'robots' =&gt; 'noindex'
+//	'robots' =&gt; 'nofollow'
+//	'robots' =&gt; 'noindex, nofollow'
+]
+			</code></pre>
+			<div class="main_note_error"><p>不要使用<code>noindex</code>、<code>nofollow</code>或<code>noindex, nofollow</code>以外的任何值。<a href="https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/meta/name/robots" target="_blank">其他的值不一定被爬虫理解。</a></p></div>
+		</div>
+	</div>
+	<div class="sidebyside">
+		<pre><code>
+	&lt;meta property="__og:image" content="/&lt;?=htmlspecialchars($this-&gt;meta['img'], ENT_COMPAT)?&gt;" /&gt;
+		</code></pre>
+		<div>
+			<p>如果在<code>resource</code>对象的<code>meta</code>变量中定义了<code>img</code>，就将展示代表页面的海报。例如，设置<code>'meta' =&gt; ['img' =&gt; 'my/image.jpg']</code>就可以使用<code>/my/image.jpg</code>作为海报。注意这里的值是绝对地址，且省略开头的“/”。</p>
+		</div>
+	</div>
+	<div class="sidebyside">
+		<pre><code>
+	&lt;meta name="author" content="&lt;?=htmlspecialchars($this-&gt;owner, ENT_COMPAT)?&gt;" /&gt;
+		</code></pre>
+		<div>
+			<p>如果<code>owner</code>不为空字符串（系统），就展示作者。</p>
+		</div>
+	</div>
+	<div class="sidebyside">
+		<pre><code>
+	&lt;link rel="alternate" hreflang="en" href="/&lt;?=htmlspecialchars($this-&gt;aux['lang-en'], ENT_COMPAT)?&gt;" type="text/html" /&gt;
+	&lt;link rel="alternate" hreflang="zh" href="/&lt;?=htmlspecialchars($this-&gt;aux['lang-zh'], ENT_COMPAT)?&gt;" type="text/html" /&gt;
+&lt;/head&gt;
+		</code></pre>
+		<div>
+			<p>多语页面的其他语言。</p>
+			<p>在<code>resource</code>对象的<code>meta</code>变量中定义该页面的各种语言版本（包括当前语言）的URL，例如：</p>
+			<pre><code>
+'aux' =&gt; ['lang-en' =&gt; 'url/en', 'lang-zh' =&gt; 'url/zh']
+			</code></pre>
+
+		</div>
+	</div>
+</div>
+<div>
+	<h3>HTML <code>&lt;body&gt;</code></h3>
+	<p>一个页面包含3个部分：<code>&lt;header&gt;</code>、<code>&lt;main&gt;</code>、<code>&lt;footer&gt;</code>。再加上一些额外的工具项目。</p>
+	<div class="sidebyside">
+		<pre><code>
+&lt;body&gt;
+	&lt;header&gt;
+		&lt;!-- 导航 --&gt;
+	&lt;/header&gt;
+		</code></pre>
+		<div>
+			<p>&lt;header&gt;部分包含了：</p>
+			<ul>
+				站点名 - 点击回到页面顶端。硬编码。
+				搜索框 - 打开一个包含站点地图的新页面并执行客户端过滤。
+				菜单 - 其它页面的链接。硬编码。
+				语言 - 多语页面切换语言，使用<code>resource-&gt;meta-&gt;lang-*</code>。
+			</ul>
+		</div>
+	</div>
+	<div class="sidebyside">
+		<pre><code>
+	&lt;main&gt;
+		&lt;?= $BW->site->content ?&gt;
+	&lt;/main&gt;
+		</code></pre>
+		<div>
+			<p><code>resource-&gt;content</code>中的HTML内容。具体如何渲染需参考<code>resource-&gt;template</code>中定义的子模版。</p>
+			<p>你不该使用<code style="background:pink">htmlspecialchars($BW-&gt;site-&gt;content, ENT_COMPAT)</code>来转义资源内容，因为资源内容包含的是使用HTML编码好了的网页部分。相反，使用：</p>
+			<ul>
+				<li><code style="background:lightgreen">&lt;?= $BW-&gt;site->content ?&gt;</code>或<code style="background:lightgreen">echo $BW-&gt;site-&gt;content;</code> - 输出数据库支持的资源内容。此类资源体积小，例如HTML文件。</li>
+				<li><code style="background:lightgreen">$this-&gt;site-&gt;dumpContent(-1, false);</code> - 直接发送文件支持的资源内容到客户端。此类资源体积大，例如图片。大部分情况下你都不会在网页模板中使用这个方法，毕竟没哪个疯子往HTML中赛那么多内容。</li>
+			</ul>
+			<p>取决于<code>Bearweb_Site::Size_FileBlob</code>设置（默认100kB），一个资源可能会是数据库支持或文件支持的。使用错误的方法<b>仍然工作</b>（除了极端情况下会爆内存），但是不利于性能。参考<a href="https://captdam.com/bearweb-resource-optimization/en" target="_blank">我的这一篇博客</a>。</p>
+		</div>
+	</div>
+	<div class="sidebyside">
+		<pre><code>
+	&lt;footer&gt;
+		&lt;!-- 版权 --&gt;
+		&lt;!-- 链接 --&gt;
+	&lt;/footer&gt;
+		</code></pre>
+		<div>
+			<p>&lt;footer&gt;部分硬编码了其它链接和版权信息。具体要放什么内容可以自由发挥。</p>
+		</div>
+	</div>
+	<div class="sidebyside">
+		<pre><code>
+	&lt;div&gt;
+		&lt;!-- utils --&gt;
+	&lt;/div&gt;
+		</code></pre>
+		<div>
+			<p>其它工具项目，例如<code>modal()</code>。</p>
+		</div>
+	</div>
+</div>
+
+<div>
+	<h2>响应式设计</h2>
+	<p>Bearweb网页模板使用完全客户端的响应式设计。也就是说，Bearweb网页模板将不会知道访客使用的设备，无论访客使用的是电脑还是手机，Bearweb网页模板都将发送相同的HTML。（是的，我就是很讨厌那种区分电脑版和移动版的网站，那是对访客的绑架行为！）接下来，客户端通过使用样式表来合理对页面进行排版。</p>
+	<p>这里分为3个断点</p>
+	<ul>
+		<li>小屏，小于且不包括768像素宽，主要是手机与平板竖屏。一些菜单将被折叠，一些横向排版的内容将被纵向排版。</li>
+		<li>中屏，大于且包括768像素宽，但小于且不包括1360像素宽，主要是平板横屏和笔记本电脑。页面内容将占据整个屏幕。</li>
+		<li>大屏，大于且包括1360像素宽。页面内容将占据屏幕中间部分。</li>
+	</ul>
+	<div class="sidebyside" style="grid-template-columns: 1.0604fr 1.9791fr 3.7604fr;">
+		<figure>
+			<img src="rd-narrow.jpg" alt="小屏（窄屏）" style="width:100%;min-width:100%;">
+			<figcaption>小屏（窄屏）</figcaption>
+		</figure>
+		<figure>
+			<img src="rd-mid.jpg" alt="中屏" style="width:100%;min-width:100%;">
+			<figcaption>中屏</figcaption>
+		</figure>
+		<figure>
+			<img src="rd-wide.jpg" alt="大屏（宽屏）" style="width:100%;min-width:100%;">
+			<figcaption>大屏（宽屏）</figcaption>
+		</figure>
+	</div>
+</div>
+
+<div class="main_title">
+	<h1>子模版</h1>
+</div>
+<div>
+	<p>Bearweb网页模板内置了一些子模版。通过将<code>resource</code>对象的<code>template</code>变量设置为数组<code>['page', 'x']</code>，就可以使用文件名为<code>x</code>的子模版。例如，<code>['page-en', 'direct']</code>，Bearweb CMS将会使用<code>Bearweb_Site::Dir_Template</code>文件夹中的<code>page-en.php</code>模板，接下来，<code>page-en.php</code>将会使用<code>Bearweb_Site::Dir_Template</code>文件夹中的<code>page-en_direct.php</code>子模版。</p>
+	<div class="main_note_ok">
+		<p>正如你所见，这将需要执行2次PHP文件的“打开-编译-执行”操作，这对性能来说是不利的。虽然Apache2和PHP可以缓存文件路径与二进制程序，“执行”操作仍然是一个额外负担。因此，我么可以将一些常用的子模版集成到页面模板中：</p>
+		<pre><code>
+&lt;?php if ($BW-&gt;site-&gt;template[1] == 'template1'): ?&gt;
+	&lt;div class="template1"&gt;&lt;?= $BW-&gt;site-&gt;content ?&gt;&lt;/div&gt;
+&lt;?php elseif ($BW-&gt;site-&gt;template[1] == 'template2'): ?&gt;
+	&lt;div class="template2"&gt;&lt;?= $BW-&gt;site-&gt;content ?&gt;&lt;/div&gt;
+&lt;? else:
+//	$template = Bearweb_Site::Dir_Template.'page_'.$this-&gt;site-&gt;template[1].'.php';
+//	if (file_exists($template))
+//		include $template;
+//	else
+		throw new BW_WebServerError('Secondary page template not found: '.$this-&gt;site-&gt;template[1], 500);
+?&gt;
+		</code></pre>
+		<p>如果该页面模板集成了该子模版，Bearweb就会执行该子模版的if条件内的代码。否则，Bearweb可以（可选）尝试在<code>Bearweb_Site::Dir_Template</code>文件夹内查找并执行该模板。如果该子模版不存在，Bearweb将会报服务端错误。</p>
+	</div>
+</div>
+
+<div>
+	<h2>直接输出<code>['page-x', 'direct']</code></h2>
+	<div class="sidebyside">
+		<figure>
+			<img src="direct.zh.png" alt="直接输出子模版">
+			<figcaption>直接输出子模版</figcaption>
+		</figure>
+		<div>
+			<p>直接在网页模板中输出<code>resource</code>对象的<code>content</code>变量的内容。该截屏由如下代码生成：</p>
+			<pre><code>
+'page/direct/zh' =&gt; [
+	'category' =&gt; 'Template',
+	'create' =&gt; 1769055184,
+	'modify' =&gt; 1769055184,
+	'template' =&gt; ['page-zh','direct'],
+	'meta' =&gt; [
+		'title' =&gt; '示例页面',
+		'description' =&gt; '一个示例页面',
+		'keywords' =&gt; '网页, HTML',
+		'img' =&gt; 'web/banner.jpeg',
+	],
+	'content' =&gt; '
+		&lt;div class="main_title"&gt;
+			&lt;h1&gt;示例页面&lt;/h1&gt;
+		&lt;/div&gt;
+		&lt;div&gt;
+			&lt;h2&gt;标题1&lt;/h2&gt;
+			&lt;p&gt;内容1&lt;/p&gt;
+		&lt;/div&gt;
+		&lt;div&gt;
+			&lt;h2&gt;标题2&lt;/h2&gt;
+			&lt;p&gt;内容2&lt;/p&gt;
+		&lt;/div&gt;
+	',
+	'aux' =&gt; [
+		'lang-en' =&gt; 'page/direct/en',
+		'lang-zh' =&gt; 'page/direct/zh'
+	]
+];
+			</code></pre>
+			<p><a href="direct/zh">此处打开示例：直接输出子模版。</a></p>
+		</div>
+	</div>
+</div>
+
+<div>
+	<h2>文章<code>['page-x', 'article']</code></h2>
+	<div class="sidebyside">
+		<figure>
+			<img src="article.zh.png" alt="文章子模版">
+			<figcaption>文章子模版</figcaption>
+		</figure>
+		<div>
+			<p>显示<code>resource</code>对象的<code>content</code>变量的内容。下面的代码和上面<code>direct</code>直接输出子模版使用的代码完全相同，但是渲染出来的结果不同：</p>
+			<pre><code>
+'page/article/zh' =&gt; [
+	'category' =&gt; 'Template',
+	'create' =&gt; 1769055184,
+	'modify' =&gt; 1769055184,
+	'template' =&gt; ['page-zh','article'],
+	'meta' =&gt; [
+		'title' =&gt; '示例页面',
+		'description' =&gt; '一个示例页面',
+		'keywords' =&gt; '网页, HTML',
+		'img' =&gt; 'web/banner.jpeg',
+	],
+	'content' =&gt; '
+		&lt;div class="main_title"&gt;
+			&lt;h1&gt;示例页面&lt;/h1&gt;
+		&lt;/div&gt;
+		&lt;div&gt;
+			&lt;h2&gt;标题1&lt;/h2&gt;
+			&lt;p&gt;内容1&lt;/p&gt;
+		&lt;/div&gt;
+		&lt;div&gt;
+			&lt;h2&gt;标题2&lt;/h2&gt;
+			&lt;p&gt;内容2&lt;/p&gt;
+		&lt;/div&gt;
+	',
+	'aux' =&gt; [
+		'lang-en' =&gt; 'page/article/en',
+		'lang-zh' =&gt; 'page/article/zh'
+	]
+];
+			</code></pre>
+			<p>可以看到在<code>content</code>的前面增添了：</p>
+			<ol>
+				<li>标题，根据<code>$resource-&gt;meta-&gt;title</code>得到。</li>
+				<li>简述，根据<code>$resource-&gt;meta-&gt;description</code>得到。</li>
+				<li>关键字，根据<code>$resource-&gt;meta-&gt;keywords</code>得到，并会分割为彩色的#块。</li>
+				<li>作者，根据<code>$resource-&gt;owner</code>得到。</li>
+				<li>时间戳，根据<code>$resource-&gt;create</code>和<code>$resource-&gt;modify</code>得到。</li>
+				<li>其它语言，根据<code>$resource-&gt;lang-*</code>得到。</li>
+				<li>文章目录，根据文章内的<code>&lt;h*&gt;</code>在用户端生成。点击目录可以跳转到相应章节。</li>
+				<li>所有这些都将被放在一个以<code>$resource-&gt;meta-&gt;img</code>作为背景图片的项目内。</li>
+			</ol>
+			<p><a href="article/zh">此处打开示例：文章子模版。</a></p>
+		</div>
+	</div>
+</div>
+
+<div>
+	<h2>图片<code>['page-x', 'image']</code></h2>
+	<div class="sidebyside">
+		<figure>
+			<img src="image.zh.png" alt="图片子模版">
+			<figcaption>图片子模版</figcaption>
+		</figure>
+		<div>
+			<p>图片详情。<code>image</code>子模版和<code>article</code>子模版相似，但不同在于以下3点：</p>
+			<ul>
+				<li><code>img</code>（缩略图） - 对于大图，下载该文件通常花费一定时间。因此，我们可以考虑使用该图片的缩略图。当加载这个页面时，我们先显示这张体积小但下载快的缩略图。虽然图片模糊，但是至少可以让访客看个大概。（不然的话，访客没有耐心等到大图下载，直接关掉页面跑路了。）同时，我们在后台慢慢加载这张高清大图。</li>
+				<li><code>hd</code> - 高清大图。</li>
+				<li><code>ratio</code> - 图片比例（宽度/高度）。这个数据方便浏览器在下载图片获得图片的分辨率前就可以正确预留空间排版,主要是为了方便生成照片墙。</li>
+			</ul>
+			<pre><code>
+'page/image/zh' =&gt; [
+	'category' =&gt; 'Template',
+	'create' =&gt; 1769055184,
+	'modify' =&gt; 1769055184,
+	'template' =&gt; ['page-zh','image'],
+	'meta' =&gt; [
+		'title' =&gt; '示例图片',
+		'description' =&gt; '该图片展示了Bearweb CMS的源码，这张图片在此被用作一个例子。',
+		'keywords' =&gt; '源代码, 网站开发',
+		'img' =&gt; 'web/banner.thumb.jpeg',
+		'hd' =&gt; 'web/banner.jpeg',
+		'ratio' =&gt; 1.33333
+	],
+	'content' =&gt; '
+		&lt;div&gt;
+			&lt;p&gt;可选内容&lt;/p&gt;
+		&lt;/div&gt;
+	',
+	'aux' =&gt; [
+		'lang-en' =&gt; 'page/image/en',
+		'lang-zh' =&gt; 'page/image/zh'
+	]
+];
+			</code></pre>
+			<div class="main_note_warning">
+				<p>对于不需要缩略图的小图片，使用图片的URL作为<code>img</code>和<code>hd</code>的值。这样才能正确渲染这个页面并且提供正确的Open Graph图片元素据。</p>
+			</div>
+			<p><a href="image/zh">此处打开示例：图片子模版。</a></p>
+		</div>
+	</div>
+</div>
+
+<div>
+	<h2>索引<code>['page-x', 'catalog']</code></h2>
+	<div class="sidebyside">
+		<figure>
+			<img src="catalog.zh.png" alt="索引子模版">
+			<figcaption>索引子模版</figcaption>
+		</figure>
+		<div>
+			<p>使用这个子模版来显示索引（文章列表），例如：</p>
+			<pre><code>
+&lt;div class="list_horizontal" id="categorylist"&gt;
+	&lt;a href="/example/tree.zh.html" style="--bgimg:url(/example/tree.thumb.jpg)"&gt;
+		&lt;h2&gt;樱&lt;/h2&gt;
+		&lt;p&gt;夜晚的樱花树&lt;/p&gt;
+		&lt;div class="keywords"&gt;樱花, 夜景&lt;/div&gt;
+		&lt;p&gt;&lt;i&gt;--by Captdam @ Jan 22, 2026&lt;/i&gt;&lt;/p&gt;
+	&lt;/a&gt;
+	&lt;!-- More elements --&gt;
+&lt;/div&gt;
+			</code></pre>
+			<p>该页面将有且只有一个<code>&lt;main&gt;</code>下面的<code>&lt;div id="categorylist"&gt;</code>项目表示索引列表。这个项目内，你可以有零个或任意数量个<code>&lt;a&gt;</code>项目，每一个<code>&lt;a&gt;</code>都代表一篇文章，且包含：</p>
+			<ul>
+				<li><code>href</code> - 文章（当然也可以时其它类型资源）的链接。</li>
+				<li><code>bgimg</code> - 背景图片，可以使用文章的<code>resource-&gt;meta-&gt;img</code>变量。</li>
+				<li><code>h2</code> - 标题，可以使用文章的<code>resource-&gt;meta-&gt;title</code>变量。</li>
+				<li><code>p</code> - 简述，可以使用文章的<code>resource-&gt;meta-&gt;description</code>变量。</li>
+				<li><code>keywords</code> - 背景图片关键字，可以使用文章的<code>resource-&gt;meta-&gt;keywords</code>变量。</li>
+				<li><code>p</code> - 作者与时间戳，可以使用文章的<code>resource-&gt;owner</code>、<code>resource-&gt;create</code>和<code>resource-&gt;modify</code>变量。</li>
+			</ul>
+			<p>另外，你可以使用页眉的搜索栏对资源进行内容（标题、简述、关键字）过滤。</p>
+			<p><a href="/example/catalog/zh">此处打开示例：索引子模版。</a></p>
+		</div>
+	</div>
+</div>
+
+<div>
+	<h2>照片墙<code>['page-x', 'bulletin']</code></h2>
+	<div class="sidebyside">
+		<figure>
+			<img src="bulletin.zh.png" alt="照片墙子模版">
+			<figcaption>照片墙子模版</figcaption>
+		</figure>
+		<div>
+			<p>使用这个子模版来显示照片墙（图片列表），例如：</p>
+			<pre><code>
+&lt;div class="list_vertical" id="bulletinlist"&gt;
+	&lt;a href="/example/tree.zh.html" style="aspect-ratio:0.97552"&gt;
+		&lt;img src="/example/tree.thumb.jpg" title="樱" alt="夜晚的樱花树。" loading="lazy"&gt;
+	&lt;/a&gt;
+	&lt;!-- More elements --&gt;
+&lt;/div&gt;
+			</code></pre>
+			<p>该页面将有且只有一个<code>&lt;main&gt;</code>下面的<code>&lt;div id="bulletinlist"&gt;</code>项目表示索引列表。这个项目内，你可以有零个或任意数量个<code>&lt;a&gt;</code>项目，每一个<code>&lt;a&gt;</code>都代表一张图片，且包含：</p>
+			<ul>
+				<li><code>href</code> - 图片页面（当然也可以时其它类型资源）的链接。</li>
+				<li><code>aspect-ratio</code> - 方便浏览器在下载图片获得图片的分辨率前就可以正确预留空间排版。</li>
+				<li><code>img</code> - 缩略图，可以使用图片页面的<code>resource-&gt;meta-&gt;img</code>变量。</li>
+				<li><code>title</code> - 标题，可以使用图片页面的<code>resource-&gt;meta-&gt;title</code>变量。</li>
+				<li><code>alt</code> - 简述，可以使用图片页面的<code>resource-&gt;meta-&gt;description</code>变量。</li>
+			</ul>
+			<div class="main_note_ok"><p>为了减小带宽消耗，可以使用<code>loading="lazy"</code>，只有当需要时才会下载图片。</p></div>
+			<p>这里没有搜索栏，因为照片墙不显示文字。</p>
+			<p><a href="/example/bulletin/zh">此处打开示例：照片墙子模版。</a></p>
+		</div>
+	</div>
+</div>
+
+<div>
+	<h2>语言选择<code>['page-x', 'langsel']</code></h2>
+	<div class="sidebyside">
+		<figure>
+			<img src="langsel.png" alt="语言选择子模版">
+			<figcaption>语言选择子模版</figcaption>
+		</figure>
+		<div>
+			<p>判断访客语言的着陆页。</p>
+			<p>你必须在<code>resource</code>对象的<code>aux</code>变量中指定目标语言的URL，例如：</p>
+			<pre><code>
+'' =&gt; [
+	'category' =&gt; 'Home',
+	'template'=&gt; ['page-en','langsel'],
+	'aux' =&gt; ['lang-en' =&gt; 'en', 'lang-zh' =&gt; 'zh']
+];
+			</code></pre>
+			<p>注意这里的URL都是绝对地址，且省略开头的“/”。</p>
+			<p>如果访客浏览器提交的<code>ACCEPT-LANGUAGE</code> HTTP头中的一个语言与<code>lang-*</code>中一项匹配，服务器将会返回一个<code>302 Found</code>头来发起跳转到合适的URL。如果<code>lang-*</code>中没有匹配项，服务器将会返回一个网页罗列可选的语言项目让访客选择。</p>
+			<p>如果有多个语言项目都匹配，那么<code>ACCEPT-LANGUAGE</code>中的第一项（最高的q值）将会被使用。</p>
+			<p>不推荐（但是你可以）在<code>resource</code>对象的其它变量中存放信息。这些信息不会被模板使用，但会拖累数据库IO与内存占用量。</p>
+			<p>当你想要分享一个多语言的网页时，分享这个着陆页<i>或许</i>是一个不错的选择，这让服务器可以根据访客语言提供合适的内容，但有悖于统一性。</p>
+			<p><a href="/">此处打开示例：主页着陆页，支持“en”与“zh”。</a></p>
+		</div>
+	</div>
+</div>
+
+<div>
+	<h2>错误</h2>
+	<div class="sidebyside">
+		<figure>
+			<img src="error.png" alt="错误子模版">
+			<figcaption>错误子模版</figcaption>
+		</figure>
+		<div>
+			<p>Bearweb CMS使用该子模版来显示错误信息：</p>
+			<ul>
+				<li>它包括了在通过<code>throw new BW_Error('message', 123);</code>抛出错误时设置的错误的名称与信息。出于安全考虑，你可以通过设置<code>Bearweb::HideServerError</code>来隐藏<code>BW_ServerError</code>类错误的名称与信息。</li>
+				<li>它包括当前请求ID。你可以通过请求ID在对话数据库中查找到这个请求。</li>
+			</ul>
+			<p>不要为你的资源使用这个子模版。</p>
+			<p><a href="404-nOT-FouND">此处打开示例：链接指向不存在的资源。</a></p>
+		</div>
+	</div>
+</div>
