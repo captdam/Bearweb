@@ -91,6 +91,8 @@
 			], 'content' => null],
 			*/
 
+			//'api/resource/reindex' => ['category' => 'API', 'template' => ['api','resource'], 'meta' => ['task' => 'reindex']],
+
 			/** Following are resource to create the example website, you can delete them */
 			'robots.txt' => ['category' => 'Web', 'create' => 1768423263, 'modify' => 1768423263, 'content' => "User-agent: *\nSitemap: https://bearweb.captdam.com/sitemap.txt\nSitemap: https://bearweb.captdam.com/sitemap.xml\nSitemap: https://bearweb.captdam.com/rss.xml", 'aux' => ['mime' => 'text/plain']],
 
@@ -106,10 +108,18 @@
 				'keywords' => 'CMS, 内容管理系统, PHP 8.4, Apache2, 数据库驱动, 博客, 网站开发'
 			], 'content' => null, 'aux' => ['lang-en' => 'en', 'lang-zh' => 'zh']],
 
+			// Page template - Template and sub-templates
+
+			'page' => ['category' => 'Template', 'template' => ['page-en','langsel'], 'aux' => ['lang-en' => 'page/en', 'lang-zh' => 'page/zh']],
 			'page/en' => ['category' => 'Template', 'template' => ['page-en','article'], 'meta' => [
 				'title' => 'Bearweb Page Template',
 				'description' => 'The Bearweb page template is built on top of the Bearweb CMS framework. The page template provides a simple, responsive design framework to display webpage content (HTML). This article shows how to use the Bearweb page template.',
-				'keywords' => 'Web dev, Data structure, HTML'
+				'keywords' => 'Web dev, Data structure, HTML, Template'
+			], 'content' => null, 'aux' => ['lang-en' => 'page/en', 'lang-zh' => 'page/zh']],
+			'page/zh' => ['category' => 'Template', 'template' => ['page-zh','article'], 'meta' => [
+				'title' => 'Bearweb网页模板',
+				'description' => 'Bearweb网页模板基于Bearweb CMS架构。Bearweb网页模板提供了一套简单、响应式设计的模板来显示网页内容（HTML）。这篇文章展示了如何使用Bearweb网页模板。',
+				'keywords' => '网站开发, 数据结构, HTML, 模板'
 			], 'content' => null, 'aux' => ['lang-en' => 'page/en', 'lang-zh' => 'page/zh']],
 
 			'page/direct' => ['category' => 'Template', 'create' => 1769055184, 'modify' => 1769055184, 'template' => ['page-en','langsel'], 'aux' => ['lang-en' => 'page/direct/en', 'lang-zh' => 'page/direct/zh']],
@@ -159,6 +169,11 @@
 			], 'content' => '<div><p>可选内容</p></div>', 'aux' => ['lang-en' => 'page/image/en', 'lang-zh' => 'page/image/zh']],
 			'page/image.en.png' => ['category' => 'Content', 'create' => 1769055184, 'modify' => 1769055184, 'content' => null, 'aux' => ['mime' => 'image/png']],
 			'page/image.zh.png' => ['category' => 'Content', 'create' => 1769055184, 'modify' => 1769055184, 'content' => null, 'aux' => ['mime' => 'image/png']],
+			
+			'page/catalog.en.png' => ['category' => 'Content', 'create' => 1769055184, 'modify' => 1769055184, 'content' => null, 'aux' => ['mime' => 'image/png']],
+			'page/catalog.zh.png' => ['category' => 'Content', 'create' => 1769055184, 'modify' => 1769055184, 'content' => null, 'aux' => ['mime' => 'image/png']],
+			'page/bulletin.en.png' => ['category' => 'Content', 'create' => 1769055184, 'modify' => 1769055184, 'content' => null, 'aux' => ['mime' => 'image/png']],
+			'page/bulletin.zh.png' => ['category' => 'Content', 'create' => 1769055184, 'modify' => 1769055184, 'content' => null, 'aux' => ['mime' => 'image/png']],
 
 			'page/langsel.png' => ['category' => 'Content', 'create' => 1769055184, 'modify' => 1769055184, 'content' => null, 'aux' => ['mime' => 'image/png']],
 			'page/error.png' => ['category' => 'Content', 'create' => 1769055184, 'modify' => 1769055184, 'content' => null, 'aux' => ['mime' => 'image/png']],

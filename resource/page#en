@@ -1,0 +1,551 @@
+<div class="overlay main_wide" style="display: flex; align-items: center; justify-content: center; color: brown; text-shadow: orange 1px 1px 10px, #000 0 0 5px;">
+	<div>
+	<span style="display: block; text-align: center; font-size: 10vw;">DRAFT</span>
+	<span style="display: block; text-align: center; font-size: 30px;">This article is in draft stage. Major content change may be applied later.</span>
+	</div>
+</div>
+
+<div class="main_title">
+	<h1>Template Structure</h1>
+</div>
+<div>
+	<p>The Bearweb page template is formed by 3 files:</p>
+	<ul>
+		<li><code>page.php</code> as the template itself (to output page content in HTML);</li>
+		<li><code>bearweb.js</code> used to create animations and handle user interactions;</li>
+		<li><code>style.css</code> used to define the appearance of the webpage.</li>
+	</ul>
+	<div class="main_note">
+		<p>Using the Bearweb page template is not mandatory when using the Bearweb CMS. The page template handles the front-end and the Bearweb CMS handles the back-end. You can create your own page template. However, you may want to use this template as reference to learn how to interact with the Bearweb CMS.</p>
+	</div>
+</div>
+
+<div>
+	<h2>HTML</h2>
+	<p>The ultimate goal of the page template is to format our data (a PHP <code>resource</code> object) into an HTML webpage. See this document for <code>resource</code> properties.</p><!-- TODO: Link to db structure -->
+	<div class="sidebyside">
+		<pre><code>
+&lt;!DOCTYPE html&gt;
+&lt;html lang="en"&gt;
+	&lt;head&gt;
+		&lt;!-- My head --&gt;
+	&lt;/dead&gt;
+	&lt;body&gt;
+		&lt;!-- My body --&gt;
+	&lt;/body&gt;
+&lt;/html&gt;
+		</code></pre>
+		<div>
+			<p>A webpage contains two parts: the invisible <code>head</code>, which carries some machine-read metadata; the visible <code>body</code>, which will be rendered and displayed to the user.</p>
+			<p>Note that <code>lang="en"</code> in the <code>html</code> tag shows the language of this page (in this example, English, without region code)</p>
+			<p>If you are building a multilingual website, you will want to create a template for each language you serve. For example, <code>page-zh.php</code> for Mandarin, where you write <code>&lt;html lang="zh"&gt;</code> in it; <code>page-en.php</code> for English, where you write <code>&lt;html lang="en"&gt;</code> in it.</p>
+			<div class="main_note_ok">
+				<p>As you can imagine, having multiple page templates for languages is a nightmare for maintenance. You will need to modify all templates when you make changes to page templates. One solution is to include all language in one template, for example, in <code>page-en.php</code>, write:</p>
+				<pre><code>
+if ($BW-&gt;site-&gt;template[0] == 'page-zh')
+	echo '&lt;html lang="zh"&gt;';
+else
+	echo '&lt;html lang="en"&gt;';
+				</code></pre>
+				<p>Then, set <code>page-zh.php</code> to be a symlink to <code>page-en.php</code>.</p>
+				<p>If <code>page-en.php</code> is invoked, it will only execute the <code>template[0] == 'page-en'</code> if-clause; if <code>page-zh.php</code> is invoked, it will link to <code>page-en.php</code>, and execute the <code>template[0] == 'page-zh'</code> if-clause.</p>
+			</div>
+		</div>
+	</div>
+</div>
+<div>
+	<h3>HTML <code>&lt;head&gt;</code></h3>
+	<p>The <code>&lt;head&gt;</code> contains metadata. Bearweb page template will:</p>
+	<div class="sidebyside">
+		<pre><code>
+&lt;head&gt;
+	&lt;?php
+		// $this = resource
+		string $domain = 'https://example.com/'
+		string $sitename = 'Example Site';
+		string $srcDomain = 'https://example.com/';
+		$meta_title = htmlspecialchars($this-&gt;meta['title'] ?? '', ENT_COMPAT);
+		$meta_keywords = htmlspecialchars($this-&gt;meta['keywords'] ?? '', ENT_COMPAT);
+		$meta_description = htmlspecialchars($this-&gt;meta['description'] ?? '', ENT_COMPAT);
+	?&gt;
+		</code></pre>
+		<div>
+			<p>To print the <code>&lt;head&gt;</code> element, you can use the helper method <code>public function util_html_head(...)</code> in the <code>resource</code> object.</p>
+			<p>You can use <code>$this-&gt;property</code> to get a specific property; use <code>htmlspecialchars($this-&gt;property, ENT_COMPAT)</code> to escape HTML characters in that property value before print.</p>
+			<p>Furthermore, in the page template, you need to hardcode the <code>$domain</code>, the <code>$sitename</code>, and the <code>$srcDomain</code> which supplies JS files.</p>
+		</div>
+	</div>
+	<div class="sidebyside">
+		<pre><code>
+	&lt;title&gt;&lt;?= $meta_title ?&gt; - &lt;?= $sitename ?&gt;&lt;/title&gt;
+	&lt;meta property="og:title" content="&lt;?= $meta_title ?&gt;" /&gt;
+	&lt;meta property="og:site_name" content="&lt;?= $sitename ?&gt;" /&gt;
+	&lt;meta property="og:type" content="website" /&gt;
+	&lt;meta name="keywords" content="&lt;?= $meta_keywords ?&gt;" /&gt;
+	&lt;meta name="description" content="&lt;?= $meta_description ?&gt;" /&gt;
+	&lt;meta property="og:description" content="&lt;?= $meta_description ?&gt;" /&gt;
+		</code></pre>
+		<div>
+			<p>Print the page title, the sitename, the keywords and description.</p>
+			<p>For all webpages, you should have <code>title</code>, <code>keywords</code> and <code>description</code> in the <code>meta</code> field of the <code>resource</code> object. For example:</p>
+			<pre><code>
+'meta' =&gt; [
+	'title' =&gt; 'Title of the Example Page',
+	'description' =&gt; 'A short description about this page.',
+	'keywords' =&gt; 'keyword1, keyword2, keyword3'
+]
+			</code></pre>
+			<div class="main_note_warning"><p>Use English comma (<code>,</code>) (ASCII 0x2C) to separate keywords.</p></div>
+		</div>
+	</div>
+	<div class="sidebyside">
+		<pre><code>
+	&lt;meta name="viewport" content="width=device-width, initial-scale=1.0" /&gt;
+	&lt;meta charset="utf-8" /&gt;
+		</code></pre>
+		<div>
+			<p>Use UTF-8 as the character set (the morden charset choice).</p>
+			<p>Set the viewport for mobile device.</p>
+		</div>
+	</div>
+	<div class="sidebyside">
+		<pre><code>
+	&lt;link href="/web/style.css" rel="stylesheet" type="text/css" /&gt;
+		</code></pre>
+		<div>
+			<p>Include the stylesheet. Since the CSS <code>url()</code> function will use the stylesheet's URL as the base URL; so, we have to supply the stylesheet from the same domain as the webpage.</p>
+		</div>
+	</div>
+	<div class="sidebyside">
+		<pre><code>
+	&lt;script src="&lt;?= $srcDomain ?&gt;web/bearapi.js"&gt;&lt;/script&gt;
+	&lt;script src="&lt;?= $srcDomain ?&gt;web/bearweb.js"&gt;&lt;/script&gt;
+		</code></pre>
+		<div>
+			<p>Include the JavaScript files. We can use external server to supply them. See <code>$srcDomain</code>.</p>
+		</div>
+	</div>
+	<div class="sidebyside">
+		<pre><code>
+	&lt;link rel="canonical" href="&lt;?= $domain.$this-&gt;url ?&gt;" /&gt;
+	&lt;meta property="og:url" content="&lt;?= $domain.$this-&gt;url ?&gt;" /&gt;
+		</code></pre>
+		<div>
+			<p>Use <code>$domain</code>/<code>$this-&gt;url</code> as canonical. This is helpful when multiple URLs link to the same resource (for example, <code>example.com/resource</code>, <code>www.example.com/resource</code>), but you should only use one URL for this resource. It tells search engine which URL to index for this content.</p>
+		</div>
+	</div>
+	<div class="sidebyside">
+		<pre><code>
+	&lt;meta name="robots" content="&lt;?=htmlspecialchars($this-&gt;meta['robots'], ENT_COMPAT)?&gt;" /&gt;
+		</code></pre>
+		<div>
+			<p>Prevent crawlers from index and/or follow this page. It requests the crawlers to not index and/or follow this resource, but some inresponsible crawlers won't respect it.</p>
+			<p>In most cases, you would like your page to be indexed by search engines. In this case, do not specify the <code>robots</code> in the <code>meta</code> field of the <code>resource</code> object.</p>
+			<p>If you do like to disable index and/or follow on a page, set:</p>
+			<pre><code>
+'meta' =&gt; [
+	'robots' =&gt; 'noindex'
+//	'robots' =&gt; 'nofollow'
+//	'robots' =&gt; 'noindex, nofollow'
+]
+			</code></pre>
+			<div class="main_note_error"><p>Do not use anything other than <code>noindex</code>, <code>nofollow</code> or <code>noindex, nofollow</code>. Some <a href="https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/meta/name/robots" target="_blank">crawlers cannot understant other attributes</a>.</p></div>
+		</div>
+	</div>
+	<div class="sidebyside">
+		<pre><code>
+	&lt;meta property="__og:image" content="/&lt;?=htmlspecialchars($this-&gt;meta['img'], ENT_COMPAT)?&gt;" /&gt;
+		</code></pre>
+		<div>
+			<p>Show a poster, if <code>img</code> in the <code>meta</code> field of the <code>resource</code> object is specified. For example, set <code>'meta' =&gt; ['img' =&gt; 'my/image.jpg']</code></pre> to use <code>/my/image.jpg</code> as the poster. Note the value is the absolute URL without the leading "/".</p>
+		</div>
+	</div>
+	<div class="sidebyside">
+		<pre><code>
+	&lt;meta name="author" content="&lt;?=htmlspecialchars($this-&gt;owner, ENT_COMPAT)?&gt;" /&gt;
+		</code></pre>
+		<div>
+			<p>Show the author, if <code>owner</code> is not empty (system).</p>
+		</div>
+	</div>
+	<div class="sidebyside">
+		<pre><code>
+	&lt;link rel="alternate" hreflang="en" href="/&lt;?=htmlspecialchars($this-&gt;aux['lang-en'], ENT_COMPAT)?&gt;" type="text/html" /&gt;
+	&lt;link rel="alternate" hreflang="zh" href="/&lt;?=htmlspecialchars($this-&gt;aux['lang-zh'], ENT_COMPAT)?&gt;" type="text/html" /&gt;
+&lt;/head&gt;
+		</code></pre>
+		<div>
+			<p>Alternative languages for multilingual page.</p>
+			<p>Specify the target URLs for the languages (including the current language and URL) in the <code>aux</code> field of the <code>resource</code> object, for example:</p>
+			<pre><code>
+'aux' =&gt; ['lang-en' =&gt; 'url/en', 'lang-zh' =&gt; 'url/zh']
+			</code></pre>
+
+		</div>
+	</div>
+</div>
+<div>
+	<h3>HTML <code>&lt;body&gt;</code></h3>
+	<p>A page includes 3 elements: <code>&lt;header&gt;</code>, <code>&lt;main&gt;</code>, <code>&lt;footer&gt;</code>. Plus some extra util elements.</p>
+	<div class="sidebyside">
+		<pre><code>
+&lt;body&gt;
+	&lt;header&gt;
+		&lt;!-- nav --&gt;
+	&lt;/header&gt;
+		</code></pre>
+		<div>
+			<p>The &lt;header&gt; section includes:</p>
+			<ul>
+				Sitename - Click to scroll to the top. Hardcoded.
+				Search box - Open a new page with all resources to perform client-side filter.
+				Menu - Link to other pages. Hardcoded.
+				Language - Alternative languages for multilingual site. Drive from <code>resource-&gt;meta-&gt;lang-*</code>.
+			</ul>
+		</div>
+	</div>
+	<div class="sidebyside">
+		<pre><code>
+	&lt;main&gt;
+		&lt;?= $BW->site->content ?&gt;
+	&lt;/main&gt;
+		</code></pre>
+		<div>
+			<p>Content in HTML format from the <code>resource-&gt;content</code>. It is rendered depending on its sub-template in <code>resource-&gt;template</code>.</p>
+			<p>You should not use <code style="background:pink">htmlspecialchars($BW-&gt;site-&gt;content, ENT_COMPAT)</code> to escape the resource content, because it includes desired HTML code for the webpage; instead, use:</p>
+			<ul>
+				<li><code style="background:lightgreen">&lt;?= $BW-&gt;site->content ?&gt;</code> or <code style="background:lightgreen">echo $BW-&gt;site-&gt;content;</code> - To output the resource content (for database-backed resources: small-size resources like HTML pages).</li>
+				<li><code style="background:lightgreen">$this-&gt;site-&gt;dumpContent(-1, false);</code> - To dump the resource content directly to client-side (for file-backed resources: large-size resources like images). You are not likely to use this method for HTML page, I don't think any HTML page can be this big.</li>
+			</ul>
+			<p>Depending on <code>Bearweb_Site::Size_FileBlob</code> setting (default 100kB), a resource content may be database-backed or file-backed. Using the wrong output method WORKS (other than possible out-of-memory error) but hits performance. See <a href="https://captdam.com/bearweb-resource-optimization/en" target="_blank">my blog for details</a>.</p>
+		</div>
+	</div>
+	<div class="sidebyside">
+		<pre><code>
+	&lt;footer&gt;
+		&lt;!-- copyright --&gt;
+		&lt;!-- links --&gt;
+	&lt;/footer&gt;
+		</code></pre>
+		<div>
+			<p>The &lt;footer&gt; section includes other links and copyright information, hardcoded in the template. It is up to you to decide what to put here.</p>
+		</div>
+	</div>
+	<div class="sidebyside">
+		<pre><code>
+	&lt;div&gt;
+		&lt;!-- utils --&gt;
+	&lt;/div&gt;
+		</code></pre>
+		<div>
+			<p>Other utils, such as <code>modal()</code>.</p>
+		</div>
+	</div>
+</div>
+
+<div>
+	<h2>Responsive Design</h2>
+	<p>The Bearweb page template uses responsive design in a full front-end approach. The Bearweb page template is not aware of the client-side device, it sends the same HTML to the client, no matter if the client is a laptop or a cellphone. (Yes, I hate those websites that send different pages when using different clients, forcing me to switch devices.) The stylesheet which is running on the client-side determines the appropriate layout to render the page.</p>
+	<p>There are 3 break points:</p>
+	<ul>
+		<li>Small screen under 768px (exclude) in width, common for cellphones and tablets (portrait). Some menus are grouped; some horizontally side-by-side elements are placed vertically.</li>
+		<li>Middle screen at least 768px (include) but under 1360px (exclude) in width, common for tablets (landscape) and laptops. The content of the page spans the entire screen width.</li>
+		<li>Large screen at least 1360px (include) in width. The content of the page spans the center portion of the screen.</li>
+	</ul>
+	<div class="sidebyside" style="grid-template-columns: 1.0604fr 1.9791fr 3.7604fr;">
+		<figure>
+			<img src="rd-narrow.jpg" alt="Small (narrow) screen" style="width:100%;min-width:100%;">
+			<figcaption>Small (narrow) screen</figcaption>
+		</figure>
+		<figure>
+			<img src="rd-mid.jpg" alt="Middle screen" style="width:100%;min-width:100%;">
+			<figcaption>Middle screen</figcaption>
+		</figure>
+		<figure>
+			<img src="rd-wide.jpg" alt="Large (wide) screen" style="width:100%;min-width:100%;">
+			<figcaption>Large (wide) screen</figcaption>
+		</figure>
+	</div>
+</div>
+
+<div class="main_title">
+	<h1>Sub-template</h1>
+</div>
+<div>
+	<p>The Bearweb page template comes with a few sub-templates. To select a sub-template, set the <code>template</code> field of the <code>resource</code> object to an array <code>['page', 'x']</code>, where <code>x</code> is the filename of the desired sub-template. For example, <code>['page-en', 'direct']</code>, in which case, the Bearweb CMS will invoke <code>page-en.php</code> in the <code>Bearweb_Site::Dir_Template</code> directory, then, <code>page-en.php</code> will invoke <code>page-en_direct.php</code> in the <code>Bearweb_Site::Dir_Template</code> directory.</p>
+	<div class="main_note_ok">
+		<p>As you can see, this requires 2 PHP file open-compile-execute operations, which is bad for performance. Although Apache2 and PHP can cache the filepath and the opcode, the “invoke” operation still introduces some overhead. Therefore, some commonly used sub-templates are embedded in the page template:</p>
+		<pre><code>
+&lt;?php if ($BW-&gt;site-&gt;template[1] == 'template1'): ?&gt;
+	&lt;div class="template1"&gt;&lt;?= $BW-&gt;site-&gt;content ?&gt;&lt;/div&gt;
+&lt;?php elseif ($BW-&gt;site-&gt;template[1] == 'template2'): ?&gt;
+	&lt;div class="template2"&gt;&lt;?= $BW-&gt;site-&gt;content ?&gt;&lt;/div&gt;
+&lt;? else:
+//	$template = Bearweb_Site::Dir_Template.'page_'.$this-&gt;site-&gt;template[1].'.php';
+//	if (file_exists($template))
+//		include $template;
+//	else
+		throw new BW_WebServerError('Secondary page template not found: '.$this-&gt;site-&gt;template[1], 500);
+?&gt;
+		</code></pre>
+		<p>If a specific sub-template is embedded in the page template, Bearweb will execute that if-clause; otherwise, it may optionally search for and include that file in the <code>Bearweb_Site::Dir_Template</code> directory. If that sub-template does not exist, Bearweb will throw a server-side error.</p>
+	</div>
+</div>
+
+<div>
+	<h2>Direct <code>['page-x', 'direct']</code></h2>
+	<div class="sidebyside">
+		<figure>
+			<img src="direct.en.png" alt="Direct sub-template">
+			<figcaption>Direct sub-template</figcaption>
+		</figure>
+		<div>
+			<p>Directly include the <code>content</code> field of the <code>resource</code> object in the template. The following code renders the example screenshot:</p>
+			<pre><code>
+'page/direct/en' =&gt; [
+	'category' =&gt; 'Template',
+	'create' =&gt; 1769055184,
+	'modify' =&gt; 1769055184,
+	'template' =&gt; ['page-en','direct'],
+	'meta' =&gt; [
+		'title' =&gt; 'Example Page',
+		'description' =&gt; 'An example webpage',
+		'keywords' =&gt; 'webpage, HTML',
+		'img' =&gt; 'web/banner.jpeg',
+	],
+	'content' =&gt; '
+		&lt;div class="main_title"&gt;
+			&lt;h1&gt;Example Page&lt;/h1&gt;
+		&lt;/div&gt;
+		&lt;div&gt;
+			&lt;h2&gt;Title 1&lt;/h2&gt;
+			&lt;p&gt;Content 1&lt;/p&gt;
+		&lt;/div&gt;
+		&lt;div&gt;
+			&lt;h2&gt;Title 2&lt;/h2&gt;
+			&lt;p&gt;Content 2&lt;/p&gt;
+		&lt;/div&gt;
+	',
+	'aux' =&gt; [
+		'lang-en' =&gt; 'page/direct/en',
+		'lang-zh' =&gt; 'page/direct/zh'
+	]
+];
+			</code></pre>
+			<p><a href="direct/en">See example here: direct sub-template.</a></p>
+		</div>
+	</div>
+</div>
+
+<div>
+	<h2>Article <code>['page-x', 'article']</code></h2>
+	<div class="sidebyside">
+		<figure>
+			<img src="article.en.png" alt="Article sub-template">
+			<figcaption>Article sub-template</figcaption>
+		</figure>
+		<div>
+			<p>Display the <code>content</code> field of the <code>resource</code> object in the template. The following code is exactly the same as what we used in the <code>direct</code> example, but renders differently:</p>
+			<pre><code>
+'page/direct/en' =&gt; [
+	'category' =&gt; 'Template',
+	'create' =&gt; 1769055184,
+	'modify' =&gt; 1769055184,
+	'template' =&gt; ['page-en','direct'],
+	'meta' =&gt; [
+		'title' =&gt; 'Example Page',
+		'description' =&gt; 'An example webpage',
+		'keywords' =&gt; 'webpage, HTML',
+		'img' =&gt; 'web/banner.jpeg',
+	],
+	'content' =&gt; '
+		&lt;div class="main_title"&gt;
+			&lt;h1&gt;Example Page&lt;/h1&gt;
+		&lt;/div&gt;
+		&lt;div&gt;
+			&lt;h2&gt;Title 1&lt;/h2&gt;
+			&lt;p&gt;Content 1&lt;/p&gt;
+		&lt;/div&gt;
+		&lt;div&gt;
+			&lt;h2&gt;Title 2&lt;/h2&gt;
+			&lt;p&gt;Content 2&lt;/p&gt;
+		&lt;/div&gt;
+	',
+	'aux' =&gt; [
+		'lang-en' =&gt; 'page/direct/en',
+		'lang-zh' =&gt; 'page/direct/zh'
+	]
+];
+			</code></pre>
+			<p>As we can see, before the <code>content</code>, there are:</p>
+			<ol>
+				<li>Title from <code>$resource-&gt;meta-&gt;title</code>.</li>
+				<li>Description from <code>$resource-&gt;meta-&gt;description</code>.</li>
+				<li>Keywords from <code>$resource-&gt;meta-&gt;keywords</code>, divided into colorful hashtag blocks.</li>
+				<li>Author from <code>$resource-&gt;owner</code>.</li>
+				<li>Timestamp from <code>$resource-&gt;create</code> and <code>$resource-&gt;modify</code>.</li>
+				<li>Alternative languages from <code>$resource-&gt;lang-*</code>.</li>
+				<li>Article index generated at client-side from the <code>&lt;h*&gt;</code> tags in the article.</li>
+				<li>All these information in a block with the background poster from <code>$resource-&gt;meta-&gt;img</code>.</li>
+			</ol>
+			<p><a href="article/en">See example here: article sub-template.</a></p>
+		</div>
+	</div>
+</div>
+
+<div>
+	<h2>Image <code>['page-x', 'image']</code></h2>
+	<div class="sidebyside">
+		<figure>
+			<img src="image.en.png" alt="Image sub-template">
+			<figcaption>Image sub-template</figcaption>
+		</figure>
+		<div>
+			<p>Details of an image. The <code>image</code> sub-template is similar to the <code>article</code> sub-template. However, it has the following 3 attributes:</p>
+			<ul>
+				<li><code>img</code> (thumbnail) - For a large image, it takes a long time to download; therefore, it is wise to have a thumbnail for it. When the page is loaded, a small, fast-load thumbnail will be displayed first. It is blurry, but allows the visitor to see what this image is about. (Otherwise, the visitor will lose patience and close this page). The large, slow-load HD image will be loaded in the background.</li>
+				<li><code>hd</code> - The high definition version of the image.</li>
+				<li><code>ratio</code> - Provide the aspect ratio (<code>width</code> / <code>height</code>) of this image. It helps the front-end to provide the correct space when layout the webpage before the image is downloaded. This is used when generate bulletin page.</li>
+			</ul>
+			<pre><code>
+'page/image/en' =&gt; [
+	'category' =&gt; 'Template',
+	'create' =&gt; 1769055184,
+	'modify' =&gt; 1769055184,
+	'template' =&gt; ['page-en','image'],
+	'meta' =&gt; [
+		'title' =&gt; 'Example Image',
+		'description' =&gt; 'This is a screenshot of the Bearweb CMS source code, it is used as an example here.',
+		'keywords' =&gt; 'Source code, Web dev',
+		'img' =&gt; 'web/banner.thumb.jpeg',
+		'hd' =&gt; 'web/banner.jpeg',
+		'ratio' =&gt; 1.33333
+	],
+	'content' =&gt; '
+		&lt;div&gt;
+			&lt;p&gt;Optional content&lt;/p&gt;
+		&lt;/div&gt;
+	',
+	'aux' =&gt; [
+		'lang-en' =&gt; 'page/image/en',
+		'lang-zh' =&gt; 'page/image/zh'
+	]
+];
+			</code></pre>
+			<p><a href="image/en">See example here: image sub-template.</a></p>
+		</div>
+	</div>
+</div>
+
+<div>
+	<h2>Catalog <code>['page-x', 'catalog']</code></h2>
+	<div class="sidebyside">
+		<figure>
+			<img src="catalog.en.png" alt="Catalog sub-template">
+			<figcaption>Catalog sub-template</figcaption>
+		</figure>
+		<div>
+			<p>Use this sub-template to display a catalog (list of articles), see example code below:</p>
+			<pre><code>
+&lt;div class="list_horizontal" id="categorylist"&gt;
+	&lt;a href="/example/tree.en.html" style="--bgimg:url(/example/tree.thumb.jpg)"&gt;
+		&lt;h2&gt;Sakura&lt;/h2&gt;
+		&lt;p&gt;Sakura in the night.&lt;/p&gt;
+		&lt;div class="keywords"&gt;Sakura, Night&lt;/div&gt;
+		&lt;p&gt;&lt;i&gt;--by Captdam @ Jan 22, 2026&lt;/i&gt;&lt;/p&gt;
+	&lt;/a&gt;
+	&lt;!-- More elements --&gt;
+&lt;/div&gt;
+			</code></pre>
+			<p>You will have only one <code>&lt;div id="categorylist"&gt;</code> element representing the catalog list under the <code>&lt;main&gt;</code> element. Under the <code>&lt;div id="categorylist"&gt;</code> element, you may have zero to multiple <code>&lt;a&gt;</code> elements representing each article. For each <code>&lt;a&gt;</code> element, you will need:</p>
+			<ul>
+				<li><code>href</code> - Link to the article (or other resource).</li>
+				<li><code>bgimg</code> - A background image, you can use the <code>resource-&gt;meta-&gt;img</code> attribute of the article.</li>
+				<li><code>h2</code> - Title, you can use the <code>resource-&gt;meta-&gt;title</code> attribute of the article.</li>
+				<li><code>p</code> - Description, you can use the <code>resource-&gt;meta-&gt;description</code> attribute of the article.</li>
+				<li><code>keywords</code> - Keywords, you can use the <code>resource-&gt;meta-&gt;keywords</code> attribute of the article.</li>
+				<li><code>p</code> - Author and timestamp, you can use the <code>resource-&gt;owner</code> <code>resource-&gt;create</code> and <code>resource-&gt;modify</code> attributes of the article.</li>
+			</ul>
+			<p>Furthermore, you can use the search box in the page banner to filter the results by their text content (title, description, keywords).</p>
+			<p><a href="/example/catalog/en">See example here: Catalog example.</a></p>
+		</div>
+	</div>
+</div>
+
+<div>
+	<h2>Bulletin <code>['page-x', 'bulletin']</code></h2>
+	<div class="sidebyside">
+		<figure>
+			<img src="bulletin.en.png" alt="Bulletin sub-template">
+			<figcaption>Bulletin sub-template</figcaption>
+		</figure>
+		<div>
+			<p>Use this sub-template to show a list of images, see example code below:</p>
+			<pre><code>
+&lt;div class="list_vertical" id="bulletinlist"&gt;
+	&lt;a href="/example/tree.en.html" style="aspect-ratio:0.97552"&gt;
+		&lt;img src="/example/tree.thumb.jpg" title="Sakura" alt="Sakura in the night." loading="lazy"&gt;
+	&lt;/a&gt;
+	&lt;!-- More elements --&gt;
+&lt;/div&gt;
+			</code></pre>
+			<p>You will have only one <code>&lt;div id="bulletinlist"&gt;</code> element representing the bulletin list under the <code>&lt;main&gt;</code> element. Under the <code>&lt;div id="bulletinlist"&gt;</code> element, you may have zero to multiple <code>&lt;a&gt;</code> elements representing each image. For each <code>&lt;a&gt;</code> element, you will need:</p>
+			<ul>
+				<li><code>href</code> - Link to the image page, or the image file (or other resource).</li>
+				<li><code>aspect-ratio</code> - Allows the browser to leave appropriate space before the image is downloaded, when the browser doesn't know the width and height of the image.</li>
+				<li><code>img</code> - Thumbnail of the image, you can use the <code>resource-&gt;meta-&gt;img</code> attribute of the image page.</li>
+				<li><code>title</code> - Title of the image, you can use the <code>resource-&gt;meta-&gt;title</code> attribute of the image page.</li>
+				<li><code>alt</code> - Description of the image, you can use the <code>resource-&gt;meta-&gt;description</code> attribute of the image page.</li>
+			</ul>
+			<div class="main_note_ok"><p>To reduce bandwidth cost, use <code>loading="lazy"</code> to delay image download until required.</p></div>
+			<p>There is no search box in the page banner to filter the results, because the bulletin doesn't display any text content.</p>
+			<p><a href="/example/bulletin/en">See example here: Bulletin example.</a></p>
+		</div>
+	</div>
+</div>
+
+<div>
+	<h2>Language Selection <code>['page-x', 'langsel']</code></h2>
+	<div class="sidebyside">
+		<figure>
+			<img src="langsel.png" alt="Language selection sub-template">
+			<figcaption>Language selection sub-template</figcaption>
+		</figure>
+		<div>
+			<p>Landing page to determine visitor language for multilingual pages.</p>
+			<p>You must specify the target URLs for the languages in the <code>aux</code> field of the <code>resource</code> object, for example:</p>
+			<pre><code>
+'' =&gt; [
+	'category' =&gt; 'Home',
+	'template'=&gt; ['page-en','langsel'],
+	'aux' =&gt; ['lang-en' =&gt; 'en', 'lang-zh' =&gt; 'zh']
+];
+			</code></pre>
+			<p>Note the values are absolute URLs without the leading "/".</p>
+			<p>If a language in <code>lang-*</code> matches with the <code>ACCEPT-LANGUAGE</code> HTTP header provided by the visitor's browser, the server will return a <code>302 Found</code> header to the client to initialize a redirect to the appropriate URL. If none of the <code>lang-*</code> matches, the server will return a webpage with a list of options to allow the visitor to select one.</p>
+			<p>If multiple languages matched, the first one in <code>ACCEPT-LANGUAGE</code> (which has higher q rank) will be used.</p>
+			<p>You should not (although you may) use the other fields of this <code>resource</code> object to store something, they will not be used by the template, and they are negative for performance due to database IO and memory usage overhead.</p>
+			<p>When you want to share a multilingual resource, it is a good idea to share the language selection page. This allows the server to provide the appropriate language version.</p>
+			<p><a href="/">See example here: landing page to the homepage, accepts "en" and "zh".</a></p>
+		</div>
+	</div>
+</div>
+
+<div>
+	<h2>Error</h2>
+	<div class="sidebyside">
+		<figure>
+			<img src="error.png" alt="Error sub-template">
+			<figcaption>Error sub-template</figcaption>
+		</figure>
+		<div>
+			<p>This is used by Bearweb CMS to display error information:</p>
+			<ul>
+				<li>It shows the name of the error name and error message, which you set when throwing the error using <code>throw new BW_Error('message', 123);</code>. You may hide <code>BW_ServerError</code> using <code>Bearweb::HideServerError</code> for security reason (you can always find the error in Apache2 error log and the session database).</li>
+				<li>It shows the request ID. You may use the request ID in the session database to trace this request.</li>
+			</ul>
+			<p>You should not use this template for your resource.</p>
+			<p><a href="404-nOT-FouND">See example here: a URL link to non-exist resource.</a></p>
+		</div>
+	</div>
+</div>
