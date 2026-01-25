@@ -96,77 +96,97 @@
 			/** Following are resource to create the example website, you can delete them */
 			'robots.txt' => ['category' => 'Web', 'create' => 1768423263, 'modify' => 1768423263, 'content' => "User-agent: *\nSitemap: https://bearweb.captdam.com/sitemap.txt\nSitemap: https://bearweb.captdam.com/sitemap.xml\nSitemap: https://bearweb.captdam.com/rss.xml", 'aux' => ['mime' => 'text/plain']],
 
-			'' => ['category' => 'Home', 'template' => ['page-en','langsel'], 'aux' => ['lang-en' => 'en', 'lang-zh' => 'zh']],
-			'en' => ['category' => 'Home', 'template' => ['page-en','direct'], 'meta' => [
+			'' => ['category' => 'Home', 'template' => ['page-en','langsel'], 'create' => 1769288622, 'modify' => 1769288622, 'aux' => ['lang-en' => 'en', 'lang-zh' => 'zh']],
+			'en' => ['category' => 'Home', 'template' => ['page-en','direct'], 'create' => 1769288622, 'modify' => 1769288622, 'aux' => ['lang-en' => 'en', 'lang-zh' => 'zh'], 'content' => null, 'meta' => [
 				'title' => 'Bearweb CMS',
 				'description' => 'A light-weight, portable database-driven content management system designed for personal blog and small-size organization website.',
 				'keywords' => 'CMS, Centent Management System, PHP 8.4, Apache2, Database-driven, Blog, Web dev'
-			], 'content' => null, 'aux' => ['lang-en' => 'en', 'lang-zh' => 'zh']],
-			'zh' => ['category' => 'Home', 'template' => ['page-zh','direct'], 'meta' => [
+			]],
+			'zh' => ['category' => 'Home', 'template' => ['page-zh','direct'], 'create' => 1769288622, 'modify' => 1769288622, 'aux' => ['lang-en' => 'en', 'lang-zh' => 'zh'], 'content' => null, 'meta' => [
 				'title' => 'Bearweb CMS',
 				'description' => '轻量化，可移植的数据库驱动内容管理系统。专为个人博客与小型组织网站设计。',
 				'keywords' => 'CMS, 内容管理系统, PHP 8.4, Apache2, 数据库驱动, 博客, 网站开发'
-			], 'content' => null, 'aux' => ['lang-en' => 'en', 'lang-zh' => 'zh']],
+			]],
+
+			'template' => ['category' => 'Home', 'template' => ['page-en','langsel'], 'create' => 1769288622, 'modify' => 1769288622, 'aux' => ['lang-en' => 'template/en', 'lang-zh' => 'template/zh']],
+			'template/en' => ['category' => 'Home', 'template' => ['page-en','article'], 'create' => 1769288622, 'modify' => 1769288622, 'aux' => ['lang-en' => 'template/en', 'lang-zh' => 'template/zh'], 'content' => null, 'meta' => [
+				'title' => 'Bearweb Template',
+				'description' => 'Bearweb templates are used to define detail operation when process a request: render a HTML page, output a file, process an API request.',
+				'keywords' => 'CMS, Centent Management System, PHP 8.4, Web dev'
+			]],
+			'template/zh' => ['category' => 'Home', 'template' => ['page-zh','article'], 'create' => 1769288622, 'modify' => 1769288622, 'aux' => ['lang-en' => 'template/en', 'lang-zh' => 'template/zh'], 'content' => null, 'meta' => [
+				'title' => 'Bearweb模板',
+				'description' => 'Bearweb模板定义了如何具体处理一个请求，包括渲染一个HTML页面，输出一个文件，处理一个API请求。',
+				'keywords' => 'CMS, 内容管理系统, PHP 8.4, 网站开发'
+			]],
 
 			// Page template - Template and sub-templates
 
-			'page' => ['category' => 'Template', 'template' => ['page-en','langsel'], 'aux' => ['lang-en' => 'page/en', 'lang-zh' => 'page/zh']],
-			'page/en' => ['category' => 'Template', 'template' => ['page-en','article'], 'meta' => [
+			'page' => ['category' => 'Template', 'create' => 1769055184, 'modify' => 1769055184, 'template' => ['page-en','langsel'], 'aux' => ['lang-en' => 'page/en', 'lang-zh' => 'page/zh']],
+			'page/en' => ['category' => 'Template', 'create' => 1769055184, 'modify' => 1769055184, 'template' => ['page-en','article'], 'aux' => ['lang-en' => 'page/en', 'lang-zh' => 'page/zh'], 'content' => null, 'meta' => [
 				'title' => 'Bearweb Page Template',
 				'description' => 'The Bearweb page template is built on top of the Bearweb CMS framework. The page template provides a simple, responsive design framework to display webpage content (HTML). This article shows how to use the Bearweb page template.',
 				'keywords' => 'Web dev, Data structure, HTML, Template'
-			], 'content' => null, 'aux' => ['lang-en' => 'page/en', 'lang-zh' => 'page/zh']],
-			'page/zh' => ['category' => 'Template', 'template' => ['page-zh','article'], 'meta' => [
+			]],
+			'page/zh' => ['category' => 'Template', 'create' => 1769055184, 'modify' => 1769055184, 'template' => ['page-zh','article'], 'aux' => ['lang-en' => 'page/en', 'lang-zh' => 'page/zh'], 'content' => null, 'meta' => [
 				'title' => 'Bearweb网页模板',
 				'description' => 'Bearweb网页模板基于Bearweb CMS架构。Bearweb网页模板提供了一套简单、响应式设计的模板来显示网页内容（HTML）。这篇文章展示了如何使用Bearweb网页模板。',
 				'keywords' => '网站开发, 数据结构, HTML, 模板'
-			], 'content' => null, 'aux' => ['lang-en' => 'page/en', 'lang-zh' => 'page/zh']],
+			]],
+
+			'page/rd-small.png' => ['category' => 'Content', 'create' => 1769055184, 'modify' => 1769055184, 'content' => null, 'aux' => ['mime' => 'image/png']],
+			'page/rd-middle.png' => ['category' => 'Content', 'create' => 1769055184, 'modify' => 1769055184, 'content' => null, 'aux' => ['mime' => 'image/png']],
+			'page/rd-large.png' => ['category' => 'Content', 'create' => 1769055184, 'modify' => 1769055184, 'content' => null, 'aux' => ['mime' => 'image/png']],
 
 			'page/direct' => ['category' => 'Template', 'create' => 1769055184, 'modify' => 1769055184, 'template' => ['page-en','langsel'], 'aux' => ['lang-en' => 'page/direct/en', 'lang-zh' => 'page/direct/zh']],
-			'page/direct/en' => ['category' => 'Template', 'create' => 1769055184, 'modify' => 1769055184, 'template' => ['page-en','direct'], 'meta' => [
+			'page/direct/en' => ['category' => 'Template', 'create' => 1769055184, 'modify' => 1769055184, 'template' => ['page-en','direct'], 'aux' => ['lang-en' => 'page/direct/en', 'lang-zh' => 'page/direct/zh'], 'meta' => [
 				'title' => 'Example Page',
 				'description' => 'An example webpage',
-				'keywords' => 'webpage, HTML'
-			], 'content' => '<div class="main_title"><h1>Example Page</h1></div><div><h2>Title 1</h2><p>Content 1</p></div><div><h2>Title 2</h2><p>Content 2</p></div>', 'aux' => ['lang-en' => 'page/direct/en', 'lang-zh' => 'page/direct/zh']],
-			'page/direct/zh' => ['category' => 'Template', 'create' => 1769055184, 'modify' => 1769055184, 'template' => ['page-zh','direct'], 'meta' => [
+				'keywords' => 'webpage, HTML',
+				'img' => 'web/banner.jpeg'
+			], 'content' => '<div class="main_title"><h1>Example Page</h1></div><div><h2>Title 1</h2><p>Content 1</p></div><div><h2>Title 2</h2><p>Content 2</p></div>'],
+			'page/direct/zh' => ['category' => 'Template', 'create' => 1769055184, 'modify' => 1769055184, 'template' => ['page-zh','direct'], 'aux' => ['lang-en' => 'page/direct/en', 'lang-zh' => 'page/direct/zh'], 'meta' => [
 				'title' => '示例页面',
 				'description' => '一个示例页面',
-				'keywords' => '网页, HTML'
-			], 'content' => '<div class="main_title"><h1>示例页面</h1></div><div><h2>标题1</h2><p>内容1</p></div><div><h2>标题2</h2><p>内容2</p></div>', 'aux' => ['lang-en' => 'page/direct/en', 'lang-zh' => 'page/direct/zh']],
+				'keywords' => '网页, HTML',
+				'img' => 'web/banner.jpeg'
+			], 'content' => '<div class="main_title"><h1>示例页面</h1></div><div><h2>标题1</h2><p>内容1</p></div><div><h2>标题2</h2><p>内容2</p></div>'],
 			'page/direct.en.png' => ['category' => 'Content', 'create' => 1769055184, 'modify' => 1769055184, 'content' => null, 'aux' => ['mime' => 'image/png']],
 			'page/direct.zh.png' => ['category' => 'Content', 'create' => 1769055184, 'modify' => 1769055184, 'content' => null, 'aux' => ['mime' => 'image/png']],
 
 			'page/article' => ['category' => 'Template', 'create' => 1769055184, 'modify' => 1769055184, 'template' => ['page-en','langsel'], 'aux' => ['lang-en' => 'page/article/en', 'lang-zh' => 'page/article/zh']],
-			'page/article/en' => ['category' => 'Template', 'create' => 1769055184, 'modify' => 1769055184, 'template' => ['page-en','article'], 'meta' => [
+			'page/article/en' => ['category' => 'Template', 'create' => 1769055184, 'modify' => 1769055184, 'template' => ['page-en','article'], 'aux' => ['lang-en' => 'page/article/en', 'lang-zh' => 'page/article/zh'], 'meta' => [
 				'title' => 'Example Page',
 				'description' => 'An example webpage',
-				'keywords' => 'webpage, HTML'
-			], 'content' => '<div class="main_title"><h1>Example Page</h1></div><div><h2>Title 1</h2><p>Content 1</p></div><div><h2>Title 2</h2><p>Content 2</p></div>', 'aux' => ['lang-en' => 'page/article/en', 'lang-zh' => 'page/article/zh']],
-			'page/article/zh' => ['category' => 'Template', 'create' => 1769055184, 'modify' => 1769055184, 'template' => ['page-zh','article'], 'meta' => [
+				'keywords' => 'webpage, HTML',
+				'img' => 'web/banner.jpeg'
+			], 'content' => '<div class="main_title"><h1>Example Page</h1></div><div><h2>Title 1</h2><p>Content 1</p></div><div><h2>Title 2</h2><p>Content 2</p></div>'],
+			'page/article/zh' => ['category' => 'Template', 'create' => 1769055184, 'modify' => 1769055184, 'template' => ['page-zh','article'], 'aux' => ['lang-en' => 'page/article/en', 'lang-zh' => 'page/article/zh'], 'meta' => [
 				'title' => '示例页面',
 				'description' => '一个示例页面',
-				'keywords' => '网页, HTML'
-			], 'content' => '<div class="main_title"><h1>示例页面</h1></div><div><h2>标题1</h2><p>内容1</p></div><div><h2>标题2</h2><p>内容2</p></div>', 'aux' => ['lang-en' => 'page/article/en', 'lang-zh' => 'page/article/zh']],
+				'keywords' => '网页, HTML',
+				'img' => 'web/banner.jpeg'
+			], 'content' => '<div class="main_title"><h1>示例页面</h1></div><div><h2>标题1</h2><p>内容1</p></div><div><h2>标题2</h2><p>内容2</p></div>'],
 			'page/article.en.png' => ['category' => 'Content', 'create' => 1769055184, 'modify' => 1769055184, 'content' => null, 'aux' => ['mime' => 'image/png']],
 			'page/article.zh.png' => ['category' => 'Content', 'create' => 1769055184, 'modify' => 1769055184, 'content' => null, 'aux' => ['mime' => 'image/png']],
 
 			'page/image' => ['category' => 'Photo', 'create' => 1769055184, 'modify' => 1769055184, 'template' => ['page-en','langsel'], 'aux' => ['lang-en' => 'page/image/en', 'lang-zh' => 'page/image/zh']],
-			'page/image/en' => ['category' => 'Template', 'create' => 1769055184, 'modify' => 1769055184, 'template' => ['page-en','image'], 'meta' => [
+			'page/image/en' => ['category' => 'Template', 'create' => 1769055184, 'modify' => 1769055184, 'template' => ['page-en','image'], 'aux' => ['lang-en' => 'page/image/en', 'lang-zh' => 'page/image/zh'], 'meta' => [
 				'title' => 'Example Image',
 				'description' => 'This is a screenshot of the Bearweb CMS source code, it is used as an example here.',
 				'keywords' => 'Source code, Web dev',
-				'thumb' => 'web/banner.thumb.jpeg',
+				'img' => 'web/banner.thumb.jpeg',
 				'hd' => 'web/banner.jpeg',
 				'ratio' => 1.33333
-			], 'content' => '<div><p>Optional content</p></div>', 'aux' => ['lang-en' => 'page/image/en', 'lang-zh' => 'page/image/zh']],
-			'page/image/zh' => ['category' => 'Template', 'create' => 1769055184, 'modify' => 1769055184, 'template' => ['page-zh','image'], 'meta' => [
+			], 'content' => '<div><p>Optional content</p></div>'],
+			'page/image/zh' => ['category' => 'Template', 'create' => 1769055184, 'modify' => 1769055184, 'template' => ['page-zh','image'], 'aux' => ['lang-en' => 'page/image/en', 'lang-zh' => 'page/image/zh'], 'meta' => [
 				'title' => '示例图片',
 				'description' => '该图片展示了Bearweb CMS的源码，这张图片在此被用作一个例子。',
 				'keywords' => '源代码, 网站开发',
-				'thumb' => 'web/banner.thumb.jpeg',
+				'img' => 'web/banner.thumb.jpeg',
 				'hd' => 'web/banner.jpeg',
 				'ratio' => 1.33333
-			], 'content' => '<div><p>可选内容</p></div>', 'aux' => ['lang-en' => 'page/image/en', 'lang-zh' => 'page/image/zh']],
+			], 'content' => '<div><p>可选内容</p></div>'],
 			'page/image.en.png' => ['category' => 'Content', 'create' => 1769055184, 'modify' => 1769055184, 'content' => null, 'aux' => ['mime' => 'image/png']],
 			'page/image.zh.png' => ['category' => 'Content', 'create' => 1769055184, 'modify' => 1769055184, 'content' => null, 'aux' => ['mime' => 'image/png']],
 			

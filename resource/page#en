@@ -190,10 +190,10 @@ else // if ($BW-&gt;site-&gt;template[0] == 'page-en') // default lang
 		<div>
 			<p>The &lt;header&gt; section includes:</p>
 			<ul>
-				Sitename - Click to scroll to the top. Hardcoded.
-				Search box - Open a new page with sitemap to perform client-side filter.
-				Menu - Link to other pages. Hardcoded.
-				Language - Alternative languages for multilingual page. Drive from <code>resource-&gt;meta-&gt;lang-*</code>.
+				<li>Sitename - Click to scroll to the top. Hardcoded.</li>
+				<li>Search box - Open a new page with sitemap to perform client-side filter.</li>
+				<li>Menu - Link to other pages. Hardcoded.</li>
+				<li>Language - Alternative languages for multilingual page. Drive from <code>resource-&gt;meta-&gt;lang-*</code>.</li>
 			</ul>
 		</div>
 	</div>
@@ -210,7 +210,7 @@ else // if ($BW-&gt;site-&gt;template[0] == 'page-en') // default lang
 				<li><code style="background:lightgreen">&lt;?= $BW-&gt;site->content ?&gt;</code> or <code style="background:lightgreen">echo $BW-&gt;site-&gt;content;</code> - To output the resource content (for database-backed resources: small-size resources like HTML pages).</li>
 				<li><code style="background:lightgreen">$this-&gt;site-&gt;dumpContent(-1, false);</code> - To dump the resource content directly to client-side (for file-backed resources: large-size resources like images). You are not likely to use this method for HTML page, I don't think any HTML page can be this big.</li>
 			</ul>
-			<p>Depending on <code>Bearweb_Site::Size_FileBlob</code> setting (default 100kB), a resource content may be database-backed or file-backed. Using the wrong output method <b>WORKS</a> (other than possible out-of-memory error) but hits performance. See <a href="https://captdam.com/bearweb-resource-optimization/en" target="_blank">my blog for details</a>.</p>
+			<p>Depending on <code>Bearweb_Site::Size_FileBlob</code> setting (default 100kB), a resource content may be database-backed or file-backed. Using the wrong output method <b>WORKS</b> (other than possible out-of-memory error) but hits performance. See <a href="https://captdam.com/bearweb-resource-optimization/en" target="_blank">my blog for details</a>.</p>
 		</div>
 	</div>
 	<div class="sidebyside">
@@ -245,17 +245,17 @@ else // if ($BW-&gt;site-&gt;template[0] == 'page-en') // default lang
 		<li>Middle screen at least 768px (include) but under 1360px (exclude) in width, common for tablets (landscape) and laptops. The content of the page spans the entire screen width.</li>
 		<li>Large screen at least 1360px (include) in width. The content of the page spans the center portion of the screen.</li>
 	</ul>
-	<div class="sidebyside" style="grid-template-columns: 1.0604fr 1.9791fr 3.7604fr;">
+	<div class="sidebyside" style="grid-template-columns: 480fr 1395fr 2757fr;">
 		<figure>
-			<img src="rd-narrow.jpg" alt="Small (narrow) screen" style="width:100%;min-width:100%;">
+			<img src="rd-small.png" alt="Small (narrow) screen" style="width:100%;min-width:100%;">
 			<figcaption>Small (narrow) screen</figcaption>
 		</figure>
 		<figure>
-			<img src="rd-mid.jpg" alt="Middle screen" style="width:100%;min-width:100%;">
+			<img src="rd-middle.png" alt="Middle screen" style="width:100%;min-width:100%;">
 			<figcaption>Middle screen</figcaption>
 		</figure>
 		<figure>
-			<img src="rd-wide.jpg" alt="Large (wide) screen" style="width:100%;min-width:100%;">
+			<img src="rd-large.png" alt="Large (wide) screen" style="width:100%;min-width:100%;">
 			<figcaption>Large (wide) screen</figcaption>
 		</figure>
 	</div>

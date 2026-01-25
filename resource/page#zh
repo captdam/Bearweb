@@ -190,10 +190,10 @@ else // if ($BW-&gt;site-&gt;template[0] == 'page-en') // 默认语言
 		<div>
 			<p>&lt;header&gt;部分包含了：</p>
 			<ul>
-				站点名 - 点击回到页面顶端。硬编码。
-				搜索框 - 打开一个包含站点地图的新页面并执行客户端过滤。
-				菜单 - 其它页面的链接。硬编码。
-				语言 - 多语页面切换语言，使用<code>resource-&gt;meta-&gt;lang-*</code>。
+				<li>站点名 - 点击回到页面顶端。硬编码。</li>
+				<li>搜索框 - 打开一个包含站点地图的新页面并执行客户端过滤。</li>
+				<li>菜单 - 其它页面的链接。硬编码。</li>
+				<li>语言 - 多语页面切换语言，使用<code>resource-&gt;meta-&gt;lang-*</code>。</li>
 			</ul>
 		</div>
 	</div>
@@ -245,17 +245,17 @@ else // if ($BW-&gt;site-&gt;template[0] == 'page-en') // 默认语言
 		<li>中屏，大于且包括768像素宽，但小于且不包括1360像素宽，主要是平板横屏和笔记本电脑。页面内容将占据整个屏幕。</li>
 		<li>大屏，大于且包括1360像素宽。页面内容将占据屏幕中间部分。</li>
 	</ul>
-	<div class="sidebyside" style="grid-template-columns: 1.0604fr 1.9791fr 3.7604fr;">
+	<div class="sidebyside" style="grid-template-columns: 480fr 1395fr 2757fr;">
 		<figure>
-			<img src="rd-narrow.jpg" alt="小屏（窄屏）" style="width:100%;min-width:100%;">
+			<img src="rd-small.png" alt="小屏（窄屏）" style="width:100%;min-width:100%;">
 			<figcaption>小屏（窄屏）</figcaption>
 		</figure>
 		<figure>
-			<img src="rd-mid.jpg" alt="中屏" style="width:100%;min-width:100%;">
+			<img src="rd-middle.png" alt="中屏" style="width:100%;min-width:100%;">
 			<figcaption>中屏</figcaption>
 		</figure>
 		<figure>
-			<img src="rd-wide.jpg" alt="大屏（宽屏）" style="width:100%;min-width:100%;">
+			<img src="rd-large.png" alt="大屏（宽屏）" style="width:100%;min-width:100%;">
 			<figcaption>大屏（宽屏）</figcaption>
 		</figure>
 	</div>
