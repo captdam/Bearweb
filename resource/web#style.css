@@ -38,6 +38,7 @@ main>*:nth-child(2n) { background: var(--content-bgcolor0); }
 main>*:nth-child(2n+1) { background: var(--content-bgcolor1); }
 .main_title { color: var(--highlight-color); background: var(--highlight-bgcolor) !important; }
 .main_wide { padding: 12px 0; }
+main>*>* { max-width: 100%; }
 
 ::backdrop { background: rgba(0, 0, 0, 0.925); }
 
@@ -52,10 +53,8 @@ main>*:nth-child(2n+1) { background: var(--content-bgcolor1); }
 
 /** Place two (or multiple) children contents side by side */ 
 .sidebyside { display: block; }
-@media (min-width: 768px) {
-	.sidebyside { display: grid; gap: 10px; grid-template-columns: 1fr 1fr; }
-	.sidebyside>* { width: 100%; overflow-x: auto; }
-}
+.sidebyside>* { width: 100%; overflow-x: auto; }
+@media (min-width: 768px) { .sidebyside { display: grid; gap: 10px; grid-template-columns: 1fr 1fr; } }
 
 
 /** Tables */
@@ -142,11 +141,12 @@ figure>img[data-wide] { max-width: 100%; }
 /** Lists style */
 .list_horizontal { /* Element with same height in horizontal layout */
 	display: grid;
-	gap: 10px;
+	gap: 5px;
 }
 .list_horizontal>* {
 	display: block;
-	padding: 5px;
+	width: calc(100% - 6px);
+	padding: 3px;
 }
 .list_vertical { /* Element can be different height in column layout */
 	columns: 2;
@@ -154,7 +154,7 @@ figure>img[data-wide] { max-width: 100%; }
 .list_vertical>* {
 	display: block;
 	width: 100%;
-	margin: 0;
+	margin: 0 0 5px 0;
 }
 @media (min-width: 768px) {
 	.list_horizontal { grid-template-columns: repeat(2, 1fr); }
