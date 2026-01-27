@@ -1,0 +1,431 @@
+<div class="main_title">
+	<h1>顶级<code>&lt;div&gt;</code></h1>
+</div>
+<div>
+	<p>首先，所有的内容都必须置于一个或多个<code>&lt;div&gt;</code>内。每一个<code>&lt;div&gt;</code>代表了一个章节。你可以将内容的不同部分放入不同<code>&lt;div&gt;</code>内。<code>&lt;div&gt;</code>之间有颜色变化便于区分。</p>
+</div>
+<div>
+	<h2><code>main_title</code></h2>
+	<p>上面的<code>&lt;div&gt;</code>使用了<code>main_title</code>作为class，这将会使用深蓝色渲染背景，白色渲染文字。适合高亮标题。</p>
+	<p>上面的<code>&lt;div&gt;</code>的源码如下：</p>
+	<pre><code>
+&lt;div class="main_title"&gt;
+	&lt;h1&gt;顶级&lt;code&gt;&amp;lt;div&amp;gt;&lt;/code&gt;&lt;/h1&gt;
+&lt;/div&gt;	
+	</code></pre>
+</div>
+<div>
+	<h2>默认</h2>
+	<p>这一个<code>&lt;div&gt;</code>没有使用class，也就是默认项目。适合作为内容部分。</p>
+	<p>这一个<code>&lt;div&gt;</code>的源码如下：</p>
+	<pre><code>
+&lt;div&gt;
+	&lt;p&gt;这一个&lt;code&gt;&lt;div&gt;&lt;/code&gt;没有使用class，也就是默认项目。适合作为内容部分。&lt;/p&gt;
+&lt;/div&gt;
+	</code></pre>
+</div>
+<div>
+	<p>这一个<code>&lt;div&gt;</code>将会有不同的背景颜色。你可以观察到内容在不同分区。</p>
+	<p>这一个<code>&lt;div&gt;</code>的源码如下：</p>
+	<pre><code>
+&lt;div class="main_title"&gt;
+	&lt;p&gt;下一个&lt;code&gt;&lt;div&gt;&lt;/code&gt;将会有不同的背景颜色。你可以观察到内容在不同分区。&lt;/p&gt;
+&lt;/div&gt;
+	</code></pre>
+</div>
+<div class="tintimg" style="--bgcolor: rgba(0,0,0,0.25); --bgimg:url(/web/banner.jpeg); color: #FFF;">
+	<h2><code>tintimg</code></h2>
+	<p>你可以使用图片作为背景。</p>
+	<p>使用<code>tintimg</code>作为class来为背景染色（使用半透明颜色层遮盖背景）并修改前景文字颜色以确保可读性。</p>
+	<p>这个例子中使用了25% alpha的黑色，前景前景文字颜色为白色。</p>
+</div>
+<div>
+	<p>上面的<code>&lt;div&gt;</code>的源码如下：</p>
+	<pre><code>
+&lt;div class="tintimg" style="--bgcolor: rgba(0,0,0,0.25); --bgimg:url(/web/banner.jpeg); color: #FFF;"&gt;
+	&lt;p&gt;你可以使用图片作为背景。&lt;/p&gt;
+	&lt;p&gt;使用&lt;code&gt;tintimg&lt;/code&gt;作为class来为背景染色（使用半透明颜色层遮盖背景）并修改前景文字颜色以确保可读性。&lt;/p&gt;
+	&lt;p&gt;这个例子中使用了25% alpha的黑色，前景前景文字颜色为白色。&lt;/p&gt;
+&lt;/div&gt;
+	</code></pre>
+</div>
+<div class="main_wide">
+	<h2><code>main_wide</code></h2>
+	<p>这一个<code>&lt;div&gt;</code>使用了<code>main_wide</code>作为class，内容将会占据整个屏幕宽度。</p>
+	<p>你可以尝试调整浏览器屏幕大小来观测<code>main_wide</code>如何影响Bearweb页面模板的响应式设计。</p>
+	<p>这一个<code>&lt;div&gt;</code>的源码如下：</p>
+	<pre><code>
+&lt;div class="main_wide"&gt;
+	&lt;p&gt;这一个&lt;code&gt;&lt;div&gt;&lt;/code&gt;使用了&lt;code&gt;main_wide&lt;/code&gt;作为class，内容将会占据整个屏幕宽度。&lt;/p&gt;
+	&lt;p&gt;你可以尝试调整浏览器屏幕大小来观测&lt;code&gt;main_wide&lt;/code&gt;如何影响Bearweb页面模板的响应式设计。&lt;/p&gt;
+&lt;/div&gt;
+	</code></pre>
+</div>
+<div id="watermark" class="overlay main_wide" style="display: none; align-items: center; justify-content: center; color: orange;">
+	<div>
+	<span style="display: block; text-align: center; font-size: 8vw;">内容&lt;div&gt;示例</span>
+	<span style="display: block; text-align: center; font-size: 30px;">这篇文章展示了如何使用内容&lt;div&gt;。</span>
+	</div>
+</div>
+<div>
+	<h2><code>overlay</code></h2>
+	<p>使用<code>overlay</code>作为class可以让&lt;div&gt;悬浮在网页顶层。这有助于达到文档水印的效果。</p>
+	<pre><code>
+&lt;div id="watermark" class="overlay main_wide" style="display: flex; align-items: center; justify-content: center; color: orange;"&gt;
+	&lt;div&gt;
+	&lt;span style="display: block; text-align: center; font-size: 8vw;"&gt;内容&amp;lt;div&amp;gt;示例&lt;/span&gt;
+	&lt;span style="display: block; text-align: center; font-size: 30px;"&gt;这篇文章展示了如何使用内容&amp;lt;div&amp;gt;。&lt;/span&gt;
+	&lt;/div&gt;
+&lt;/div&gt;
+	</code></pre>
+	<p>上面的例子展示了将一个2行的水印置于本文顶层。你可以额外添加上文提到的<code>main_wide</code>到class来使水印覆盖全屏宽度。使用下面的按键来激活这个效果。</p>
+	<div class="layflat">
+		<button onclick="_('#watermark').style.display = 'flex'">显示水印</button>
+		<button onclick="_('#watermark').style.display = 'none'">隐藏水印</button>
+	</div>
+</div>
+
+<div class="main_title">
+	<h1>模组</h1>
+</div>
+<div>
+	<p>下面展示了可以用在顶级<code>&lt;div&gt;</code>下的模组：</p>
+</div>
+
+<div>
+	<h2><code>tintimg</code></h2><div class="sidebyside">
+		<div class="tintimg" style="--bgcolor: rgba(255, 183, 197, 0.65); --bgimg:url(/example/tree.thumb.jpg); color: #1F1618; text-align: center; font-size: 50px;">桜</div>
+		<div>
+			<p>除了给顶级<code>&lt;div&gt;</code>做背景外，你可以在任何以图片为背景的元素上使用<code>tintimg</code>样式。</p>
+			<pre><code>
+&lt;div class="tintimg" style="--bgcolor: rgba(255, 183, 197, 0.65); --bgimg:url(/example/tree.thumb.jpg); color: #1F1618;"&gt;桜&lt;/div&gt;
+			</code></pre>
+			<div class="main_note_error">
+				<p>这个样式使用图片作为背景。搜索引擎将会忽略这个图片，因为搜索引擎只会识别<code>&lt;img&gt;</code>元素内的图片。如果你希望这张图片被收录的话，不要使用这个样式。</p>
+			</div>
+		</div>
+	</div>
+</div>
+
+<div>
+	<h2><code>sidebyside</code></h2>
+	<p>你可以（横向）并列排布两个（或多个）元素，便于比较。</p>
+	<pre><code>
+&lt;div class="sidebyside"&gt;
+	&lt;img src="/example/rail.thumb.jpg" alt="铁路" /&gt;
+	&lt;img src="/example/fall.thumb.jpg" alt="大瀑布" /&gt;
+&lt;/div&gt;
+	</code></pre>
+	<div class="sidebyside">
+		<img src="/example/rail.thumb.jpg" alt="铁路" />
+		<img src="/example/fall.thumb.jpg" alt="大瀑布" />
+	</div>
+	<p>两个项目默认将各自占据50%的横向空间，且间隔10像素。如果有多个项目，或是要更改宽度比例与间隔，可以设置<code>gap</code>和<code>grid-template-columns</code>规则：</p>
+	<pre><code>
+&lt;div class="sidebyside" style="grid-template-columns: 300px 2fr 1fr; gap: 25px;"&gt;
+	&lt;img src="/example/tree.thumb.jpg" alt="樱花" /&gt;
+	&lt;div&gt;文字1 比例2&lt;/div&gt;
+	&lt;div&gt;文字2 比例1&lt;/div&gt;
+&lt;/div&gt;
+	</code></pre>
+	<div class="sidebyside" style="grid-template-columns: 300px 2fr 1fr; gap: 25px;">
+		<img src="/example/tree.thumb.jpg" alt="樱花" />
+		<div style="border: 2px #000 solid">文字A 比例2</div>
+		<div style="border: 2px #000 solid">文字B 比例1</div>
+	</div>
+	<p>上面的例子展示了3个向项目。第一个（图片）占据横向300像素。第二个（文字A）与第三个项目（文字B）以2：1的比例占据剩余的空间。项目之间的间隔为25像素。</p>
+	<p>在窄屏上，横向排版会很显得很拥挤，所以会使用竖向排版替代。</p>
+</div>
+
+<div>
+	<h2>表格</h2><div class="sidebyside">
+		<div class="tablewrap"><table style="white-space:nowrap">
+			<caption>示例表格</caption>
+			<thead>
+				<tr>
+					<th scope="col">Row</th>
+					<th scope="col">Column A</th>
+					<th scope="col">Column B</th>
+					<th scope="col">Column C</th>
+				</tr>
+			</thead><tbody>
+				<tr>
+					<th scope="row">Row 1</th>
+					<td>The quick brown fox jumps over the lazy dog.</td>
+					<td>The quick brown fox jumps over the lazy dog.</td>
+					<td>The quick brown fox jumps over the lazy dog.</td>
+				</tr><tr>
+					<th scope="row">Row 2</th>
+					<td>The quick brown fox jumps over the lazy dog.</td>
+					<td>The quick brown fox jumps over the lazy dog.</td>
+					<td>The quick brown fox jumps over the lazy dog.</td>
+				</tr>
+			</tbody>
+		</table></div>
+		<div>
+			<p>和HTML原版的表格相比，Bearweb网页模板提供了一个更清晰的风格，并且还提供了一个可横向滚动的容器来防止窄屏上很宽的表格导致页面排版溢出。</p>
+			<p>只要简单地使用一个<code>&lt;div class="tablewrap"&gt;</code>来包裹住<code>&lt;table&gt;</code>就可以了：</p>
+			<pre><code>
+&lt;div class="tablewrap"&gt;&lt;table&gt;
+	&lt;caption&gt;示例表格&lt;/caption&gt;
+	&lt;thead&gt;
+		&lt;tr&gt;
+			&lt;th scope="col"&gt;Row&lt;/th&gt;
+			&lt;th scope="col"&gt;Column A&lt;/th&gt;
+			&lt;th scope="col"&gt;Column B&lt;/th&gt;
+			&lt;th scope="col"&gt;Column C&lt;/th&gt;
+		&lt;/tr&gt;
+	&lt;/thead&gt;&lt;tbody&gt;
+		&lt;tr&gt;
+			&lt;th scope="row"&gt;Row 1&lt;/th&gt;
+			&lt;td&gt;The quick brown fox jumps over the lazy dog.&lt;/td&gt;
+			&lt;td&gt;...&lt;/td&gt;
+			&lt;td&gt;...&lt;/td&gt;
+		&lt;/tr&gt;&lt;tr&gt;
+			&lt;th scope="row"&gt;Row 2&lt;/th&gt;
+			&lt;td&gt;...&lt;/td&gt;
+			&lt;td&gt;...&lt;/td&gt;
+			&lt;td&gt;...&lt;/td&gt;
+		&lt;/tr&gt;
+	&lt;/tbody&gt;
+&lt;/table&gt;&lt;/div&gt;
+			</code></pre>
+		</div>
+	</div>
+</div>
+
+<div>
+	<h2>代码与代码块</h2>
+	<p>行内代码使用灰色背景，例如：<code>int i = 0</code>。</p>
+	<p>要插入一段行内代码，只要将代码放在<code>&lt;code&gt;</code>元素内就可以了。例如：</p>
+	<pre><code>
+&lt;p&gt;行内代码使用灰色背景，例如：&lt;code&gt;int i = 0&lt;/code&gt;。&lt;/p&gt;
+	</code></pre>
+	<p>代码块提供了一个可横向滚动的容器来防止窄屏上很宽的代码块导致页面排版溢出。</p>
+	<pre><code>
+$include &lt;stdio&gt;
+int main() {
+	int i = 10086;
+	printf("Hello int %d\n", i);
+	return 0;
+}
+	</code></pre>
+	<p>下面展示了这个例子的HTML：</p>
+	<pre><code>
+&lt;pre&gt;&lt;code&gt;
+$include &amp;lt;stdio&amp;gt;
+int main() {
+	int i = 10086;
+	printf("Hello int %d\n", i);
+	return 0;
+}
+&lt;/code&gt;&lt;/pre&gt;
+	</code></pre>
+	<div class="main_note_warning">
+		<p>记住转义代码中的HTML特殊字符：</p>
+		<ul>
+			<li><code>&amp;</code>（和符合） --&gt; <code>&amp;amp;</code></li>
+			<li><code>&lt;</code>（小于符合） --&gt; <code>&amp;lt;</code></li>
+			<li><code>&gt;</code>（大于符合） --&gt; <code>&amp;gt;</code></li>
+		</ul>
+	</div>
+</div>
+
+<div>
+	<h2>图片</h2>
+		<img src="/example/bridge.thumb.jpg" alt="吊桥" style="max-width:400px" />
+		<p>这样插入一张图片：</p>
+		<pre><code>
+&lt;img src="/example/bridge.thumb.jpg" alt="吊桥" style="max-width:400px" /&gt;
+		</code></pre>
+		<p>其中：</p>
+		<ul>
+			<li><code>src</code> - 图片链接。</li>
+			<li><code>alt</code>（可选） - 备用文字描述，在图片加载失败时显示以简明阐述图片内容。<b>强烈推荐</b>以提高用户可用性。</li>
+			<li><code>max-width</code>（可选） - 你可以限制图片的尺寸。大尺寸图片可能会占据整个屏幕。</li>
+		</ul>
+		<p>Bearweb网页模板提供了一个页面内图片浏览器。访客可以通过点击图片以放大图片、浏览高清版本（如果设置了的话）和图片的其它信息。</p>
+		<figure>
+			<img src="/example/bridge.thumb.jpg" title="Lift bridge" alt="吊桥" data-hd="/example/bridge.jpg" data-keywords="桥, 工程, 地标" data-description="湖边的一座老吊桥。" />
+			<figcaption>一座老吊桥。</figcaption>
+		</figure>
+		<h3>页面内图片浏览器</h3>
+		<p>要使用页面内图片浏览器，使用<code>&lt;figure&gt;</code>元素将<code>&lt;img&gt;</code>元素包裹起来，并提供额外的信息。例如：</p>
+		<pre><code>
+&lt;figure&gt;
+	&lt;img src="/example/bridge.thumb.jpg" title="Lift bridge" alt="Lift bridge" data-hd="/example/bridge.jpg" data-keywords="桥, 工程, 地标" data-description="湖边的一座老吊桥。" /&gt;
+	&lt;figcaption&gt;一座老吊桥。&lt;/figcaption&gt;
+&lt;/figure&gt;
+		</code></pre>
+		<p>where:</p>
+		<ul>
+			<li><code>src</code> - 图片（缩略图）链接。</li>
+			<li><code>alt</code>（可选） - 备用文字描述，在图片加载失败时显示以简明阐述图片内容。<b>强烈推荐</b>以提高用户可用性。</li>
+			<li><code>title</code>（可选） - 图片标题。</li>
+			<li><code>data-title</code>（可选） - 如果没有<code>title</code>的话。</li>
+			<li><code>data-hd</code>（可选） - 图片（高清大图）链接。</li>
+			<li><code>data-keywords</code>（可选） - 以（英文）逗号分隔的关键字。</li>
+			<li><code>data-description</code>（可选） - 图片简述。</li>
+			<li><code>figcaption</code>（可选） - 在图片下方显示的小标题。<b>强烈推荐</b>以提高用户可用性。</li>
+		</ul>
+		<p>页面内图片浏览器将显示：</p>
+		<ul>
+			<li><code>src</code>指向的图片。如果有定义<code>data-hd</code>的话，高清大图会在后台下载，并在下载完成后替代缩略图（<code>src</code>）。</li>
+			<li>关闭浏览器、打开缩略图（<code>src</code>）与高清大图（<code>data-hd</code>）的按钮。</li>
+			<li>标题，如果有指定<code>title</code>或<code>data-title</code>的话。如果都没有，就会使用<code>src</code>。</li>
+			<li>简述，如果有指定<code>data-description</code>的话。</li>
+			<li>小标题，如果有指定<code>figcaption</code>的话。</li>
+			<li>分割渲染的关键字块，如果有指定</code>的话。</li>
+		</ul>
+	</div>
+</div>
+
+<div>
+	<h2>横向列表</h2>
+	<p>使用<code>&lt;div class="list_horizontal"&gt;</code>来对物品进行网格样式横向排版。</p>
+	<pre><code>
+&lt;div class="list_horizontal"&gt;
+	&lt;img src="/example/river.thumb.jpg" /&gt;
+	&lt;div style="background: #FAA content-box;"&gt;&lt;p&gt;混合一些文字。&lt;/p&gt;&lt;/div&gt;
+	&lt;img src="/example/rail.thumb.jpg" /&gt;
+	&lt;div style="background: #AFA content-box;"&gt;&lt;p&gt;混合更多的文字。&lt;/p&gt;&lt;/div&gt;
+	&lt;img src="/example/highway.thumb.jpg" /&gt;
+	&lt;img src="/example/fighter.thumb.jpg" /&gt;
+	&lt;div style="background: #AAF content-box;"&gt;&lt;p&gt;加大力度混合文字。&lt;/p&gt;&lt;/div&gt;
+&lt;/div&gt;
+	</code></pre>
+	<p>上面的代码可以生成下面的结果：</p>
+	<div class="list_horizontal">
+		<img src="/example/river.thumb.jpg" />
+		<div style="background: #FAA content-box;"><p>混合一些文字。</p></div>
+		<img src="/example/rail.thumb.jpg" />
+		<div style="background: #AFA content-box;"><p>混合更多的文字。</p></div>
+		<img src="/example/highway.thumb.jpg" />
+		<img src="/example/fighter.thumb.jpg" />
+		<div style="background: #AAF content-box;"><p>加大力度混合文字。</p></div>
+	</div>
+	<p>在上面的例子中，每一行最高的项目将会决定该行的高度。如果要强制所有的项目一样高的话，可以用<code>&lt;div&gt;</code>来取代<code>&lt;img&gt;</code>，并设置<code>&lt;div&gt;</code>的<code>background</code>为图片。</p>
+	<pre><code>
+&lt;div class="list_horizontal"&gt;
+	&lt;div style="background: center/cover url(/example/river.thumb.jpg);"&gt;&lt;/div&gt;
+	&lt;div style="background: #FAA content-box;"&gt;&lt;p&gt;混合一些文字。&lt;/p&gt;&lt;/div&gt;
+	&lt;div style="background: center/cover url(/example/rail.thumb.jpg);"&gt;&lt;/div&gt;
+	&lt;div style="background: #AFA content-box;"&gt;&lt;p&gt;混合更多的文字。&lt;/p&gt;&lt;/div&gt;
+	&lt;div style="background: center/cover url(/example/highway.thumb.jpg);"&gt;&lt;/div&gt;
+	&lt;div style="background: center/cover url(/example/fighter.thumb.jpg);"&gt;&lt;/div&gt;
+	&lt;div style="background: #AAF content-box;"&gt;&lt;p&gt;加大力度混合文字。&lt;/p&gt;&lt;/div&gt;
+&lt;/div&gt;
+	</code></pre>
+	<p>上面的代码可以生成下面的结果：</p>
+	<div class="list_horizontal">
+		<div style="background: center/cover url(/example/river.thumb.jpg);"></div>
+		<div style="background: #FAA content-box;"><p>混合一些文字。</p></div>
+		<div style="background: center/cover url(/example/rail.thumb.jpg);"></div>
+		<div style="background: #AFA content-box;"><p>混合更多的文字。</p></div>
+		<div style="background: center/cover url(/example/highway.thumb.jpg);"></div>
+		<div style="background: center/cover url(/example/fighter.thumb.jpg);"></div>
+		<div style="background: #AAF content-box;"><p>加大力度混合文字。</p></div>
+	</div>
+	<p>Bearweb网页模板默认了渲染规则，即：窄屏1列，中屏2列，宽屏3列。你可以赋予列表ID并自定义样式规则：</p>
+	<pre><code>
+&lt;div class="list_horizontal" id="list_horizontal_customsize"&gt;
+	&lt;img src="/example/river.thumb.jpg" /&gt;
+	&lt;div style="background: #FAA content-box;"&gt;&lt;p&gt;混合一些文字。&lt;/p&gt;&lt;/div&gt;
+	&lt;img src="/example/rail.thumb.jpg" /&gt;
+	&lt;div style="background: #AFA content-box;"&gt;&lt;p&gt;混合更多的文字。&lt;/p&gt;&lt;/div&gt;
+	&lt;img src="/example/highway.thumb.jpg" /&gt;
+	&lt;img src="/example/fighter.thumb.jpg" /&gt;
+	&lt;div style="background: #AAF content-box;"&gt;&lt;p&gt;加大力度混合文字。&lt;/p&gt;&lt;/div&gt;
+&lt;/div&gt;
+&lt;style&gt;
+	#list_horizontal_customsize { grid-template-columns: repeat(4, 1fr); }
+	@media (min-width: 800px) {
+		#list_horizontal_customsize { grid-template-columns: repeat(8, 1fr); }
+	}
+&lt;/style&gt;
+	</code></pre>
+	<p>上面的代码可以生成下面的结果：</p>
+	<div class="list_horizontal" id="list_horizontal_customsize">
+		<img src="/example/river.thumb.jpg" />
+		<div style="background: #FAA content-box;"><p>混合一些文字。</p></div>
+		<img src="/example/rail.thumb.jpg" />
+		<div style="background: #AFA content-box;"><p>混合更多的文字。</p></div>
+		<img src="/example/highway.thumb.jpg" />
+		<img src="/example/fighter.thumb.jpg" />
+		<div style="background: #AAF content-box;"><p>加大力度混合文字。</p></div>
+	</div>
+	<style>
+		#list_horizontal_customsize { grid-template-columns: repeat(4, 1fr); }
+		@media (min-width: 800px) {
+			#list_horizontal_customsize { grid-template-columns: repeat(6, 1fr); }
+		}
+	</style>
+</div>
+
+<div>
+	<h2>纵向列表</h2>
+	<p>使用<code>&lt;div class="list_verticla"&gt;</code>来对物品进行报纸样式纵向排版。</p>
+	<pre><code>
+&lt;div class="list_vertical"&gt;
+	&lt;img src="/example/bridge.thumb.jpg" /&gt;
+	&lt;div style="background: #FAA content-box;"&gt;&lt;span&gt;混合一些文字。&lt;/span&gt;&lt;/div&gt;
+	&lt;img src="/example/river.thumb.jpg" /&gt;
+	&lt;div style="background: #FAF content-box;"&gt;&lt;span&gt;混合另外一些文字。&lt;/span&gt;&lt;/div&gt;
+	&lt;img src="/example/rail.thumb.jpg" /&gt;
+	&lt;div style="background: #AFA content-box;"&gt;&lt;span&gt;混合更多的文字。&lt;/span&gt;&lt;/div&gt;
+	&lt;img src="/example/highway.thumb.jpg" /&gt;
+	&lt;img src="/example/fighter.thumb.jpg" /&gt;
+	&lt;div style="background: #AAF content-box;"&gt;&lt;span&gt;加大力度混合文字。&lt;/span&gt;&lt;/div&gt;
+&lt;/div&gt;
+	</code></pre>
+	<p>上面的代码可以生成下面的结果：</p>
+	<div class="list_vertical">
+		<img src="/example/bridge.thumb.jpg" />
+		<div style="background: #FAA content-box;"><span>混合一些文字。</span></div>
+		<img src="/example/river.thumb.jpg" />
+		<div style="background: #FAF content-box;"><span>混合另外一些文字。</span></div>
+		<img src="/example/rail.thumb.jpg" />
+		<div style="background: #AFA content-box;"><span>混合更多的文字。</span></div>
+		<img src="/example/highway.thumb.jpg" />
+		<img src="/example/fighter.thumb.jpg" />
+		<div style="background: #AAF content-box;"><span>加大力度混合文字。</span></div>
+	</div>
+	<p>Bearweb网页模板默认了渲染规则，即：窄屏2列，中屏和宽屏3列。你可以赋予列表ID并自定义样式规则：</p>
+	<pre><code>
+&lt;div class="list_vertical" id="list_vertical_customsize"&gt;
+	&lt;img src="/example/bridge.thumb.jpg" /&gt;
+	&lt;div style="background: #FAA content-box;"&gt;&lt;span&gt;混合一些文字。&lt;/span&gt;&lt;/div&gt;
+	&lt;img src="/example/river.thumb.jpg" /&gt;
+	&lt;div style="background: #FAF content-box;"&gt;&lt;span&gt;混合另外一些文字。&lt;/span&gt;&lt;/div&gt;
+	&lt;img src="/example/rail.thumb.jpg" /&gt;
+	&lt;div style="background: #AFA content-box;"&gt;&lt;span&gt;混合更多的文字。&lt;/span&gt;&lt;/div&gt;
+	&lt;img src="/example/highway.thumb.jpg" /&gt;
+	&lt;img src="/example/fighter.thumb.jpg" /&gt;
+	&lt;div style="background: #AAF content-box;"&gt;&lt;span&gt;加大力度混合文字。&lt;/span&gt;&lt;/div&gt;
+&lt;/div&gt;
+&lt;style&gt;
+	#list_vertical_customsize { columns: 3; }
+	@media (min-width: 800px) {
+		#list_vertical_customsize { columns: 4; }
+	}
+&lt;/style&gt;
+	</code></pre>
+	<p>上面的代码可以生成下面的结果：</p>
+	<div class="list_vertical" id="list_vertical_customsize">
+		<img src="/example/bridge.thumb.jpg" />
+		<div style="background: #FAA content-box;"><span>混合一些文字。</span></div>
+		<img src="/example/river.thumb.jpg" />
+		<div style="background: #FAF content-box;"><span>混合另外一些文字。</span></div>
+		<img src="/example/rail.thumb.jpg" />
+		<div style="background: #AFA content-box;"><span>混合更多的文字。</span></div>
+		<img src="/example/highway.thumb.jpg" />
+		<img src="/example/fighter.thumb.jpg" />
+		<div style="background: #AAF content-box;"><span>加大力度混合文字。</span></div>
+	</div>
+	<style>
+		#list_vertical_customsize { columns: 3; }
+		@media (min-width: 800px) {
+			#list_vertical_customsize { columns: 4; }
+		}
+	</style>
+</div>

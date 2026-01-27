@@ -1,0 +1,431 @@
+<div class="main_title">
+	<h1>Top level <code>&lt;div&gt;</code></h1>
+</div>
+<div>
+	<p>You must include your content in <code>&lt;div&gt;</code>s. A <code>&lt;div&gt;</code> represents a section. You can place different parts of your content into different <code>&lt;div&gt;</code>s. There is a change in the background color between <code>&lt;div&gt;</code>s to differentiate them.</p>
+</div>
+<div>
+	<h2><code>main_title</code></h2>
+	<p>Above <code>&lt;div&gt;</code> uses the <code>main_title</code> class, render the background in dark-blue and the text in white. Suitable for highlighting titles.</p>
+	<p>Source code for above <code>&lt;div&gt;</code>:</p>
+	<pre><code>
+&lt;div class="main_title"&gt;
+	&lt;h1&gt;Top level &lt;code&gt;&amp;lt;div&amp;gt;&lt;/code&gt;&lt;/h1&gt;
+&lt;/div&gt;	
+	</code></pre>
+</div>
+<div>
+	<h2>Default</h2>
+	<p>This <code>&lt;div&gt;</code> has no class, which is the default. Good for content.</p>
+	<p>Source code for this <code>&lt;div&gt;</code>:</p>
+	<pre><code>
+&lt;div&gt;
+	&lt;p&gt;This &lt;code&gt;&lt;div&gt;&lt;/code&gt; has no class, which is the default. Good for content.&lt;/p&gt;
+&lt;/div&gt;
+	</code></pre>
+</div>
+<div>
+	<p>This <code>&lt;div&gt;</code> will have different background color. So, you can see the content is in different sections.</p>
+	<p>Source code for this <code>&lt;div&gt;</code>:</p>
+	<pre><code>
+&lt;div&gt;
+	&lt;p&gt;This &lt;code&gt;&lt;div&gt;&lt;/code&gt; will have different background color. So, you can see the content is in different sections.&lt;/p&gt;
+&lt;/div&gt;
+	</code></pre>
+</div>
+<div class="tintimg" style="--bgcolor: rgba(0,0,0,0.25); --bgimg:url(/web/banner.jpeg); color: #FFF;">
+	<h2><code>tintimg</code></h2>
+	<p>You can use image for background.</p>
+	<p>Use the <code>tintimg</code> class to tint the background (place a semi-transparent color layer above the background) and change front text color to ensure readability.</p>
+	<p>In this example, the tint is black with 25% alpha, the front text color is white.</p>
+</div>
+<div>
+	<p>Source code for above <code>&lt;div&gt;</code>:</p>
+	<pre><code>
+&lt;div class="tintimg" style="--bgcolor: rgba(0,0,0,0.25); --bgimg:url(/web/banner.jpeg); color: #FFF;"&gt;
+	&lt;p&gt;You can use image for background.&lt;/p&gt;
+	&lt;p&gt;Use the &lt;code&gt;tintimg&lt;/code&gt; class to tint the background (place a semi-transparent color layer above the background) and change front text color to ensure readability.&lt;/p&gt;
+	&lt;p&gt;In this example, the tint is black with 25% alpha, the front text color is white.&lt;/p&gt;
+&lt;/div&gt;
+	</code></pre>
+</div>
+<div class="main_wide">
+	<h2><code>main_wide</code></h2>
+	<p>This <code>&lt;div&gt;</code> uses the <code>main_wide</code> class, spanning the content the entire screen width.</p>
+	<p>You can try change browser window size to see how <code>main_wide</code> affect the responsive design in Bearweb page template.</p>
+	<p>Source code for this <code>&lt;div&gt;</code>:</p>
+	<pre><code>
+&lt;div class="main_wide"&gt;
+	&lt;p&gt;This &lt;code&gt;&lt;div&gt;&lt;/code&gt; uses the &lt;code&gt;main_wide&lt;/code&gt; class, spanning the content the entire screen width.&lt;/p&gt;
+	&lt;p&gt;You can try change browser window size to see how &lt;code&gt;main_wide&lt;/code&gt; affect the responsive design in Bearweb page template.&lt;/p&gt;
+&lt;/div&gt;
+	</code></pre>
+</div>
+<div id="watermark" class="overlay main_wide" style="display: none; align-items: center; justify-content: center; color: orange;">
+	<div>
+	<span style="display: block; text-align: center; font-size: 4vw;">Content &lt;div&gt; Example</span>
+	<span style="display: block; text-align: center; font-size: 20px;">This article shows some examples to use the content &lt;div&gt;s.</span>
+	</div>
+</div>
+<div>
+	<h2><code>overlay</code></h2>
+	<p>The <code>overlay</code> class makes a &lt;div&gt; floating on top of the webpage. This is helpful if you want to place a watermark on a document.</p>
+	<pre><code>
+&lt;div id="watermark" class="overlay main_wide" style="display: flex; align-items: center; justify-content: center; color: orange;"&gt;
+	&lt;div&gt;
+	&lt;span style="display: block; text-align: center; font-size: 4vw;"&gt;Content &amp;lt;div&amp;gt; Example&lt;/span&gt;
+	&lt;span style="display: block; text-align: center; font-size: 20px;"&gt;This article shows some examples to use the content &amp;lt;div&amp;gt;s.&lt;/span&gt;
+	&lt;/div&gt;
+&lt;/div&gt;
+	</code></pre>
+	<p>The above example shows how to place a 2-line watermark on the top of this article. You may use it in addition with the <code>main_wide</code> class discussed earlier to span the overlay layer the entire screen width. Use the button below to activate it.</p>
+	<div class="layflat">
+		<button onclick="_('#watermark').style.display = 'flex'">Show watermark</button>
+		<button onclick="_('#watermark').style.display = 'none'">Hide watermark</button>
+	</div>
+</div>
+
+<div class="main_title">
+	<h1>Modules</h1>
+</div>
+<div>
+	<p>Following are modules you can use under the top level <code>&lt;div&gt;</code>s:</p>
+</div>
+
+<div>
+	<h2><code>tintimg</code></h2><div class="sidebyside">
+		<div class="tintimg" style="--bgcolor: rgba(255, 183, 197, 0.65); --bgimg:url(/example/tree.thumb.jpg); color: #1F1618; text-align: center; font-size: 50px;">桜</div>
+		<div>
+			<p>You can use <code>tintimg</code> on any image-background elements, not only top <code>&lt;div&gt;</code>s.</p>
+			<pre><code>
+&lt;div class="tintimg" style="--bgcolor: rgba(255, 183, 197, 0.65); --bgimg:url(/example/tree.thumb.jpg); color: #1F1618;"&gt;桜&lt;/div&gt;
+			</code></pre>
+			<div class="main_note_error">
+				<p>This style uses image as background. Search engines will ignore this image because they expect the image in <code>&lt;img&gt;</code> element. Do not use this style if you would like your image to bve indexed.</p>
+			</div>
+		</div>
+	</div>
+</div>
+
+<div>
+	<h2><code>sidebyside</code></h2>
+	<p>You may want to place two (or more) elements side-by-side (horizontal layout) for comparison.</p>
+	<pre><code>
+&lt;div class="sidebyside"&gt;
+	&lt;img src="/example/rail.thumb.jpg" alt="Railway" /&gt;
+	&lt;img src="/example/fall.thumb.jpg" alt="The Great Fall" /&gt;
+&lt;/div&gt;
+	</code></pre>
+	<div class="sidebyside">
+		<img src="/example/rail.thumb.jpg" alt="Railway" />
+		<img src="/example/fall.thumb.jpg" alt="The Great Fall" />
+	</div>
+	<p>By default, you can place two items side-by-side at 50-50 width, 10px gap between. To place more than two items or to set different width, or different gap size, set the <code>gap</code> and <code>grid-template-columns</code> style rules:</p>
+	<pre><code>
+&lt;div class="sidebyside" style="grid-template-columns: 300px 2fr 1fr; gap: 25px;"&gt;
+	&lt;img src="/example/tree.thumb.jpg" alt="Sakura" /&gt;
+	&lt;div&gt;Text A ratio 2&lt;/div&gt;
+	&lt;div&gt;Text B ratio 1&lt;/div&gt;
+&lt;/div&gt;
+	</code></pre>
+	<div class="sidebyside" style="grid-template-columns: 300px 2fr 1fr; gap: 25px;">
+		<img src="/example/tree.thumb.jpg" alt="Sakura" />
+		<div style="border: 2px #000 solid">Text 1 ratio 2</div>
+		<div style="border: 2px #000 solid">Text 2 ratio 1</div>
+	</div>
+	<p>The above example shows 3 items, the first item (a picture) uses 300px of horizontal space. The second item (text A) and the third item (text B) consume the remaining space at 2-1 ratio. 25px gap between items.</p>
+	<p>One narrow screen where multiple items are not favoured, items will be placed in vertical layout.</p>
+</div>
+
+<div>
+	<h2>Table</h2><div class="sidebyside">
+		<div class="tablewrap"><table style="white-space:nowrap">
+			<caption>Example Table</caption>
+			<thead>
+				<tr>
+					<th scope="col">Row</th>
+					<th scope="col">Column A</th>
+					<th scope="col">Column B</th>
+					<th scope="col">Column C</th>
+				</tr>
+			</thead><tbody>
+				<tr>
+					<th scope="row">Row 1</th>
+					<td>The quick brown fox jumps over the lazy dog.</td>
+					<td>The quick brown fox jumps over the lazy dog.</td>
+					<td>The quick brown fox jumps over the lazy dog.</td>
+				</tr><tr>
+					<th scope="row">Row 2</th>
+					<td>The quick brown fox jumps over the lazy dog.</td>
+					<td>The quick brown fox jumps over the lazy dog.</td>
+					<td>The quick brown fox jumps over the lazy dog.</td>
+				</tr>
+			</tbody>
+		</table></div>
+		<div>
+			<p>Compared to the vanilla HTML table, the Bearweb page template provides a more clear table style, and it provides a horizontal-scrollable container to ensure a wide table won’t overflow a narrow page on a cellphone screen.</p>
+			<p>To do so, simply wrap a <code>&lt;table&gt;</code> in a <code>&lt;div class="tablewrap"&gt;</code> element:</p>
+			<pre><code>
+&lt;div class="tablewrap"&gt;&lt;table&gt;
+	&lt;caption&gt;Example Table&lt;/caption&gt;
+	&lt;thead&gt;
+		&lt;tr&gt;
+			&lt;th scope="col"&gt;Row&lt;/th&gt;
+			&lt;th scope="col"&gt;Column A&lt;/th&gt;
+			&lt;th scope="col"&gt;Column B&lt;/th&gt;
+			&lt;th scope="col"&gt;Column C&lt;/th&gt;
+		&lt;/tr&gt;
+	&lt;/thead&gt;&lt;tbody&gt;
+		&lt;tr&gt;
+			&lt;th scope="row"&gt;Row 1&lt;/th&gt;
+			&lt;td&gt;The quick brown fox jumps over the lazy dog.&lt;/td&gt;
+			&lt;td&gt;...&lt;/td&gt;
+			&lt;td&gt;...&lt;/td&gt;
+		&lt;/tr&gt;&lt;tr&gt;
+			&lt;th scope="row"&gt;Row 2&lt;/th&gt;
+			&lt;td&gt;...&lt;/td&gt;
+			&lt;td&gt;...&lt;/td&gt;
+			&lt;td&gt;...&lt;/td&gt;
+		&lt;/tr&gt;
+	&lt;/tbody&gt;
+&lt;/table&gt;&lt;/div&gt;
+			</code></pre>
+		</div>
+	</div>
+</div>
+
+<div>
+	<h2>Code and Code Block</h2>
+	<p>Inline code has a grey background, for example: <code>int i = 0</code>.</p>
+	<p>To inline a code segment in HTML, just wrap the code segment in a <code>&lt;code&gt;</code> element. For example:</p>
+	<pre><code>
+&lt;p&gt;Inline code has a grey background, for example: &lt;code&gt;int i = 0&lt;/code&gt;.&lt;/p&gt;
+	</code></pre>
+	<p>Code block provides a horizontal-scrollable container to ensure a wide code block won’t overflow a narrow page on a cellphone screen.</p>
+	<pre><code>
+$include &lt;stdio&gt;
+int main() {
+	int i = 10086;
+	printf("Hello int %d\n", i);
+	return 0;
+}
+	</code></pre>
+	<p>Following code renders the example:</p>
+	<pre><code>
+&lt;pre&gt;&lt;code&gt;
+$include &amp;lt;stdio&amp;gt;
+int main() {
+	int i = 10086;
+	printf("Hello int %d\n", i);
+	return 0;
+}
+&lt;/code&gt;&lt;/pre&gt;
+	</code></pre>
+	<div class="main_note_warning">
+		<p>Remember to escape the following HTML special characters in raw code:</p>
+		<ul>
+			<li><code>&amp;</code> (and sign) --&gt; <code>&amp;amp;</code></li>
+			<li><code>&lt;</code> (less than) --&gt; <code>&amp;lt;</code></li>
+			<li><code>&gt;</code> (greater than) --&gt; <code>&amp;gt;</code></li>
+		</ul>
+	</div>
+</div>
+
+<div>
+	<h2>Image and Figure</h2>
+		<img src="/example/bridge.thumb.jpg" alt="Lift bridge" style="max-width:400px" />
+		<p>To insert an image, use:</p>
+		<pre><code>
+&lt;img src="/example/bridge.thumb.jpg" alt="Lift bridge" style="max-width:400px" /&gt;
+		</code></pre>
+		<p>where:</p>
+		<ul>
+			<li><code>src</code> - Link to the image.</li>
+			<li><code>alt</code> (Optional) - Alternative text, description of this image in case the image cannot be loaded. <b>Highly recommended</b> for user accessibility.</li>
+			<li><code>max-width</code> (Optional) - You may want to limit the image dimension. Large width image may span the entire page width.</li>
+		</ul>
+		<p>Bearweb page template comes with a in-page image viewer. Visitor can click the image to zoom-in the image, view its HD version (if supplied) and other information about this image.</p>
+		<figure>
+			<img src="/example/bridge.thumb.jpg" title="Lift bridge" alt="Lift bridge" data-hd="/example/bridge.jpg" data-keywords="Bridge, Engineering, Landmark" data-description="An old lift bridge on the lake bank." />
+			<figcaption>An old lift bridge.</figcaption>
+		</figure>
+		<h3>In-page Image Viewer</h3>
+		<p>If you would like to enable the in-page image viewer, enclose the <code>&lt;img&gt;</code> element in a <code>&lt;figure&gt;</code> element and supply additional data. For example:</p>
+		<pre><code>
+&lt;figure&gt;
+	&lt;img src="/example/bridge.thumb.jpg" title="Lift bridge" alt="Lift bridge" data-hd="/example/bridge.jpg" data-keywords="Bridge, Engineering, Landmark" data-description="An old lift bridge on the lake bank." /&gt;
+	&lt;figcaption&gt;An old lift bridge.&lt;/figcaption&gt;
+&lt;/figure&gt;
+		</code></pre>
+		<p>where:</p>
+		<ul>
+			<li><code>src</code> - Link to the image (thumbnail).</li>
+			<li><code>alt</code> (Optional) - Alternative text, description of this image in case the image cannot be loaded. <b>Highly recommended</b> for user accessibility.</li>
+			<li><code>title</code> (Optional) - Image title.</li>
+			<li><code>data-title</code> (Optional) - Used if <code>title</code> is not provided.</li>
+			<li><code>data-hd</code> (Optional) - Link to the image (HD).</li>
+			<li><code>data-keywords</code> (Optional) - Comma-seperated keywords.</li>
+			<li><code>data-description</code> (Optional) - Image description.</li>
+			<li><code>figcaption</code> (Optional) - Caption displayed under the image. <b>Highly recommended</b> for user accessibility.</li>
+		</ul>
+		<p>The in-page image viewer shows the following information:</p>
+		<ul>
+			<li>The image specified by <code>src</code>. If <code>data-hd</code> is supplied, the HD image will be downloaded at background and replace the thumbnail (<code>src</code>) once ready.</li>
+			<li>Buttons to close the viewer, to open the thumbnail (<code>src</code>) and the HD (<code>data-hd</code>) images in a new tab.</li>
+			<li>Title if <code>title</code> or <code>data-title</code> is provided. If not provided, will use <code>src</code>.</li>
+			<li>Description if <code>data-description</code> is provided.</li>
+			<li>Caption if <code>figcaption</code> is provided.</li>
+			<li>Keywords in hashtag style if <code>data-keywords</code> is provided.</li>
+		</ul>
+	</div>
+</div>
+
+<div>
+	<h2>Horizontal List</h2>
+	<p>Use <code>&lt;div class="list_horizontal"&gt;</code> to place items in a horizontal-order grid-like list.</p>
+	<pre><code>
+&lt;div class="list_horizontal"&gt;
+	&lt;img src="/example/river.thumb.jpg" /&gt;
+	&lt;div style="background: #FAA content-box;"&gt;&lt;p&gt;Some mixed text.&lt;/p&gt;&lt;/div&gt;
+	&lt;img src="/example/rail.thumb.jpg" /&gt;
+	&lt;div style="background: #AFA content-box;"&gt;&lt;p&gt;More mixed text.&lt;/p&gt;&lt;/div&gt;
+	&lt;img src="/example/highway.thumb.jpg" /&gt;
+	&lt;img src="/example/fighter.thumb.jpg" /&gt;
+	&lt;div style="background: #AAF content-box;"&gt;&lt;p&gt;Even more mixed text.&lt;/p&gt;&lt;/div&gt;
+&lt;/div&gt;
+	</code></pre>
+	<p>The above code will generate the following list:</p>
+	<div class="list_horizontal">
+		<img src="/example/river.thumb.jpg" />
+		<div style="background: #FAA content-box;"><p>Some mixed text.</p></div>
+		<img src="/example/rail.thumb.jpg" />
+		<div style="background: #AFA content-box;"><p>More mixed text.</p></div>
+		<img src="/example/highway.thumb.jpg" />
+		<img src="/example/fighter.thumb.jpg" />
+		<div style="background: #AAF content-box;"><p>Even more mixed text.</p></div>
+	</div>
+	<p>In the above example, the highest item in a row determines the height of that row. To force items in the same row the same height, replace all <code>&lt;img&gt;</code>s with <code>&lt;div&gt;</code>s, set <code>background</code> to the image.</p>
+	<pre><code>
+&lt;div class="list_horizontal"&gt;
+	&lt;div style="background: center/cover url(/example/river.thumb.jpg);"&gt;&lt;/div&gt;
+	&lt;div style="background: #FAA content-box;"&gt;&lt;p&gt;Some mixed text.&lt;/p&gt;&lt;/div&gt;
+	&lt;div style="background: center/cover url(/example/rail.thumb.jpg);"&gt;&lt;/div&gt;
+	&lt;div style="background: #AFA content-box;"&gt;&lt;p&gt;More mixed text.&lt;/p&gt;&lt;/div&gt;
+	&lt;div style="background: center/cover url(/example/highway.thumb.jpg);"&gt;&lt;/div&gt;
+	&lt;div style="background: center/cover url(/example/fighter.thumb.jpg);"&gt;&lt;/div&gt;
+	&lt;div style="background: #AAF content-box;"&gt;&lt;p&gt;Even more mixed text.&lt;/p&gt;&lt;/div&gt;
+&lt;/div&gt;
+	</code></pre>
+	<p>The above code will generate the following list:</p>
+	<div class="list_horizontal">
+		<div style="background: center/cover url(/example/river.thumb.jpg);"></div>
+		<div style="background: #FAA content-box;"><p>Some mixed text.</p></div>
+		<div style="background: center/cover url(/example/rail.thumb.jpg);"></div>
+		<div style="background: #AFA content-box;"><p>More mixed text.</p></div>
+		<div style="background: center/cover url(/example/highway.thumb.jpg);"></div>
+		<div style="background: center/cover url(/example/fighter.thumb.jpg);"></div>
+		<div style="background: #AAF content-box;"><p>Even more mixed text.</p></div>
+	</div>
+	<p>Bearweb page template has a default rule, that is, narrow screen has 1 column, middle screen has 2 columns, wide screen has 3 columns. You may change this rule by giving the list an ID and providing a custom style on the page. For example:</p>
+	<pre><code>
+&lt;div class="list_horizontal" id="list_horizontal_customsize"&gt;
+	&lt;img src="/example/river.thumb.jpg" /&gt;
+	&lt;div style="background: #FAA content-box;"&gt;&lt;p&gt;Some mixed text.&lt;/p&gt;&lt;/div&gt;
+	&lt;img src="/example/rail.thumb.jpg" /&gt;
+	&lt;div style="background: #AFA content-box;"&gt;&lt;p&gt;More mixed text.&lt;/p&gt;&lt;/div&gt;
+	&lt;img src="/example/highway.thumb.jpg" /&gt;
+	&lt;img src="/example/fighter.thumb.jpg" /&gt;
+	&lt;div style="background: #AAF content-box;"&gt;&lt;p&gt;Even more mixed text.&lt;/p&gt;&lt;/div&gt;
+&lt;/div&gt;
+&lt;style&gt;
+	#list_horizontal_customsize { grid-template-columns: repeat(4, 1fr); }
+	@media (min-width: 800px) {
+		#list_horizontal_customsize { grid-template-columns: repeat(8, 1fr); }
+	}
+&lt;/style&gt;
+	</code></pre>
+	<p>The above code will generate the following list:</p>
+	<div class="list_horizontal" id="list_horizontal_customsize">
+		<img src="/example/river.thumb.jpg" />
+		<div style="background: #FAA content-box;"><p>Some mixed text.</p></div>
+		<img src="/example/rail.thumb.jpg" />
+		<div style="background: #AFA content-box;"><p>More mixed text.</p></div>
+		<img src="/example/highway.thumb.jpg" />
+		<img src="/example/fighter.thumb.jpg" />
+		<div style="background: #AAF content-box;"><p>Even more mixed text.</p></div>
+	</div>
+	<style>
+		#list_horizontal_customsize { grid-template-columns: repeat(4, 1fr); }
+		@media (min-width: 800px) {
+			#list_horizontal_customsize { grid-template-columns: repeat(6, 1fr); }
+		}
+	</style>
+</div>
+
+<div>
+	<h2>Verticle List</h2>
+	<p>Use <code>&lt;div class="list_verticla"&gt;</code> to place items in a vertical-order column-like list.</p>
+	<pre><code>
+&lt;div class="list_vertical"&gt;
+	&lt;img src="/example/bridge.thumb.jpg" /&gt;
+	&lt;div style="background: #FAA content-box;"&gt;&lt;span&gt;Some mixed text.&lt;/span&gt;&lt;/div&gt;
+	&lt;img src="/example/river.thumb.jpg" /&gt;
+	&lt;div style="background: #FAF content-box;"&gt;&lt;span&gt;Another mixed text.&lt;/span&gt;&lt;/div&gt;
+	&lt;img src="/example/rail.thumb.jpg" /&gt;
+	&lt;div style="background: #AFA content-box;"&gt;&lt;span&gt;More mixed text.&lt;/span&gt;&lt;/div&gt;
+	&lt;img src="/example/highway.thumb.jpg" /&gt;
+	&lt;img src="/example/fighter.thumb.jpg" /&gt;
+	&lt;div style="background: #AAF content-box;"&gt;&lt;span&gt;Even more mixed text.&lt;/span&gt;&lt;/div&gt;
+&lt;/div&gt;
+	</code></pre>
+	<p>The above code will generate the following list:</p>
+	<div class="list_vertical">
+		<img src="/example/bridge.thumb.jpg" />
+		<div style="background: #FAA content-box;"><span>Some mixed text.</span></div>
+		<img src="/example/river.thumb.jpg" />
+		<div style="background: #FAF content-box;"><span>Another mixed text.</span></div>
+		<img src="/example/rail.thumb.jpg" />
+		<div style="background: #AFA content-box;"><span>More mixed text.</span></div>
+		<img src="/example/highway.thumb.jpg" />
+		<img src="/example/fighter.thumb.jpg" />
+		<div style="background: #AAF content-box;"><span>Even more mixed text.</span></div>
+	</div>
+	<p>Bearweb page template has a default rule, that is, narrow screen has 2 column, middle screen and wide screen has 3 columns. You may change this rule by giving the list an ID and providing a custom style on the page. For example:</p>
+	<pre><code>
+&lt;div class="list_vertical" id="list_vertical_customsize"&gt;
+	&lt;img src="/example/bridge.thumb.jpg" /&gt;
+	&lt;div style="background: #FAA content-box;"&gt;&lt;span&gt;Some mixed text.&lt;/span&gt;&lt;/div&gt;
+	&lt;img src="/example/river.thumb.jpg" /&gt;
+	&lt;div style="background: #FAF content-box;"&gt;&lt;span&gt;Another mixed text.&lt;/span&gt;&lt;/div&gt;
+	&lt;img src="/example/rail.thumb.jpg" /&gt;
+	&lt;div style="background: #AFA content-box;"&gt;&lt;span&gt;More mixed text.&lt;/span&gt;&lt;/div&gt;
+	&lt;img src="/example/highway.thumb.jpg" /&gt;
+	&lt;img src="/example/fighter.thumb.jpg" /&gt;
+	&lt;div style="background: #AAF content-box;"&gt;&lt;span&gt;Even more mixed text.&lt;/span&gt;&lt;/div&gt;
+&lt;/div&gt;
+&lt;style&gt;
+	#list_vertical_customsize { columns: 3; }
+	@media (min-width: 800px) {
+		#list_vertical_customsize { columns: 4; }
+	}
+&lt;/style&gt;
+	</code></pre>
+	<p>The above code will generate the following list:</p>
+	<div class="list_vertical" id="list_vertical_customsize">
+		<img src="/example/bridge.thumb.jpg" />
+		<div style="background: #FAA content-box;"><span>Some mixed text.</span></div>
+		<img src="/example/river.thumb.jpg" />
+		<div style="background: #FAF content-box;"><span>Another mixed text.</span></div>
+		<img src="/example/rail.thumb.jpg" />
+		<div style="background: #AFA content-box;"><span>More mixed text.</span></div>
+		<img src="/example/highway.thumb.jpg" />
+		<img src="/example/fighter.thumb.jpg" />
+		<div style="background: #AAF content-box;"><span>Even more mixed text.</span></div>
+	</div>
+	<style>
+		#list_vertical_customsize { columns: 3; }
+		@media (min-width: 800px) {
+			#list_vertical_customsize { columns: 4; }
+		}
+	</style>
+</div>
