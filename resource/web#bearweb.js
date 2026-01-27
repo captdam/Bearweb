@@ -132,7 +132,7 @@ const jumpbox = (dom, target = null, auxChars = [], speed = 50, chance = 2) => {
 	}, speed);
 };
 
-// Generate index from target DOM's <hx> tags 
+// Generate index from target DOM's <hx> tags
 ready().then(() => {
 	__('.hxIndex_nav').forEach(node => {
 		const list = __('h1,h2,h3,h4,h5,h6,h7', _(node.dataset.index_target));
@@ -193,6 +193,7 @@ ready().then(() => { _('body').appendChild(dom({_: 'dialog', id: 'modal'})); });
 
 // Image viewer
 const imgViewer = event => {
+	console.log(event.target.getAttribute('title'), event.target.dataset.title, event.target.getAttribute('src'));
 	_('#imgViewer_img').style.background = 'center / contain no-repeat url("' + event.target.src + '")';
 	_('#imgViewer_img').replaceChildren();
 	if (event.target.dataset.hd) {
@@ -215,7 +216,7 @@ const imgViewer = event => {
 			{_: 'a', id: 'imgViewer_linkThumb', href: event.target.getAttribute('src'), target: '_blank', textContent: 'Thumbnail', onclick: event => event.stopImmediatePropagation()},
 			event.target.dataset.hd ? {_: 'a', id: 'imgViewer_linkHd', href: event.target.dataset.hd, target: '_blank', textContent: 'HD Image', onclick: event => event.stopImmediatePropagation()} : null
 		]},
-		{_: 'h1', id: 'imgViewer_title', textContent: event.target.dataset.title ?? event.target.getAttribute('src')},
+		{_: 'h1', id: 'imgViewer_title', textContent: event.target.getAttribute('title') ?? event.target.dataset.title ?? event.target.getAttribute('src')},
 		{_: 'p', id: 'imgViewer_description', textContent: event.target.dataset.description ?? ''},
 		{_: 'p', id: 'imgViewer_caption', textContent: _('figcaption', event.target.parentNode) ? _('figcaption', event.target.parentNode).textContent : ''},
 		{_: 'p', id: 'imgViewer_keywords', textContent: event.target.dataset.keywords ?? ''}
