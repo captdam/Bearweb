@@ -93,6 +93,70 @@
 </div>
 
 <div>
+	<h2>Keywords</h2>
+		<p>You can use <code>&lt;p class="content_keywords"&gt;</code> to render the keywords list. For example:</p>
+		<pre><code>
+&lt;p class="content_keywords"&gt;keyword 1, keyword 2, keyword 3&lt;/p&gt;
+		</code></pre>
+		<div class="main_note_warning">
+			<p>Make sure you use English commas (<code>,</code>) to separate the keywords.</p>
+		</div>
+		<p>When the webpage loaded, the keywords will be converted into light-color hashtag blocks, like the following code represented:</p>
+		<pre><code>
+&lt;div class="keywords"&gt;
+	&lt;span style="background: rgb(235, 250, 140);"&gt;keyword 1&lt;/span&gt;
+	&lt;span style="background: rgb(219, 180, 221);"&gt;keyword 2&lt;/span&gt;
+	&lt;span style="background: rgb(184, 129, 146);"&gt;keyword 3&lt;/span&gt;
+&lt;/div&gt;
+		</code></pre>
+		<p>which looks like:</p>
+		<p class="content_keywords">keyword 1, keyword 2, keyword 3</p>
+		<p>Auto-generated light colors are used for the background. The color will be different each time the page is loaded.</p>
+	</div>
+</div>
+
+<div>
+	<h2>Notebox</h2>
+		<p>You can use <code>&lt;div class="main_note"&gt;</code> to create a notebox. For example:</p>
+		<pre><code>
+&lt;div class="main_note"&gt;
+	&lt;b&gt;Notebox&lt;/b&gt;
+	&lt;p&gt;This is a note.&lt;/p&gt;
+&lt;/div&gt;
+		</code></pre>
+		<div class="main_note">
+			<b>Notebox</b>
+			<p>This is a note.</p>
+		</div>
+		<p>By default, gray is used. You can set the box color by using <code>--color: #RRGGBB;</code> style rule. You may also use the pre-set <code>main_note_ok</code>, <code>main_note_ok</code>, <code>main_note_ok</code> classes.</p>
+		<div class="main_note" style="--color: blue;">
+			<p>Custom color:</p>
+			<pre><code>
+&lt;div class="main_note" style="--color: blue;"&gt;&lt;p&gt;Custom color.&lt;/p&gt;&lt;/div&gt;
+			</code></pre>
+		</div>
+		<div class="main_note_ok">
+			<p>OK notebox style:</p>
+			<pre><code>
+&lt;div class="main_note_ok"&gt;&lt;p&gt;OK notebox style.&lt;/p&gt;&lt;/div&gt;
+			</code></pre>
+		</div>
+		<div class="main_note_warning">
+			<p>Warning notebox style:</p>
+			<pre><code>
+&lt;div class="main_note_warning"&gt;&lt;p&gt;Warning notebox style.&lt;/p&gt;&lt;/div&gt;
+			</code></pre>
+		</div>
+		<div class="main_note_error">
+			<p>Error notebox style:</p>
+			<pre><code>
+&lt;div class="main_note_error"&gt;&lt;p&gt;Error notebox style.&lt;/p&gt;&lt;/div&gt;
+			</code></pre>
+		</div>
+	</div>
+</div>
+
+<div>
 	<h2><code>tintimg</code></h2><div class="sidebyside">
 		<div class="tintimg" style="--bgcolor: rgba(255, 183, 197, 0.65); --bgimg:url(/example/tree.thumb.jpg); color: #1F1618; text-align: center; font-size: 50px;">桜</div>
 		<div>

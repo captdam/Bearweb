@@ -93,6 +93,70 @@
 </div>
 
 <div>
+	<h2>关键字</h2>
+		<p>使用<code>&lt;p class="content_keywords"&gt;</code>来渲染关键字列表。例如：</p>
+		<pre><code>
+&lt;p class="content_keywords"&gt;关键字 1, 关键字 2, 关键字 3&lt;/p&gt;
+		</code></pre>
+		<div class="main_note_warning">
+			<p>注意使用英文的逗号（<code>,</code>）来间隔关键字。</p>
+		</div>
+		<p>在网页加载时，关键字将会被分割为浅色的块，如为下面样式所示：</p>
+		<pre><code>
+&lt;div class="keywords"&gt;
+	&lt;span style="background: rgb(235, 250, 140);">关键字 1&lt;/span&gt;
+	&lt;span style="background: rgb(219, 180, 221);">关键字 2&lt;/span&gt;
+	&lt;span style="background: rgb(184, 129, 146);">关键字 3&lt;/span&gt;
+&lt;/div&gt;
+		</code></pre>
+		<p>渲染效果就是：</p>
+		<p class="content_keywords">关键字 1, 关键字 2, 关键字 3</p>
+		<p>背景将使用随机生成的浅色。每次加载页面时颜色都会不同。</p>
+	</div>
+</div>
+
+<div>
+	<h2>注释框</h2>
+		<p>你可以使用<code>&lt;div class="main_note"&gt;</code>来创建一个注释框，例如：</p>
+		<pre><code>
+&lt;div class="main_note"&gt;
+	&lt;b&gt;注释框&lt;/b&gt;
+	&lt;p&gt;这是一个注释框。&lt;/p&gt;
+&lt;/div&gt;
+		</code></pre>
+		<div class="main_note">
+			<b>注释框</b>
+			<p>这是一个注释框。</p>
+		</div>
+		<p>默认将使用灰色。你可以通过<code>--color: #RRGGBB;</code>样式规则来自定义颜色。当然，也可以使用预设的<code>main_note_ok</code>、<code>main_note_ok</code>、<code>main_note_ok</code>类型。</p>
+		<div class="main_note" style="--color: blue;">
+			<p>自定义颜色：</p>
+			<pre><code>
+&lt;div class="main_note" style="--color: blue;"&gt;&lt;p&gt;自定义颜色。&lt;/p&gt;&lt;/div&gt;
+			</code></pre>
+		</div>
+		<div class="main_note_ok">
+			<p>OK样式注释框：</p>
+			<pre><code>
+&lt;div class="main_note_ok"&gt;&lt;p&gt;OK样式注释框。&lt;/p&gt;&lt;/div&gt;
+			</code></pre>
+		</div>
+		<div class="main_note_warning">
+			<p>警告样式注释框：</p>
+			<pre><code>
+&lt;div class="main_note_warning"&gt;&lt;p&gt;警告样式注释框。&lt;/p&gt;&lt;/div&gt;
+			</code></pre>
+		</div>
+		<div class="main_note_error">
+			<p>错误样式注释框：</p>
+			<pre><code>
+&lt;div class="main_note_error"&gt;&lt;p&gt;错误样式注释框。&lt;/p&gt;&lt;/div&gt;
+			</code></pre>
+		</div>
+	</div>
+</div>
+
+<div>
 	<h2><code>tintimg</code></h2><div class="sidebyside">
 		<div class="tintimg" style="--bgcolor: rgba(255, 183, 197, 0.65); --bgimg:url(/example/tree.thumb.jpg); color: #1F1618; text-align: center; font-size: 50px;">桜</div>
 		<div>
