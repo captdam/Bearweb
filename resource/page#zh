@@ -15,7 +15,7 @@
 
 <div>
 	<h2>HTML</h2>
-	<p>网页模板的最终目标就是以HTML网页的格式输出我们的数据（一个PHP的<code>resource</code>对象）。关于<code>resource</code>对象的变量，参考这个文档。</p><!-- TODO: Link to db structure -->
+	<p>网页模板的最终目标就是以HTML网页的格式输出我们的数据（一个PHP的<code>resource</code>对象）。关于<code>resource</code>对象的变量，<a href="/db/en">参考这个文档</a>。</p>
 	<div class="sidebyside">
 		<pre><code>
 &lt;!DOCTYPE html&gt;

@@ -1,0 +1,321 @@
+<div class="main_title">
+	<h1>Bearweb Database</h1>
+</div>
+<div>
+	<p>One of the reasons I created my own CMS is because of the complex database of existing CMSs. Therefore, when I designed this CMS, I aimed to make the underlying database structure simple, portable and manageable.</p>
+	<p>Bearweb CMS has a very simple database structure. It relies on only 4 databases in 3 SQLite database files:</p>
+	<ul>
+		<li><code>Sitemap</code> - Each record represents a resource, it can be a webpage,a file, or an API.</li>
+		<li><code>Session</code> - A session is a series of requests from one client to the server.</li>
+		<li><code>Transaction</code> - A transaction represents a HTTP request from client to server and a response from the server to the client.</li>
+		<li><code>User</code> - Each record represents a registered user.</li>
+	</ul>
+	<p>Bearweb CMS is portable. It is designed to use a portable DBMS, the SQLite. Transferring the website from one machine to another requires copying and pasting the PHP files (the CMS) and the database files (the data).</p>
+	<div class="main_note_warning">
+		<p>Make sure that the database files and the <b>directory</b> containing the database files are readable and writable.</p>
+	</div>
+	<p>Although it is recommended to modify the website through APIs<del>, we all like the quick-and-dirty way</del>. The database is very managementable, by design, there is no foreign key or trigger. You can directly make modifications to the database to make changes to the website, as long as you:</p>
+	<ul>
+		<li>Respect the data type. When making changes to a field, you should use the same data type. For example, <code>Sitemap->create</code> wants a timestamp in <code>int</code>, you should provide a timestamp in <code>int</code> (for example: <code>0</code>) instead of a <code>string</code> (for example: <code>1970-01-01 00:00:00</code>).</li>
+		<li>Respect the JSON format. Bearweb CMS relies heavily on JSON to store key-value pairs, such as <code>Sitemap::meta</code> and <code>User::group</code>.</li>
+		<li>I recommend using <a href="https://sqlitebrowser.org/" target="_blank">DB browser for SQLite</a> to manage the database. It provides syntax highlighting, formatting and compressing (remove formatting spaces) for JSON.</li>
+	</ul>
+	<p>Don't worry. If Brarweb CMS senses a data in bad format, it will use the default value.</p>
+</div>
+
+<div class="main_title">
+	<h1>Bearweb Sitemap</h1>
+</div>
+<div>
+	<p>Requesting a webpage, a file (for example, an image), or any other resource is in fact fetching data from the database, with access control and some data manipulation. This database is called Sitemap because the table is a map of the website.</p>
+	<pre><code>
+CREATE TABLE "Sitemap" (
+	"url"		TEXT NOT NULL UNIQUE,
+	"category"	TEXT NOT NULL DEFAULT '',
+	"template"	TEXT NOT NULL DEFAULT '["object", "blob"]',
+	"owner"		TEXT NOT NULL DEFAULT '',
+	"create"	INTEGER NOT NULL DEFAULT 0,
+	"modify"	INTEGER NOT NULL DEFAULT 0,
+	"meta"		TEXT NOT NULL DEFAULT '{}',
+	"content"	BLOB DEFAULT '',
+	"aux"		TEXT NOT NULL DEFAULT '{}',
+	PRIMARY KEY("url")
+) WITHOUT ROWID
+	</code></pre>
+</div>
+<div>
+	<div class="tablewrap"><table>
+		<caption><h2><code>Bearweb_Site</code> Database Structure</h2></caption>
+		<thead>
+			<tr>
+				<th scope="col">Column</th>
+				<th scope="col">Format (SQLite)</th>
+				<th scope="col">Default</th>
+				<th scope="col">Description</th>
+				<th scope="col">Example</th>
+			</tr>
+		</thead><tbody>
+			<tr>
+				<th scope="row">url</th>
+				<td>text, PK, Unique, Not null</td>
+				<td>No default value</td>
+				<td>Resource URL. All resources are indexed by its URL.</td>
+				<td><ul>
+					<li><code>"hello/world.html"</code> - Use this URL to access this resource.</li>
+				</ul></td>
+			</tr><tr>
+				<th scope="row">category</th>
+				<td>text, Not null</td>
+				<td><code>''</code></td>
+				<td>Resource category, for management purpose, ignored by Bearweb CMS framework.</td>
+				<td><ul>
+					<li><code>'Article'</code> - This resource is an article.</li>
+				</ul></td>
+			</tr><tr>
+				<th scope="row">template</th>
+				<td>JSON array in text, Not null</td>
+				<td><code>'["object", "blob"]'</code> - Object (file) template, direct blob output.</td>
+				<td>Template used to process this resource. Bearweb CMS will invoke <code>template[0]</code> (template), then <code>template[0]</code> will invoke <code>template[1]</code> (sub-template).</td>
+				<td><ul>
+					<li><code>['page-en', 'direct']</code> - Bearweb CMS will invoke <code>page-en.php</code> in the <code>Bearweb_Site::Dir_Template</code> directory, then, <code>page-en.php</code> will invoke <code>page-en_direct.php</code> in the <code>Bearweb_Site::Dir_Template</code> directory.</li>
+				</ul></td>
+			</tr><tr>
+				<th scope="row">owner</th>
+				<td>text, Not null</td>
+				<td><code>''</code> (empty string) - System-owned resource.</td>
+				<td>Owner's user ID of this resource. Only the owner and admin (group 0) can modify this resource.</td>
+				<td><ul>
+					<li><code>''</code> - The system owns this resource. Such as generated resource. (Example: system generated RSS sitemap)</li>
+					<li><code>'John'</code> - User with ID "John" owns this resource. Such as articles by the user.</li>
+				</ul></td>
+			</tr><tr>
+				<th scope="row">create</th>
+				<td>int, Not null</td>
+				<td><code>0</code> (<code>Bearweb_Site::TIME_NULL</code>) - No actual time.</td>
+				<td>Create timestamp.</td>
+				<td><ul>
+					<li><code>0</code> - No actual time, such as generated resource. (Example: system generated RSS sitemap)</li>
+					<li><code>60</code> - Resource created at 1970-01-01 00:01:00.</li>
+				</ul></td>
+			</tr><tr>
+				<th scope="row">modify</th>
+				<td>int, Not null</td>
+				<td><code>0</code> (<code>Bearweb_Site::TIME_NULL</code>) - No actual time.</td>
+				<td>Modify timestamp.</td>
+				<td><ul>
+					<li><code>0</code> - No actual time, such as API.</li>
+					<li><code>60</code> - Resource modified at 1970-01-01 00:01:00.</li>
+				</ul></td>
+			</tr><tr>
+				<th scope="row">meta</th>
+				<td>JSON object in text, Not null</td>
+				<td><code>'{}'</code> - Empty metadate.</td>
+				<td>Resource metadata. Optional data used by Bearweb CMS framework and the template.</td>
+				<td><ul>
+					<li><code>'{"title"; "Example Title", "description": "This is an example resource."}'</code> - See below.</li>
+				</ul></td>
+			</tr><tr>
+				<th scope="row">content</th>
+				<td>text, or null</td>
+				<td><code>''</code> - Empty content.</td>
+				<td>Resource content, the content should be directly output to reduce server process load (for a webpage, that means use HTML code instead of markdown). If <code>null</code>, Bearweb will try read a file with the same pathname as the <code>url</code> under the resource directory. This is used to offload large files from the database. See <a href="https://captdam.com/bearweb-resource-optimization/en" target="_blank">my blog for details</a>.</td>
+				<td><ul>
+					<li><code>'&lt;div&gt;&lt;!-- My content in HTML --&gt;&lt;/div&gt;'</code> - An article.</li>
+					<li><code>'ABCDEFG'</code> - A plain text file.</li>
+					<li><code>48613FA87E...</code> - A binary file.</li>
+					<li><code>null</code> - File-backed resource. The Bearweb CMS will try read a file with the same pathname as the <code>url</code> under the resource directory.</li>
+				</ul></td>
+			</tr><tr>
+				<th scope="row">aux</th>
+				<td>JSON object in text, Not null</td>
+				<td><code>'{}'</code> - Empty aux data.</td>
+				<td>Resource auxiliary data. Optional data used by the template.</td>
+				<td><ul>
+					<li><code>'{"lang-en"; "url/en", "lang-zh": "url/zh"}'</code> - See below.</li>
+				</ul></td>
+			</tr>
+		</tbody>
+	</table></div>
+	<p><code>meta</code> and <code>aux</code> store optional data. It doesn't make sense to create seperate database field for each of those optional data (which will make the table extremely wide and unmanageable); therefore, they are aggregated into JSON objects.</p>
+	
+	<div class="tablewrap"><table>
+		<caption><h2>Bearweb_Site <code>meta</code> options</h2></caption>
+		<thead>
+			<tr>
+				<th scope="col">Key</th>
+				<th scope="col">Type</th>
+				<th scope="col">Description</th>
+				<th scope="col">Used by template with example</th>
+			</tr>
+		</thead><tbody>
+			<tr>
+				<th scope="row">title</th>
+				<td>string</td>
+				<td>Title</td>
+				<td>
+					<span class="usedby_page">All</span><br />
+					<ul>
+						<li><code>{"title": "Example Title"}</code> - Page title is "Example Title".</li>
+					</ul>
+				</td>
+			</tr><tr>
+				<th scope="row">keywords</th>
+				<td>string, comma-seperated words</td>
+				<td>Keywords</td>
+				<td>
+					<span class="usedby_page">All</span><br />
+					<ul>
+						<li><code>{"keywords": "keyword1, keyword2, keyword3"}</code> - Page with 3 keywords: "keyword1", "keyword2" and "keyword3".</li>
+					</ul>
+				</td>
+			</tr><tr>
+				<th scope="row">description</th>
+				<td>string</td>
+				<td>Description</td>
+				<td>
+					<span class="usedby_page">All</span><br />
+					<ul>
+						<li><code>{"description": "This is an example resource."}</code> - Page description is "This is an example resource.".</li>
+					</ul>
+				</td>
+			</tr><tr>
+				<th scope="row">r301</th>
+				<td>string</td>
+				<td>Permanently redirect to target URL.</td>
+				<td>
+					<span class="usedby_cms">Core</span><br />
+					<ul>
+						<li><code>{"r301": "new/page.html"}</code> - Cause Bearweb to send an HTTP <code>301 Moved Permanently</code> header to "/new/page.html". Note this value is an absolute URL without leading "/".</li>
+					</ul>
+				</td>
+			</tr><tr>
+				<th scope="row">r302</th>
+				<td>string</td>
+				<td>Temporarily redirect to target URL.</td>
+				<td>
+					<span class="usedby_cms">Core</span><br />
+					<ul>
+						<li><code>{"r301": "new/page.html"}</code> - Cause Bearweb to send an HTTP <code>302 Found</code> header to "/new/page.html". Note this value is an absolute URL without leading "/".</li>
+					</ul>
+				</td>
+			</tr><tr>
+				<th scope="row">robots</th>
+				<td>string</td>
+				<td>Tells crawlers to bot not index and/or follow.</td>
+				<td>
+					<span class="usedby_cms">Core</span><span class="usedby_page">All</span><br />
+					<ul>
+						<li><code>{"r301": "noindex"}</code> - Do not index this resource.</li>
+						<li><code>{"r301": "nofollow"}</code> - Do not links on this resource.</li>
+						<li><code>{"r301": "noindex, nofollow"}</code> - Both above.</li>
+					</ul>
+					<div class="main_note_error">
+						<p>This is a request, but some inresponsible crawlers won't respect it.</p>
+						<p>Do not use anything other than <code>noindex</code>, <code>nofollow</code> or <code>noindex, nofollow</code>. <a href="https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/meta/name/robots" target="_blank">Some crawlers cannot understant other attributes.</a></p>
+					</div>
+				</td>
+			</tr><tr>
+				<th scope="row">access</th>
+				<td>array of number and string</td>
+				<td>If specified, Bearweb will enable access control on this resource. Only user id or user group in the array can read this resource; others will received a <code>HTTP 403</code> error.</td>
+				<td>
+					<span class="usedby_cms">Core</span><br />
+					<ul>
+						<li><code>{"access": ["Alice", 23, "Bob"]}</code> - Allows user ID "Alice" and "Bob" and all users in group 23 to read this resource.</li>
+						<li><code>{"access": []}</code> - Allows nobody to read this resource.</li>
+						<li>The owner and admin (group 0) always have access.</li>
+					</ul>
+				</td>
+			</tr><tr>
+				<th scope="row">img</th>
+				<td>string</td>
+				<td>URL to a poster image.</td>
+				<td>
+					<span class="usedby_page">All</span><br />
+					<ul>
+						<li><code>{"bgimg": "sun.jpg"}</code> - Use "/sun.jpg" as poster for this page. Note this value is an absolute URL without leading "/".</li>
+					</ul>
+					<span class="usedby_page">Image</span><br />
+					<ul>
+						<li><code>{"hd": "sun.thumb.jpg"}</code> - If in image sub-template, use this image as thumbnail. Note this value is an absolute URL without leading "/".</li>
+					</ul>
+				</td>
+			</tr><tr>
+				<th scope="row">hd</th>
+				<td>string</td>
+				<td>URL to a poster image.</td>
+				<td>
+					<span class="usedby_page">Image</span><br />
+					<ul>
+						<li><code>{"hd": "sun.jpg"}</code> - Use "/sun.jpg" as the high definition image for this page. Note this value is an absolute URL without leading "/".</li>
+					</ul>
+				</td>
+			</tr><tr>
+				<th scope="row">ratio</th>
+				<td>number</td>
+				<td>Provide the aspect ratio (<code>width</code> / <code>height</code>) of this image.</td>
+				<td>
+					<span class="usedby_page">Image</span><br />
+					<ul>
+						<li><code>1.33333</code> - It helps the browser to provide the correct space when layout the webpage before the image is downloaded. This is used when generate bulletin page.</li>
+					</ul>
+				</td>
+			</tr><tr>
+				<th scope="row">task</th>
+				<td>API task</td>
+				<td>Specify task to execute.</td>
+				<td>
+					<span class="usedby_api">All</span><br />
+					<ul>
+						<li><code>{"bgimg": "sun.jpg"}</code> - Use "/sun.jpg" as poster for this page. Note this value is an absolute URL without leading "/".</li>
+					</ul>
+				</td>
+			</tr>
+		</tbody>
+	</table></div>
+	<p>All those data are optional. Bearweb will use default value or skip it if a specific data is not given.</p>
+
+	<div class="tablewrap"><table>
+		<caption><h2>Bearweb_Site <code>aux</code> options</h2></caption>
+		<thead>
+			<tr>
+				<th scope="col">Key</th>
+				<th scope="col">Type</th>
+				<th scope="col">Description</th>
+				<th scope="col">Used by template with example</th>
+			</tr>
+		</thead><tbody>
+			<tr>
+				<th scope="row">lang-*</th>
+				<td>string</td>
+				<td>Alternative language for multilingual resources.</td>
+				<td>
+					<span class="usedby_page">All</span><br />
+					<ul>
+						<li><code>{"lang-en": "url/en", "lang-zh": "url/zh"}</code> - Specify the target URLs for the languages (including the current language and URL).</li>
+					</ul>
+				</td>
+			</tr><tr>
+				<th scope="row">mime</th>
+				<td>string</td>
+				<td>Object MIME type</td>
+				<td>
+					<span class="usedby_page">All</span><br />
+					<ul>
+						<li><code>{"mime": "image/png"}</code> - Cause the object template to send a <code>Content-Type: image/png</code> HTTP header.</li>
+						<li>If not specified, object template will send a <code>Content-Type: text/plain</code> HTTP header.</li>
+					</ul>
+				</td>
+			</tr>
+		</tbody>
+	</table></div>
+	<p>All those data are optional. Bearweb will use default value or skip it if a specific data is not given.</p>
+
+	<style>
+		[class^="usedby_"],[class*=" usedby_"] { display:inline-block; padding: 0 1ch; margin-right: 2ch;}
+		.usedby_cms { background-color: yellow; } .usedby_cms:before { content: 'CMS - '; }
+		.usedby_page { background-color: skyblue; } .usedby_page:before { content: 'Page - '; }
+		.usedby_object { background-color: pink; } .usedby_object:before { content: 'Object - '; }
+		.usedby_api { background-color: lightgreen; } .usedby_api:before { content: 'API - '; }
+	</style>
+</div>

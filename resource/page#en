@@ -15,7 +15,7 @@
 
 <div>
 	<h2>HTML</h2>
-	<p>The ultimate goal of the page template is to format our data (a PHP <code>resource</code> object) into an HTML webpage. See this document for <code>resource</code> properties.</p><!-- TODO: Link to db structure -->
+	<p>The ultimate goal of the page template is to format our data (a PHP <code>resource</code> object) into an HTML webpage. See <a href="/db/en">this document</a> for <code>resource</code> properties.</p>
 	<div class="sidebyside">
 		<pre><code>
 &lt;!DOCTYPE html&gt;
@@ -142,7 +142,7 @@ else // if ($BW-&gt;site-&gt;template[0] == 'page-en') // default lang
 //	'robots' =&gt; 'noindex, nofollow'
 ]
 			</code></pre>
-			<div class="main_note_error"><p>Do not use anything other than <code>noindex</code>, <code>nofollow</code> or <code>noindex, nofollow</code>. <a href="https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/meta/name/robots" target="_blank">Some crawlers cannot understant other attributes。</a></p></div>
+			<div class="main_note_error"><p>Do not use anything other than <code>noindex</code>, <code>nofollow</code> or <code>noindex, nofollow</code>. <a href="https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/meta/name/robots" target="_blank">Some crawlers cannot understant other attributes.</a></p></div>
 		</div>
 	</div>
 	<div class="sidebyside">
