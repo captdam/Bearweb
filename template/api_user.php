@@ -17,6 +17,10 @@
 	}
 
 	switch ($BW->site->meta['task']) {
+		case 'whoami':
+			http_response_code(200);
+			return [ 'id' => $BW->session->sUser ];
+
 		case 'get':
 			$user = Bearweb_User::query($_POST['id']);
 			if (!$user) {

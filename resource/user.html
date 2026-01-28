@@ -26,21 +26,24 @@
 </div>
 <script>
 	'use strict';
-	(async () => {if (_('html').dataset.suser) {
-		try {
-			const user = await BearAPI_User.get(_('html').dataset.suser);
-			_('#header h1').textContent = 'Hello ' + user.id;
-			_('#info_id').value = user.id;
-			_('#info_name').value = user.name;
-			_('#info_registerTime').value = timestamp2str(user.registerTime);
-			_('#info_lastActive').value = timestamp2str(user.lastActive);
-			_('#info_group').textContent = user.group.join(', ');
-			_('#login_and_register').style.display = 'none';
-		dialog_success('OK', 'User info loaded') } catch (e) { dialog_error(e.name, e.message); }
-	} else {
-		_('#header h1').textContent = 'Login in / Register';
-		_('#info').style.display = 'none';
-	}})();
+	(async () => {
+		const uid = (await BearAPI_User.whoami()).id;
+		if (uid) {
+			try {
+				const user = await BearAPI_User.get(uid);
+				_('#header h1').textContent = 'Hello ' + user.id;
+				_('#info_id').value = user.id;
+				_('#info_name').value = user.name;
+				_('#info_registerTime').value = timestamp2str(user.registerTime);
+				_('#info_lastActive').value = timestamp2str(user.lastActive);
+				_('#info_group').textContent = user.group.join(', ');
+				_('#login_and_register').style.display = 'none';
+			dialog_success('OK', 'User info loaded') } catch (e) { dialog_error(e.name, e.message); }
+		} else {
+			_('#header h1').textContent = 'Login in / Register';
+			_('#info').style.display = 'none';
+		}
+	})();
 
 	const logoff = async event => { event.preventDefault(); try {
 		const res = await BearAPI_User.logoff();

@@ -71,6 +71,11 @@ class BearAPI_Resource extends BearAPI {
 
 // Create, read, login and logoff user (session bind)
 class BearAPI_User extends BearAPI {
+	static async whoami() {
+		const res = await this.xhr('/api/user/whoami', {id: 'dummyid'});
+		if (res.status != 200) this.throwError(res.status, res.json.error);
+		return res.json;
+	}
 	static async get(id) {
 		const res = await this.xhr('/api/user/get', {id: id});
 		if (res.status != 200) this.throwError(res.status, res.json.error);

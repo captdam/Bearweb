@@ -1,9 +1,9 @@
 <!DOCTYPE html>
 <?php
 	if ($BW->site->template[0] == 'page-zh')
-		echo '<html lang="zh" data-suser="', htmlspecialchars($BW->session->sUser, ENT_COMPAT), '">';
+		echo '<html lang="zh">';
 	else
-		echo '<html lang="en" data-suser="', htmlspecialchars($BW->session->sUser, ENT_COMPAT), '">';
+		echo '<html lang="en">';
 	echo '<head>',$BW->site->util_html_head('https://bearweb.captdam.com/', 'Bearweb CMS', 'https://bearweb.captdam.com/'),'</head>';
 ?>
 <body>
