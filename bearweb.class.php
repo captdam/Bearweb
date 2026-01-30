@@ -715,6 +715,10 @@
 		private static function keygen(): string { return base64_encode(random_bytes(static::KEY_LENGTH)); }
 		private static function keycheck(string|array $data, string $key = ''): bool { return strlen(base64_decode( is_array($data) ? ($data[$key] ?? '') : ($data ?? '') , true)) == static::KEY_LENGTH; }
 
+		const int DB_CLEAN_CHANCE = 100; # out of 1000, 0 = never, 1000 = always
+		const int DB_CLEAN_SESSIONDAY = 30;
+		const int DB_CLEAN_TRANSACTIONDAY = 30;
+
 		private static function insertRetry(int $retry, callable $fn, Exception $err): void {
 			for (; $retry; $retry--) {
 				try {
@@ -733,7 +737,12 @@
 		 * @throws BW_DatabaseServerError Cannot write session / transaction into DB
 		*/
 		public function __construct(string $url) { try {
-			if (!static::$db->beginTransaction()) { throw new Exception ('Cannot start transaction'); }
+			if (!static::$db->beginTransaction()) { throw new Exception('Cannot start transaction'); }
+
+			if (rand(1, 1000) < static::DB_CLEAN_CHANCE) {
+				static::$db->exec('delete from `Session` where strftime(\'%s\', \'now\') - `lastuse` > '.static::DB_CLEAN_SESSIONDAY * 24 * 3600);
+				static::$db->exec('delete from `Transaction` where strftime(\'%s\', \'now\') - `create` > '.static::DB_CLEAN_TRANSACTIONDAY * 24 * 3600);
+			}
 
 			$session = null;
 			$transaction = null;
@@ -741,7 +750,7 @@
 
 			// Update session if session cookies are valid, found and matched, not expired in db
 			if ( static::keycheck($_COOKIE, static::CookieSID) && static::keycheck($_COOKIE, static::CookieKey) ) {
-				$sql = static::$db->prepare('UPDATE `Session` SET `LastUse` = ? WHERE `ID` = ? AND `Key` = ? AND `LastUse` > ? RETURNING `ID`, `Create`, `LastUse`, `User`, `Key`');
+				$sql = static::$db->prepare('UPDATE `Session` SET `lastuse` = ? WHERE `id` = ? AND `key` = ? AND `lastuse` > ? RETURNING `id`, `create`, `lastuse`, `user`, `key`');
 				$sql->bindValue(	1,	$_SERVER['REQUEST_TIME'],			PDO::PARAM_INT	);
 				$sql->bindValue(	2,	$_COOKIE[static::CookieSID],			PDO::PARAM_STR	);
 				$sql->bindValue(	3,	$_COOKIE[static::CookieKey],			PDO::PARAM_STR	);
@@ -754,12 +763,12 @@
 			// Create a new session otherwise
 			if (!$session) {
 				$sid = '';
-				$sql = static::$db->prepare('INSERT INTO `Session` (`ID`, `Create`, `LastUse`, `User`, `Key`) VALUES (?,?,?,?,?) RETURNING `ID`, `Create`, `LastUse`, `User`, `Key`');
+				$sql = static::$db->prepare('INSERT INTO `Session` (`id`, `create`, `lastuse`, `user`, `key`) VALUES (?,?,?,?,?) RETURNING `id`, `create`, `lastuse`, `user`, `key`');
 				$sql->bindParam(	1,	$sid,				PDO::PARAM_STR	); #By reference
 				$sql->bindValue(	2,	$_SERVER['REQUEST_TIME'],	PDO::PARAM_INT	);
 				$sql->bindValue(	3,	$_SERVER['REQUEST_TIME'],	PDO::PARAM_INT	);
 				$sql->bindValue(	4,	'',				PDO::PARAM_STR	); #New session is always issused to new user, it can only be changed by User Login API with existed SID
-				$sql->bindValue(	5,	static::keygen(),			PDO::PARAM_STR	);
+				$sql->bindValue(	5,	static::keygen(),		PDO::PARAM_STR	);
 				static::insertRetry(5, function() use (&$sid, $sql) { $sid = static::keygen(); $sql->execute(); }, new Exception('Retry too much for session ID'));
 				$session = $sql->fetch();
 				$sql->closeCursor();
@@ -768,41 +777,41 @@
 
 			// Create a new transaction
 			$tid = '';
-			$sql = static::$db->prepare('INSERT INTO `Transaction` (`ID`, `Create`, `IP`, `URL`, `Session`, `Log`) VALUES (?,?,?,?,?,?) RETURNING `ID`, `Create`, `IP`, `URL`, `Session`, `Log`');
+			$sql = static::$db->prepare('INSERT INTO `Transaction` (`id`, `create`, `ip`, `url`, `session`, `log`) VALUES (?,?,?,?,?,?) RETURNING `id`, `create`, `ip`, `url`, `session`, `log`');
 			$sql->bindParam(	1,	$tid,							PDO::PARAM_STR	); #By reference
 			$sql->bindValue(	2,	$_SERVER['REQUEST_TIME'],				PDO::PARAM_INT	);
 			$sql->bindValue(	3,	$_SERVER['REMOTE_ADDR'].':'.$_SERVER['REMOTE_PORT'],	PDO::PARAM_STR	);
 			$sql->bindValue(	4,	$url,							PDO::PARAM_STR	);
-			$sql->bindValue(	5,	$session['ID'],						PDO::PARAM_STR	); #New session is always issused to new user, it can only be changed by User Login API with existed SID
-			$sql->bindValue(	6,	'PID: '.getmypid().PHP_EOL,				PDO::PARAM_STR	);
+			$sql->bindValue(	5,	$session['id'],						PDO::PARAM_STR	);
+			$sql->bindValue(	6,	'PID: '.getmypid(),					PDO::PARAM_STR	);
 			static::insertRetry(5, function() use (&$tid, $sql) { $tid = static::keygen(); $sql->execute(); }, new Exception('Retry too much for transaction ID'));
 			$transaction = $sql->fetch();
 			$sql->closeCursor();
 
-			$this->sID	= $session['ID'];
-			$this->sCreate	= $session['Create'];
-			$this->sLastUse	= $session['LastUse'];
-			$this->sUser	= $session['User'];
-			$this->sKey	= $session['Key'];
-			$this->tID	= $transaction['ID'];
-			$this->tCreate	= $transaction['Create'];
-			$this->tIP	= $transaction['IP'];
-			$this->tURL	= $transaction['URL'];
-			$this->tSID	= $transaction['Session'];
-			$this->tLog	= $transaction['Log'];
+			$this->sID	= $session['id'];
+			$this->sCreate	= $session['create'];
+			$this->sLastUse	= $session['lastuse'];
+			$this->sUser	= $session['user'];
+			$this->sKey	= $session['key'];
+			$this->tID	= $transaction['id'];
+			$this->tCreate	= $transaction['create'];
+			$this->tIP	= $transaction['ip'];
+			$this->tURL	= $transaction['url'];
+			$this->tSID	= $transaction['session'];
+			$this->tLog	= $transaction['log'];
 			if ($needToSendSessionCookie) {
 				setcookie(static::CookieSID, $this->sID, 0, '/', '', true, true ); # Note: Send cookie to client only if DB write success
 				setcookie(static::CookieKey, $this->sKey, 0, '/', '', true, false );
 			}
 
-			if (!static::$db->commit()) { throw new Exception ('Cannot commit transaction'); }
+			if (!static::$db->commit()) { throw new Exception('Cannot commit transaction'); }
 		} catch (Exception $e) { static::$db->rollBack(); throw new BW_DatabaseServerError('Cannot record session control in DB: '.$e->getMessage(), 500); } } # Cannot do anything if rollback fails :(
 
 		/** Append log to transaction record. 
 		 * @param string	$log	Log to append
 		 * @return string	Log in full after append
 		 */
-		public function log(string $log): string { return $this->tLog .= $log.PHP_EOL; }
+		public function log(string $log): string { return $this->tLog .= PHP_EOL.$log; }
 
 		/** Bind a user to the session. Effects next transaction. 
 		 * @param string	$uid	User ID
@@ -810,7 +819,7 @@
 		 */
 		public function bindUser(string $uid): void {
 			try {
-				$sql = static::$db->prepare('UPDATE `Session` SET `User` = ? WHERE ID = ?');
+				$sql = static::$db->prepare('UPDATE `Session` SET `user` = ? WHERE `id` = ?');
 				$sql->bindValue(	1,	$uid,		PDO::PARAM_STR	);
 				$sql->bindValue(	2,	$this->sID,	PDO::PARAM_STR	);
 				$sql->execute();
@@ -825,7 +834,7 @@
 		public function updateKey(): string {
 			$key = static::keygen();
 			try {
-				$sql = static::$db->prepare('UPDATE `Session` SET `Key` = ? WHERE ID = ?');
+				$sql = static::$db->prepare('UPDATE `Session` SET `key` = ? WHERE `id` = ?');
 				$sql->bindValue(	1,	$key,		PDO::PARAM_STR	);
 				$sql->bindValue(	2,	$this->sID,	PDO::PARAM_STR	);
 				$sql->execute();
@@ -840,7 +849,7 @@
 		 * Commit log to DB. 
 		*/
 		public function __destruct() {
-			$sql = static::$db->prepare('UPDATE `Transaction` SET `Log` = ?, `Status` = ?, `Time` = ?, `Memory` = ? WHERE ID = ?');
+			$sql = static::$db->prepare('UPDATE `Transaction` SET `log` = ?, `status` = ?, `time` = ?, `memory` = ? WHERE `id` = ?');
 			$sql->bindValue(	1,	$this->tLog,							PDO::PARAM_STR	);
 			$sql->bindValue(	2,	http_response_code(),						PDO::PARAM_INT	);
 			$sql->bindValue(	3,	(microtime(true) - $_SERVER["REQUEST_TIME_FLOAT"]) * 1e6,	PDO::PARAM_INT	);
