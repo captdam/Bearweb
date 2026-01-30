@@ -15,7 +15,7 @@
 
 <div>
 	<h2>HTML</h2>
-	<p>The ultimate goal of the page template is to format our data (a PHP <code>resource</code> object) into an HTML webpage. See <a href="/db/en">this document</a> for <code>resource</code> properties.</p>
+	<p>The ultimate goal of the page template is to format our data (a PHP <code>resource</code> object) into an HTML webpage. See <a href="/db/en#sitemap">this document</a> for <code>resource</code> properties.</p>
 	<div class="sidebyside">
 		<pre><code>
 &lt;!DOCTYPE html&gt;

@@ -15,7 +15,7 @@
 
 <div>
 	<h2>HTML</h2>
-	<p>网页模板的最终目标就是以HTML网页的格式输出我们的数据（一个PHP的<code>resource</code>对象）。关于<code>resource</code>对象的变量，<a href="/db/en">参考这个文档</a>。</p>
+	<p>网页模板的最终目标就是以HTML网页的格式输出我们的数据（一个PHP的<code>resource</code>对象）。关于<code>resource</code>对象的变量，<a href="/db/zh#sitemap">参考这个文档</a>。</p>
 	<div class="sidebyside">
 		<pre><code>
 &lt;!DOCTYPE html&gt;
@@ -210,7 +210,7 @@ else // if ($BW-&gt;site-&gt;template[0] == 'page-en') // 默认语言
 				<li><code style="background:lightgreen">&lt;?= $BW-&gt;site->content ?&gt;</code>或<code style="background:lightgreen">echo $BW-&gt;site-&gt;content;</code> - 输出数据库支持的资源内容。此类资源体积小，例如HTML文件。</li>
 				<li><code style="background:lightgreen">$this-&gt;site-&gt;dumpContent(-1, false);</code> - 直接发送文件支持的资源内容到客户端。此类资源体积大，例如图片。大部分情况下你都不会在网页模板中使用这个方法，毕竟没哪个疯子往HTML中赛那么多内容。</li>
 			</ul>
-			<p>取决于<code>Bearweb_Site::Size_FileBlob</code>设置（默认100kB），一个资源可能会是数据库支持或文件支持的。使用错误的方法<b>仍然工作</b>（除了极端情况下会爆内存），但是不利于性能。参考<a href="https://captdam.com/bearweb-resource-optimization/en" target="_blank">我的这一篇博客</a>。</p>
+			<p>取决于<code>Bearweb_Site::Size_FileBlob</code>设置（默认100kB），一个资源可能会是数据库支持或文件支持的。使用错误的方法<b>仍然工作</b>（除了极端情况下会爆内存），但是不利于性能。参考<a href="https://captdam.com/bearweb-resource-optimization/zh" target="_blank">我的这一篇博客</a>。</p>
 		</div>
 	</div>
 	<div class="sidebyside">
