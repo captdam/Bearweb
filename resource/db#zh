@@ -1,30 +1,29 @@
-<div class="main_title">
-	<h1>Bearweb Database</h1>
-</div>
 <div>
-	<p>One of the reasons I created my own CMS is because of the complex database of existing CMSs. Therefore, when I designed this CMS, I aimed to make the underlying database structure simple, portable and manageable.</p>
-	<p>Bearweb CMS has a very simple database structure. It relies on only 4 databases in 3 SQLite database files:</p>
+	<p>我决定自己造轮子的一个原因就是因为我用过的CMS（内容管理系统）的数据库结构都太复杂了。所以，当我写这个CMS时的目标就是创造一个结构简单、可移植、好管理的底层数据库。</p>
+	<p>Bearweb CMS是数据库驱动的，每一个模组都有自己的独立数据库。Bearweb CMS在设计时就考虑SQLite，但是也可以轻松移植到其它的关系数据库上。对于SQLite来说，每个数据库都是一个文件。因此，为每一个模组创建自己的独立数据库（文件）应该可以最大化减少拥挤。</p>
+	<p>Bearweb CMS结构非常简单。它有3个模组（站点地图、对话与交互、用户），合计3个文件内共4个数据库：</p>
 	<ul>
-		<li><code>Sitemap</code> - Each record represents a resource, it can be a webpage,a file, or an API.</li>
-		<li><code>Session</code> - A session is a series of requests from one client to the server.</li>
-		<li><code>Transaction</code> - A transaction represents a HTTP request from client to server and a response from the server to the client.</li>
-		<li><code>User</code> - Each record represents a registered user.</li>
+		<li><code>Sitemap</code>（站点地图） - 每一个记录对应一个资源，可以是一张网页、一个文件、或一个API接口。</li>
+		<li><code>Session</code>（对话） - 一个会话代表一连串同一个客户与服务器的交互。</li>
+		<li><code>Transaction</code>（交互） - 一个交互代表一次客户到服务器的HTTP请求和服务器到客户的HTTP回复。</li>
+		<li><code>User</code>（用户） - 每一个记录对应一个注册的用户。</li>
 	</ul>
-	<p>Bearweb CMS is portable. It is designed to use a portable DBMS, the SQLite. Transferring the website from one machine to another requires copying and pasting the PHP files (the CMS) and the database files (the data).</p>
+	<p>Bearweb CMS的模组都是数据库驱动的，每一个实例都代表了数据库中的一个记录，每一个实例变量都可以在数据中找到相应的值。<code>int</code>实例变量将以<code>integer</code>保存在数据库中，<code>string</code>变量将以<code>text</code>保存，<code>array</code>与<code>object</code>变量将以JSON格式的<code>text</code>保存，二进制<code>string</code>变量将以<code>blob</code>保存。</p>
+	<p>Bearweb CMS是可移植的。它在设计时就考虑使用可移植的数据库，即SQLite。因此，网站迁移只需要复制粘贴PHP文件（CMS）与数据库文件（数据）。</p>
 	<div class="main_note_warning">
-		<p>Make sure that the database files and the <b>directory</b> containing the database files are readable and writable.</p>
+		<p>确保数据库文件与其<b>目录</b>都是可读写的。</p>
 	</div>
-	<p>Although it is recommended to modify the website through APIs<del>, we all like the quick-and-dirty way</del>. The database is very managementable, by design, there is no foreign key or trigger. You can directly make modifications to the database to make changes to the website, as long as you:</p>
+	<p>虽然推荐使用API来修改网站<del>，但是偷懒直接修改数据库就是又快又爽</del>。数据库也是很方便管理的，在设计时就决定不使用外键和触发。因此，你可以直接修改数据库里面的数据来修改网站，当然：</p>
 	<ul>
-		<li>Respect the data type. When making changes to a field, you should use the same data type. For example, <code>Sitemap->create</code> wants a timestamp in <code>int</code>, you should provide a timestamp in <code>int</code> (for example: <code>0</code>) instead of a <code>string</code> (for example: <code>1970-01-01 00:00:00</code>).</li>
-		<li>Respect the JSON format. Bearweb CMS relies heavily on JSON to store key-value pairs, such as <code>Sitemap::meta</code> and <code>User::group</code>.</li>
-		<li>I recommend using <a href="https://sqlitebrowser.org/" target="_blank">DB browser for SQLite</a> to manage the database. It provides syntax highlighting, formatting and compressing (remove formatting spaces) for JSON.</li>
+		<li>数据类型不能被修改。比如，<code>Sitemap.create</code>应该包含<code>int</code>类型的时间戳，那么修改时也应该使用<code>int</code>类型的时间戳（如<code>0</code>），而不要改成<code>string</code>（如<code>1970-01-01 00:00:00</code>）。</li>
+		<li>不要破坏JSON格式。Bearweb CMS大量使用JSON来保存键值数据，例如<code>Sitemap.meta</code>和<code>User.group</code>。如果JSON格式被破坏了，Bearweb CMS就无法正确解析这个数据了。</li>
+		<li>我推荐使用<a href="https://sqlitebrowser.org/" target="_blank">DB browser for SQLite</a>来管理数据库。这个软件可以防止错误修改变量类型或JSON格式，还可以高亮语法、格式/压缩（移除格式空格）JSON。</li>
 	</ul>
-	<p>Don't worry. If Brarweb CMS senses a data in bad format, it will use the default value.</p>
+	<p>也不用太担心。如果Brarweb CMS发现了错误数据类型或无法解析时，会使用默认值。</p>
 </div>
 
 <div class="main_title">
-	<h1>Bearweb Sitemap</h1>
+	<h1 id="sitemap">Bearweb站点地图</h1>
 </div>
 <div>
 	<p>Requesting a webpage, a file (for example, an image), or any other resource is in fact fetching data from the database, with access control and some data manipulation. This database is called Sitemap because the table is a map of the website.</p>
@@ -45,271 +44,271 @@ CREATE TABLE "Sitemap" (
 </div>
 <div>
 	<div class="tablewrap"><table>
-		<caption><h2><code>Bearweb_Site</code> Database Structure</h2></caption>
+		<caption><h2><code>Bearweb_Site</code>数据库结构</h2></caption>
 		<thead>
 			<tr>
-				<th scope="col">Column</th>
-				<th scope="col">Format (SQLite)</th>
-				<th scope="col">Default</th>
-				<th scope="col">Description</th>
-				<th scope="col">Example</th>
+				<th scope="col">列</th>
+				<th scope="col">SQLite类型</th>
+				<th scope="col">默认值</th>
+				<th scope="col">解释</th>
+				<th scope="col">例子</th>
 			</tr>
 		</thead><tbody>
 			<tr>
 				<th scope="row">url</th>
 				<td>text, PK, Unique, Not null</td>
 				<td>No default value</td>
-				<td>Resource URL. All resources are indexed by its URL.</td>
+				<td>资源URL。所有的资源都通过URL进行索引。</td>
 				<td><ul>
-					<li><code>"hello/world.html"</code> - Use this URL to access this resource.</li>
+					<li><code>'hello/world.html'</code> - 使用这个URL来访问该资源。</li>
 				</ul></td>
 			</tr><tr>
 				<th scope="row">category</th>
 				<td>text, Not null</td>
 				<td><code>''</code></td>
-				<td>Resource category, for management purpose, ignored by Bearweb CMS framework.</td>
+				<td>资源分类，用于管理目的，Bearweb CMS不使用这个值。</td>
 				<td><ul>
-					<li><code>'Article'</code> - This resource is an article.</li>
+					<li><code>'Article'</code> - 这个资源属于一个“Article”。</li>
 				</ul></td>
 			</tr><tr>
 				<th scope="row">template</th>
 				<td>JSON array in text, Not null</td>
-				<td><code>'["object", "blob"]'</code> - Object (file) template, direct blob output.</td>
-				<td>Template used to process this resource. Bearweb CMS will invoke <code>template[0]</code> (template), then <code>template[0]</code> will invoke <code>template[1]</code> (sub-template).</td>
+				<td><code>'["object", "blob"]'</code> - 对象（文件）模板，直接输出内容。</td>
+				<td>进一步处理这个资源的模板。Bearweb CMS将调用<code>template[0]</code>（模板），然后<code>template[0]</code>将调用<code>template[1]</code>（子模板）。</td>
 				<td><ul>
-					<li><code>['page-en', 'direct']</code> - Bearweb CMS will invoke <code>page-en.php</code> in the <code>Bearweb_Site::Dir_Template</code> directory, then, <code>page-en.php</code> will invoke <code>page-en_direct.php</code> in the <code>Bearweb_Site::Dir_Template</code> directory.</li>
+					<li><code>['page-en', 'direct']</code> - Bearweb CMS将调用<code>Bearweb_Site::Dir_Template</code>目录下的<code>page-en.php</code>， 然后<code>page-en.php</code>将调用<code>Bearweb_Site::Dir_Template</code>目录下的<code>page-en_direct.php</code>。</li>
 				</ul></td>
 			</tr><tr>
 				<th scope="row">owner</th>
 				<td>text, Not null</td>
-				<td><code>''</code> (empty string) - System-owned resource.</td>
-				<td>Owner's user ID of this resource. Only the owner and admin (group 0) can modify this resource.</td>
+				<td><code>''</code>（空字符串） - 系统所有资源。</td>
+				<td>资源所有者的用户ID（user id）。只有所有者和管理员（组0）才可以修改这个资源。</td>
 				<td><ul>
-					<li><code>''</code> - The system owns this resource. Such as generated resource. (Example: system generated RSS sitemap)</li>
-					<li><code>'John'</code> - User with ID "John" owns this resource. Such as articles by the user.</li>
+					<li><code>''</code> - 系统所有资源。例如自动生成的资源（例如RSS站点地图）。</li>
+					<li><code>'John'</code> - 用户名为“John”的资源。例如用户写的文章。</li>
 				</ul></td>
 			</tr><tr>
 				<th scope="row">create</th>
 				<td>int, Not null</td>
-				<td><code>0</code> (<code>Bearweb_Site::TIME_NULL</code>) - No actual time.</td>
-				<td>Create timestamp.</td>
+				<td><code>0</code>（<code>Bearweb_Site::TIME_NULL</code>） - 无实际时间。</td>
+				<td>创建时间戳。</td>
 				<td><ul>
-					<li><code>0</code> - No actual time, such as generated resource. (Example: system generated RSS sitemap)</li>
-					<li><code>60</code> - Resource created at 1970-01-01 00:01:00.</li>
+					<li><code>0</code> - 无实际时间，例如自动生成的资源。（例如RSS站点地图）</li>
+					<li><code>60</code> - 资源创建于1970-01-01 00:01:00。</li>
 				</ul></td>
 			</tr><tr>
 				<th scope="row">modify</th>
 				<td>int, Not null</td>
-				<td><code>0</code> (<code>Bearweb_Site::TIME_NULL</code>) - No actual time.</td>
-				<td>Modify timestamp.</td>
+				<td><code>0</code>（<code>Bearweb_Site::TIME_NULL</code>） - 无实际时间。</td>
+				<td>修改时间戳。</td>
 				<td><ul>
-					<li><code>0</code> - No actual time, such as API.</li>
-					<li><code>60</code> - Resource modified at 1970-01-01 00:01:00.</li>
+					<li><code>0</code> - 无实际时间，例如API。</li>
+					<li><code>60</code> - 资源修改于1970-01-01 00:01:00。</li>
 				</ul></td>
 			</tr><tr>
 				<th scope="row">meta</th>
 				<td>JSON object in text, Not null</td>
-				<td><code>'{}'</code> - Empty metadate.</td>
-				<td>Resource metadata. Optional data used by Bearweb CMS framework and the template.</td>
+				<td><code>'{}'</code> - 空元数据。</td>
+				<td>资源元素据。包含Bearweb CMS架构与模板使用的可选数据。</td>
 				<td><ul>
-					<li><code>'{"title"; "Example Title", "description": "This is an example resource."}'</code> - See below.</li>
+					<li><code>'{"title"; "Example Title", "description": "This is an example resource."}'</code> - 见下文。</li>
 				</ul></td>
 			</tr><tr>
 				<th scope="row">content</th>
-				<td>text, or null</td>
-				<td><code>''</code> - Empty content.</td>
-				<td>Resource content, the content should be directly output to reduce server process load (for a webpage, that means use HTML code instead of markdown). If <code>null</code>, Bearweb will try read a file with the same pathname as the <code>url</code> under the resource directory. This is used to offload large files from the database. See <a href="https://captdam.com/bearweb-resource-optimization/en" target="_blank">my blog for details</a>.</td>
+				<td>text或null</td>
+				<td><code>''</code> - 空内容。</td>
+				<td>资源内容。为最小化服务器负载，内容应该是最终输出的内容（对于网页来说，这里应该包含HTML而不是markdown）。如果为<code>null</code>，Bearweb将在资源目录下以<code>url</code>为文件名读取文件。这是为了不在数据库中保存大文件，参考<a href="https://captdam.com/bearweb-resource-optimization/en" target="_blank">我的博客详述</a>。</td>
 				<td><ul>
-					<li><code>'&lt;div&gt;&lt;!-- My content in HTML --&gt;&lt;/div&gt;'</code> - An article.</li>
-					<li><code>'ABCDEFG'</code> - A plain text file.</li>
-					<li><code>48613FA87E...</code> - A binary file.</li>
-					<li><code>null</code> - File-backed resource. The Bearweb CMS will try read a file with the same pathname as the <code>url</code> under the resource directory.</li>
+					<li><code>'&lt;div&gt;&lt;!-- 我的HTML内容 --&gt;&lt;/div&gt;'</code> - 一篇文章。</li>
+					<li><code>'ABCDEFG'</code> - 一个纯文本文件。</li>
+					<li><code>48613FA87E...</code> - 一个二进制文件</li>
+					<li><code>null</code> - 文件支持资源。Bearweb CMS将在资源目录下以<code>url</code>为文件名读取文件。</li>
 				</ul></td>
 			</tr><tr>
 				<th scope="row">aux</th>
 				<td>JSON object in text, Not null</td>
-				<td><code>'{}'</code> - Empty aux data.</td>
-				<td>Resource auxiliary data. Optional data used by the template.</td>
+				<td><code>'{}'</code> - 空额外数据。</td>
+				<td>资源额外素据。包含模板使用的可选数据。</td>
 				<td><ul>
-					<li><code>'{"lang-en"; "url/en", "lang-zh": "url/zh"}'</code> - See below.</li>
+					<li><code>'{"lang-en"; "url/en", "lang-zh": "url/zh"}'</code> - 见下文。</li>
 				</ul></td>
 			</tr>
 		</tbody>
 	</table></div>
-	<p><code>meta</code> and <code>aux</code> store optional data. It doesn't make sense to create seperate database field for each of those optional data (which will make the table extremely wide and unmanageable); therefore, they are aggregated into JSON objects.</p>
+	<p><code>meta</code>和<code>aux</code>保存了可选信息。为这些可选信息各自单独创建数据库中表的列将会使得表很宽很不便于管理且产生大量不使用的值。因此，使用JSON保存它们。</p>
 	
 	<div class="tablewrap"><table>
-		<caption><h2>Bearweb_Site <code>meta</code> options</h2></caption>
+		<caption><h2>Bearweb_Site <code>meta</code>可选数据</h2></caption>
 		<thead>
 			<tr>
-				<th scope="col">Key</th>
-				<th scope="col">Type</th>
-				<th scope="col">Description</th>
-				<th scope="col">Used by template with example</th>
+				<th scope="col">键</th>
+				<th scope="col">类型</th>
+				<th scope="col">解释</th>
+				<th scope="col">使用模板与例子</th>
 			</tr>
 		</thead><tbody>
 			<tr>
 				<th scope="row">title</th>
 				<td>string</td>
-				<td>Title</td>
+				<td>标题</td>
 				<td>
 					<span class="usedby_page">All</span><br />
 					<ul>
-						<li><code>{"title": "Example Title"}</code> - Page title is "Example Title".</li>
+						<li><code>{"title": "示例标题"}</code> - 页面标题为“示例标题”。</li>
 					</ul>
 				</td>
 			</tr><tr>
 				<th scope="row">keywords</th>
 				<td>string, comma-seperated words</td>
-				<td>Keywords</td>
+				<td>关键字</td>
 				<td>
 					<span class="usedby_page">All</span><br />
 					<ul>
-						<li><code>{"keywords": "keyword1, keyword2, keyword3"}</code> - Page with 3 keywords: "keyword1", "keyword2" and "keyword3".</li>
+						<li><code>{"keywords": "关键字1, 关键字2, 关键字3"}</code> - 页面有3个关键字：“关键字1”、“关键字2”、“关键字3”。</li>
 					</ul>
 				</td>
 			</tr><tr>
 				<th scope="row">description</th>
 				<td>string</td>
-				<td>Description</td>
+				<td>简述</td>
 				<td>
 					<span class="usedby_page">All</span><br />
 					<ul>
-						<li><code>{"description": "This is an example resource."}</code> - Page description is "This is an example resource.".</li>
+						<li><code>{"description": "这是一个简述。"}</code> - 页面简述为“这是一个简述。”。</li>
 					</ul>
 				</td>
 			</tr><tr>
 				<th scope="row">r301</th>
 				<td>string</td>
-				<td>Permanently redirect to target URL.</td>
+				<td>永久重定向至新的URL。</td>
 				<td>
 					<span class="usedby_cms">Core</span><br />
 					<ul>
-						<li><code>{"r301": "new/page.html"}</code> - Cause Bearweb to send an HTTP <code>301 Moved Permanently</code> header to "/new/page.html". Note this value is an absolute URL without leading "/".</li>
+						<li><code>{"r301": "new/page.html"}</code> - 使Bearweb发送<code>301 Moved Permanently</code>HTTP头至“/new/page.html”。注意该值为绝对URL且省略开头的“/”。</li>
 					</ul>
 				</td>
 			</tr><tr>
 				<th scope="row">r302</th>
 				<td>string</td>
-				<td>Temporarily redirect to target URL.</td>
+				<td>临时重定向至新的URL。</td>
 				<td>
 					<span class="usedby_cms">Core</span><br />
 					<ul>
-						<li><code>{"r301": "new/page.html"}</code> - Cause Bearweb to send an HTTP <code>302 Found</code> header to "/new/page.html". Note this value is an absolute URL without leading "/".</li>
+						<li><code>{"r301": "new/page.html"}</code> - 使Bearweb发送<code>302 Found</code>HTTP头至“/new/page.html”。注意该值为绝对URL且省略开头的“/”。</li>
 					</ul>
 				</td>
 			</tr><tr>
 				<th scope="row">robots</th>
 				<td>string</td>
-				<td>Tells crawlers to bot not index and/or follow.</td>
+				<td>告诉爬虫不要收录本资源/发现本资源的链接。</td>
 				<td>
 					<span class="usedby_cms">Core</span><span class="usedby_page">All</span><br />
 					<ul>
-						<li><code>{"r301": "noindex"}</code> - Do not index this resource.</li>
-						<li><code>{"r301": "nofollow"}</code> - Do not links on this resource.</li>
-						<li><code>{"r301": "noindex, nofollow"}</code> - Both above.</li>
+						<li><code>{"r301": "noindex"}</code> - 不要收录本资源。</li>
+						<li><code>{"r301": "nofollow"}</code> - 不要发现本资源的链接。</li>
+						<li><code>{"r301": "noindex, nofollow"}</code> - 以上两项。</li>
 					</ul>
 					<div class="main_note_error">
-						<p>This is a request, but some inresponsible crawlers won't respect it.</p>
-						<p>Do not use anything other than <code>noindex</code>, <code>nofollow</code> or <code>noindex, nofollow</code>. <a href="https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/meta/name/robots" target="_blank">Some crawlers cannot understant other attributes.</a></p>
+						<p>但是有的爬虫坏得很，说了当成耳边风。</p>
+						<p>不要使用<code>noindex</code>、<code>nofollow</code>、<code>noindex, nofollow</code>以外任何值。<a href="https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/meta/name/robots" target="_blank">其它值不一定被所有爬虫都理解。</a></p>
 					</div>
 				</td>
 			</tr><tr>
 				<th scope="row">access</th>
 				<td>array of number and string</td>
-				<td>If specified, Bearweb will enable access control on this resource. Only user id or user group in the array can read this resource; others will received a <code>HTTP 403</code> error.</td>
+				<td>如果定义，Bearweb将对该资源启用访问控制。只有用户ID和组被包含在这个数组里才能访问这个资源，其它人都会收到<code>HTTP 403</code>错误。</td>
 				<td>
 					<span class="usedby_cms">Core</span><br />
 					<ul>
-						<li><code>{"access": ["Alice", 23, "Bob"]}</code> - Allows user ID "Alice" and "Bob" and all users in group 23 to read this resource.</li>
-						<li><code>{"access": []}</code> - Allows nobody to read this resource.</li>
-						<li>The owner and admin (group 0) always have access.</li>
+						<li><code>{"access": ["Alice", 23, "Bob"]}</code> - 允许用户名为“Alice”和“Bob”的两位用户，以及分组23下的用户读取。</li>
+						<li><code>{"access": []}</code> - 任何人都看不到。</li>
+						<li>资源所有者和管理员（组0）永远都有权读写。</li>
 					</ul>
 				</td>
 			</tr><tr>
 				<th scope="row">img</th>
 				<td>string</td>
-				<td>URL to a poster image.</td>
+				<td>海报图片URL。</td>
 				<td>
 					<span class="usedby_page">All</span><br />
 					<ul>
-						<li><code>{"bgimg": "sun.jpg"}</code> - Use "/sun.jpg" as poster for this page. Note this value is an absolute URL without leading "/".</li>
+						<li><code>{"bgimg": "sun.jpg"}</code> - 使用“/sun.jpg”作为该页海报。注意该值为绝对URL且省略开头的“/”。</li>
 					</ul>
 					<span class="usedby_page">Image</span><br />
 					<ul>
-						<li><code>{"hd": "sun.thumb.jpg"}</code> - If in image sub-template, use this image as thumbnail. Note this value is an absolute URL without leading "/".</li>
+						<li><code>{"hd": "sun.thumb.jpg"}</code> - 在图片（Image）子模版下，使用该图为缩略图。注意该值为绝对URL且省略开头的“/”。</li>
 					</ul>
 				</td>
 			</tr><tr>
 				<th scope="row">hd</th>
 				<td>string</td>
-				<td>URL to a poster image.</td>
+				<td>高清大图的URL。</td>
 				<td>
 					<span class="usedby_page">Image</span><br />
 					<ul>
-						<li><code>{"hd": "sun.jpg"}</code> - Use "/sun.jpg" as the high definition image for this page. Note this value is an absolute URL without leading "/".</li>
+						<li><code>{"hd": "sun.jpg"}</code> - 使用“/sun.jpg”作为该页的高清大图。注意该值为绝对URL且省略开头的“/”。</li>
 					</ul>
 				</td>
 			</tr><tr>
 				<th scope="row">ratio</th>
 				<td>number</td>
-				<td>Provide the aspect ratio (<code>width</code> / <code>height</code>) of this image.</td>
+				<td>图片比例（<code>width</code> / <code>height</code>）。</td>
 				<td>
 					<span class="usedby_page">Image</span><br />
 					<ul>
-						<li><code>1.33333</code> - It helps the browser to provide the correct space when layout the webpage before the image is downloaded. This is used when generate bulletin page.</li>
+						<li><code>1.33333</code> - 方便浏览器在完全下载图片前就能正确排版。在生成照片墙时使用。</li>
 					</ul>
 				</td>
 			</tr><tr>
 				<th scope="row">task</th>
 				<td>API task</td>
-				<td>Specify task to execute.</td>
+				<td>任务。</td>
 				<td>
 					<span class="usedby_api">All</span><br />
 					<ul>
-						<li><code>{"bgimg": "sun.jpg"}</code> - Use "/sun.jpg" as poster for this page. Note this value is an absolute URL without leading "/".</li>
+						<li><code>{"task": "login"}</code> - 执行“login”任务。</li>
 					</ul>
 				</td>
 			</tr>
 		</tbody>
 	</table></div>
-	<p>All those data are optional. Bearweb will use default value or skip it if a specific data is not given.</p>
+	<p>上述值都为可选的。当需要使用某个值但没有定义时，Bearweb将会使用默认值。</p>
 
 	<div class="tablewrap"><table>
-		<caption><h2>Bearweb_Site <code>aux</code> options</h2></caption>
+		<caption><h2>Bearweb_Site <code>aux</code>可选数据</h2></caption>
 		<thead>
 			<tr>
-				<th scope="col">Key</th>
-				<th scope="col">Type</th>
-				<th scope="col">Description</th>
-				<th scope="col">Used by template with example</th>
+				<th scope="col">键</th>
+				<th scope="col">类型</th>
+				<th scope="col">解释</th>
+				<th scope="col">使用模板与例子</th>
 			</tr>
 		</thead><tbody>
 			<tr>
 				<th scope="row">lang-*</th>
 				<td>string</td>
-				<td>Alternative language for multilingual resources.</td>
+				<td>多语言资源备选语言。</td>
 				<td>
 					<span class="usedby_page">All</span><br />
 					<ul>
-						<li><code>{"lang-en": "url/en", "lang-zh": "url/zh"}</code> - Specify the target URLs for the languages (including the current language and URL).</li>
+						<li><code>{"lang-en": "url/en", "lang-zh": "url/zh"}</code> - 备选语言（包括当前语言）的URL。注意该值为绝对URL且省略开头的“/”。</li>
 					</ul>
 				</td>
 			</tr><tr>
 				<th scope="row">mime</th>
 				<td>string</td>
-				<td>Object MIME type</td>
+				<td>对象MIME类型</td>
 				<td>
 					<span class="usedby_page">All</span><br />
 					<ul>
-						<li><code>{"mime": "image/png"}</code> - Cause the object template to send a <code>Content-Type: image/png</code> HTTP header.</li>
-						<li>If not specified, object template will send a <code>Content-Type: text/plain</code> HTTP header.</li>
+						<li><code>{"mime": "image/png"}</code> - 对象模板将发送<code>Content-Type: image/png</code> HTTP头（PNG图片）。</li>
+						<li>如果没有设定，对象模板将发送<code>Content-Type: text/plain</code> HTTP头（纯文本）。</li>
 					</ul>
 				</td>
 			</tr>
 		</tbody>
 	</table></div>
-	<p>All those data are optional. Bearweb will use default value or skip it if a specific data is not given.</p>
+	<p>上述值都为可选的。当需要使用某个值但没有定义时，Bearweb将会使用默认值。</p>
 
 	<style>
 		[class^="usedby_"],[class*=" usedby_"] { display:inline-block; padding: 0 1ch; margin-right: 2ch;}
@@ -318,4 +317,228 @@ CREATE TABLE "Sitemap" (
 		.usedby_object { background-color: pink; } .usedby_object:before { content: 'Object - '; }
 		.usedby_api { background-color: lightgreen; } .usedby_api:before { content: 'API - '; }
 	</style>
+</div>
+
+<div class="main_title">
+	<h1 id="session">Bearweb会话</h1>
+</div>
+<div>
+	<p>一个交互指由客户端发送给服务端的一次HTTP请求和服务端返回给客户端的相应回复。</p>
+	<p>对于Bearweb CMS来说，一个请求包含了3部分：</p>
+	<ul>
+		<li>URL：每个请求都必须包含一个URL（HTTP也规定了这一点，HTTP请求的第一行永远是<code>METHOD URL VERSION</code>，比如<code>GET /bearweb-resource-optimization/zh HTTP/1.1</code>）。这个信息用来向服务器表示该请求的目标资源（或API）。</li>
+		<li>会话令牌：HTTP是无记忆的，也就是说，服务器并不知道是谁发送的请求。为了区分用户，服务器将在第一次交互时生成一个令牌（以cookie的形式）。客户端在接下来的交互中应该包含这个令牌以区分用户。如果客户端禁用了cookie或是选择不发送会话令牌cookie，服务器将会生成一个新的令牌。</li>
+		<li>数据：会话可以包括一些数据。主要用于API。=</li>
+	</ul>
+	<p>对于Bearweb CMS来说，一个会话包含了来自同一个客户端的请求。</p>
+	<ul>
+		<li>如上文所说，使用会话令牌区分交互所属的会话。</li>
+	</ul>
+	<p>Bearweb CMS使用两个数据库来记录交互与会话。</p>
+	<pre><code>
+CREATE TABLE "Transaction" (
+	"id"	TEXT NOT NULL UNIQUE,
+	"create"	INTEGER NOT NULL DEFAULT -1,
+	"ip"	TEXT NOT NULL DEFAULT '',
+	"url"	TEXT NOT NULL DEFAULT '',
+	"status"	INTEGER NOT NULL DEFAULT 0,
+	"time"	INTEGER NOT NULL DEFAULT -1,
+	"memory"	INTEGER NOT NULL DEFAULT -1,
+	"session"	TEXT NOT NULL DEFAULT '',
+	"log"	TEXT NOT NULL DEFAULT '',
+	PRIMARY KEY("id")
+) WITHOUT ROWID,STRICT
+	</code></pre>
+	<pre><code>
+CREATE TABLE "Session" (
+	"id"		TEXT NOT NULL UNIQUE,
+	"create"	INTEGER NOT NULL DEFAULT -1,
+	"lastuse"	INTEGER NOT NULL DEFAULT -1,
+	"user"		TEXT NOT NULL DEFAULT '',
+	"key"		TEXT NOT NULL DEFAULT '',
+	PRIMARY KEY("id")
+) WITHOUT ROWID,STRICT
+	</code></pre>
+	
+</div>
+<div>
+	<div class="tablewrap"><table>
+		<caption><h2><code>Bearweb_Session.Transaction</code>数据库结构</h2></caption>
+		<thead>
+			<tr>
+				<th scope="col">列</th>
+				<th scope="col">SQLite类型</th>
+				<th scope="col">默认值</th>
+				<th scope="col">解释</th>
+				<th scope="col">例子</th>
+			</tr>
+		</thead><tbody>
+			<tr>
+				<th scope="row">id</th>
+				<td>text, PK, Unique, Not null</td>
+				<td>No default value</td>
+				<td>交互ID。</td>
+				<td><ul>
+					<li><code>'AZaz09+='</code> - 使用这个ID来查找一个交互。</li>
+				</ul></td>
+			</tr><tr>
+				<th scope="row">create</th>
+				<td>int, Not null</td>
+				<td><code>-1</code> - 错误值，不会发生。</td>
+				<td>创建时间戳。</td>
+				<td><ul>
+					<li><code>60</code> - 交互创建于1970-01-01 00:01:00。该值为服务器接收到请求的实际时间，而非客户端发送请求的时间。</li>
+				</ul></td>
+			</tr><tr>
+				<th scope="row">ip</th>
+				<td>text, Not null</td>
+				<td><code>''</code></td>
+				<td>客户端IP地址与端口，可以是IPv4或IPv6地址。</td>
+				<td><ul>
+					<li><code>'1.2.3.4:10086'</code> - 客户端IP地址与端口。</li>
+					<li><code>'1234:5678:90ab:cdef:ff00:5599:abcd:1234:12345'</code> - 客户端IP地址与端口。</li>
+				</ul></td>
+			</tr><tr>
+				<th scope="row">url</th>
+				<td>text, Not null</td>
+				<td><code>''</code></td>
+				<td>请求的资源或API的URL。</td>
+				<td><ul>
+					<li><code>'hello/world.html'</code> - 请求的资源或API的URL。</li>
+				</ul></td>
+			</tr><tr>
+				<th scope="row">status</th>
+				<td>int, Not null</td>
+				<td><code>0</code> - 错误值，致命错误发生。</td>
+				<td>HTTP状态码。</td>
+				<td><ul>
+					<li><code>200</code> - 服务器返回了一个HTTP <code>200 OK</code>到客户端。</li>
+					<li><code>404</code> - 服务器返回了一个HTTP <code>404 Not Found</code>到客户端。</li>
+					<li><code>500</code> - 服务器返回了一个HTTP <code>500 Internal Server Error</code>到客户端。</li>
+					<li><code>0</code> - 致命错误发生。PHP脚本在写入返回的HTTP状态码前就退出了。</li>
+				</ul></td>
+			</tr><tr>
+				<th scope="row">time</th>
+				<td>int, Not null</td>
+				<td><code>-1</code> - 错误值，致命错误发生。</td>
+				<td>服务器处理该请求花费的时间（单位：微秒）。注意，这包括服务器等待数据传输的时间（对于文件，这将非常大，甚至会几十秒）。该值通过<code>(microtime(true) - $_SERVER["REQUEST_TIME_FLOAT"]) * 1e6</code>得到。</td>
+				<td><ul>
+					<li><code>25000</code> - 服务器花费25毫秒。</li>
+					<li><code>-1</code> - 致命错误发生。PHP脚本在写入处理时间前就退出了。</li>
+				</ul></td>
+			</tr><tr>
+				<th scope="row">memory</th>
+				<td>int, Not null</td>
+				<td><code>-1</code> - 错误值，致命错误发生。</td>
+				<td>服务器处理该请求占用的内存（单位：KiB）。该值通过<code>memory_get_peak_usage(false) / 1024</code>得到。</td>
+				<td><ul>
+					<li><code>1024</code> - 服务器占用1 MiB内存。</li>
+					<li><code>-1</code> - 致命错误发生。PHP脚本在写入内存用量前就退出了。</li>
+				</ul></td>
+			</tr><tr>
+				<th scope="row">session</th>
+				<td>text, Not null</td>
+				<td><code>''</code></td>
+				<td>对应会话ID。</td>
+				<td><ul>
+					<li><code>'zaZA90=+'</code> - 该ID用于查找对应会话ID。</li>
+				</ul></td>
+			</tr><tr>
+				<th scope="row">log</th>
+				<td>text, or null</td>
+				<td><code>''</code> - 空log。</td>
+				<td>调试用。使用<code>$BW->log('Hello world');</code>来打一行log。</td>
+				<td><ul>
+					<li><code>'Hello\nStart\nDone!'</code> - 一些log。</li>
+					<li><code>''</code> - 没有log。或者也可能，</li>
+					<li><code>''</code> - 致命错误发生。PHP脚本在写入log前就退出了。</li>
+				</ul></td>
+			</tr>
+		</tbody>
+	</table></div>
+</div>
+<div>
+	<div class="tablewrap"><table>
+		<caption><h2><code>Bearweb_Session.Session</code>数据库结构</h2></caption>
+		<thead>
+			<tr>
+				<th scope="col">列</th>
+				<th scope="col">SQLite类型</th>
+				<th scope="col">默认值</th>
+				<th scope="col">解释</th>
+				<th scope="col">例子</th>
+			</tr>
+		</thead><tbody>
+			<tr>
+				<th scope="row">id</th>
+				<td>text, PK, Unique, Not null</td>
+				<td>No default value</td>
+				<td>会话ID。</td>
+				<td><ul>
+					<li><code>'zaZA90=+'</code> - 使用这个ID来查找一个会话。</li>
+				</ul></td>
+			</tr><tr>
+				<th scope="row">create</th>
+				<td>int, Not null</td>
+				<td><code>-1</code> - 错误值，不会发生。</td>
+				<td>创建时间戳。</td>
+				<td><ul>
+					<li><code>60</code> - 会话创建于1970-01-01 00:01:00。该值为服务器接收到请求的实际时间，而非客户端发送请求的时间。</li>
+				</ul></td>
+			</tr><tr>
+				<th scope="row">lastuse</th>
+				<td>int, Not null</td>
+				<td><code>-1</code> - 错误值，不会发生。</td>
+				<td>最后使用时间戳。</td>
+				<td><ul>
+					<li><code>120</code> - 会话最后使用于1970-01-01 00:02:00。该值为服务器接收到请求的实际时间，而非客户端发送请求的时间。</li>
+				</ul></td>
+			</tr><tr>
+				<th scope="row">user</th>
+				<td>text, Not null</td>
+				<td><code>''</code> - 未绑定用户（游客）。</td>
+				<td>会话绑定的用户的ID。</td>
+				<td><ul>
+					<li><code>''</code> - 游客会话。</li>
+					<li><code>'John'</code> - 绘画绑定为用户“John”。</li>
+				</ul></td>
+			</tr><tr>
+				<th scope="row">key</th>
+				<td>text, Not null</td>
+				<td><code>''</code> - 错误值。</td>
+				<td>会话验证钥匙。</td>
+				<td><ul>
+					<li><code>'90=+zaZA'</code> - 会话验证钥匙。</li>
+				</ul></td>
+			</tr>
+		</tbody>
+	</table></div>
+</div>
+<div>
+	<h2>会话与交互数据库维护</h2>
+	<p>使用这个view来查看交互和相应的会话：</p>
+	<pre><code>
+CREATE VIEW `Transaction_View` AS
+	select all
+		t.`id`,
+		datetime(t.`create`, 'unixepoch') as `create`,
+		t.`ip`,
+		t.`url`,
+		t.`status`,
+		t.`time` as `time (us)`,
+		t.`memory` as `memory (kB)`,
+		t.`log`,
+		t.`session`,
+		datetime(s.`create`, 'unixepoch') as `firstuse`,
+		datetime(s.`lastuse`, 'unixepoch') as `lastuse`,
+		s.`user`,
+		s.`key`
+	from `Transaction` t join `Session` s where t.`session` = s.`id`
+order by `create` desc
+	</code></pre>
+	<p>会话与交互数据库将的体积随时间而增长。你可以定期清理过期会话和陈旧交互：</p>
+	<pre><code>
+delete from `Session` where strftime(\'%s\', \'now\') - `lastuse` &gt; 30 * 24 * 3600;
+delete from `Transaction` where strftime(\'%s\', \'now\') - `create` &gt; 30 * 24 * 3600);
+	</code></pre>
 </div>

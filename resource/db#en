@@ -1,30 +1,29 @@
-<div class="main_title">
-	<h1>Bearweb Database</h1>
-</div>
 <div>
 	<p>One of the reasons I created my own CMS is because of the complex database of existing CMSs. Therefore, when I designed this CMS, I aimed to make the underlying database structure simple, portable and manageable.</p>
-	<p>Bearweb CMS has a very simple database structure. It relies on only 4 databases in 3 SQLite database files:</p>
+	<p>Bearweb CMS is database-driven, each module has its own private database. Bearweb CMS is designed with SQLite in mind, but should be easily adapt to other relational DBMS. For SQLite, each database is a file; therefore, using dedicated database (file) for each module should minimize congestion.</p>
+	<p>Bearweb CMS has a very simple database structure. It has 3 modules (sitemap, session and transaction, user), it relies on only 4 databases in 3 SQLite database files:</p>
 	<ul>
-		<li><code>Sitemap</code> - Each record represents a resource, it can be a webpage,a file, or an API.</li>
+		<li><code>Sitemap</code> - Each record represents a resource, it can be a webpage, a file, or an API.</li>
 		<li><code>Session</code> - A session is a series of requests from one client to the server.</li>
 		<li><code>Transaction</code> - A transaction represents a HTTP request from client to server and a response from the server to the client.</li>
 		<li><code>User</code> - Each record represents a registered user.</li>
 	</ul>
+	<p>In Bearweb CMS, modules are database-backed classes instances. An instance is a row in the table. Each variable in the instance can be mapped to a field in the module's database table, with the same field name for variable name. <code>int</code> will be saved as <code>integer</code> in the database, human-readable <code>string</code> will be saved as <code>text</code>, <code>array</code> and <code>object</code> will be saved as JSON <code>text</code>, binary <code>string</code> will be saved as <code>blob</code>.</p>
 	<p>Bearweb CMS is portable. It is designed to use a portable DBMS, the SQLite. Transferring the website from one machine to another requires copying and pasting the PHP files (the CMS) and the database files (the data).</p>
 	<div class="main_note_warning">
 		<p>Make sure that the database files and the <b>directory</b> containing the database files are readable and writable.</p>
 	</div>
 	<p>Although it is recommended to modify the website through APIs<del>, we all like the quick-and-dirty way</del>. The database is very managementable, by design, there is no foreign key or trigger. You can directly make modifications to the database to make changes to the website, as long as you:</p>
 	<ul>
-		<li>Respect the data type. When making changes to a field, you should use the same data type. For example, <code>Sitemap->create</code> wants a timestamp in <code>int</code>, you should provide a timestamp in <code>int</code> (for example: <code>0</code>) instead of a <code>string</code> (for example: <code>1970-01-01 00:00:00</code>).</li>
-		<li>Respect the JSON format. Bearweb CMS relies heavily on JSON to store key-value pairs, such as <code>Sitemap::meta</code> and <code>User::group</code>.</li>
-		<li>I recommend using <a href="https://sqlitebrowser.org/" target="_blank">DB browser for SQLite</a> to manage the database. It provides syntax highlighting, formatting and compressing (remove formatting spaces) for JSON.</li>
+		<li>Respect the data type. When making changes to a field, you should use the same data type. For example, <code>Sitemap.create</code> wants a timestamp in <code>int</code>, you should provide a timestamp in <code>int</code> (for example: <code>0</code>) instead of a <code>string</code> (for example: <code>1970-01-01 00:00:00</code>).</li>
+		<li>Respect the JSON format. Bearweb CMS relies heavily on JSON to store key-value pairs, such as <code>Sitemap.meta</code> and <code>User.group</code>. If the JSON format is damaged, Bearweb CMS cannot parse it correctly.</li>
+		<li>I recommend using <a href="https://sqlitebrowser.org/" target="_blank">DB browser for SQLite</a> to manage the database. It prevents changing variable type or breaking JSON format by accident. It provides syntax highlighting, formatting and compressing (remove formatting spaces) for JSON.</li>
 	</ul>
 	<p>Don't worry. If Brarweb CMS senses a data in bad format, it will use the default value.</p>
 </div>
 
 <div class="main_title">
-	<h1>Bearweb Sitemap</h1>
+	<h1 id="sitemap">Bearweb Sitemap</h1>
 </div>
 <div>
 	<p>Requesting a webpage, a file (for example, an image), or any other resource is in fact fetching data from the database, with access control and some data manipulation. This database is called Sitemap because the table is a map of the website.</p>
@@ -49,7 +48,7 @@ CREATE TABLE "Sitemap" (
 		<thead>
 			<tr>
 				<th scope="col">Column</th>
-				<th scope="col">Format (SQLite)</th>
+				<th scope="col">Type (SQLite)</th>
 				<th scope="col">Default</th>
 				<th scope="col">Description</th>
 				<th scope="col">Example</th>
@@ -61,7 +60,7 @@ CREATE TABLE "Sitemap" (
 				<td>No default value</td>
 				<td>Resource URL. All resources are indexed by its URL.</td>
 				<td><ul>
-					<li><code>"hello/world.html"</code> - Use this URL to access this resource.</li>
+					<li><code>'hello/world.html'</code> - Use this URL to access this resource.</li>
 				</ul></td>
 			</tr><tr>
 				<th scope="row">category</th>
@@ -69,7 +68,7 @@ CREATE TABLE "Sitemap" (
 				<td><code>''</code></td>
 				<td>Resource category, for management purpose, ignored by Bearweb CMS framework.</td>
 				<td><ul>
-					<li><code>'Article'</code> - This resource is an article.</li>
+					<li><code>'Article'</code> - This resource is an "Article".</li>
 				</ul></td>
 			</tr><tr>
 				<th scope="row">template</th>
@@ -136,7 +135,7 @@ CREATE TABLE "Sitemap" (
 			</tr>
 		</tbody>
 	</table></div>
-	<p><code>meta</code> and <code>aux</code> store optional data. It doesn't make sense to create seperate database field for each of those optional data (which will make the table extremely wide and unmanageable); therefore, they are aggregated into JSON objects.</p>
+	<p><code>meta</code> and <code>aux</code> store optional data. It doesn't make sense to create seperate database field for each of those optional data (which will make the table extremely wide and unmanageable, and create a lot of unused field); therefore, they are aggregated into JSON objects.</p>
 	
 	<div class="tablewrap"><table>
 		<caption><h2>Bearweb_Site <code>meta</code> options</h2></caption>
@@ -243,7 +242,7 @@ CREATE TABLE "Sitemap" (
 			</tr><tr>
 				<th scope="row">hd</th>
 				<td>string</td>
-				<td>URL to a poster image.</td>
+				<td>URL to a HD image.</td>
 				<td>
 					<span class="usedby_page">Image</span><br />
 					<ul>
@@ -267,7 +266,7 @@ CREATE TABLE "Sitemap" (
 				<td>
 					<span class="usedby_api">All</span><br />
 					<ul>
-						<li><code>{"bgimg": "sun.jpg"}</code> - Use "/sun.jpg" as poster for this page. Note this value is an absolute URL without leading "/".</li>
+						<li><code>{"task": "login"}</code> - Execute the "login" task.</li>
 					</ul>
 				</td>
 			</tr>
@@ -292,7 +291,7 @@ CREATE TABLE "Sitemap" (
 				<td>
 					<span class="usedby_page">All</span><br />
 					<ul>
-						<li><code>{"lang-en": "url/en", "lang-zh": "url/zh"}</code> - Specify the target URLs for the languages (including the current language and URL).</li>
+						<li><code>{"lang-en": "url/en", "lang-zh": "url/zh"}</code> - Specify the target URLs for the languages (including the current language and URL). Note these values are absolute URLs without leading "/".</li>
 					</ul>
 				</td>
 			</tr><tr>
@@ -302,8 +301,8 @@ CREATE TABLE "Sitemap" (
 				<td>
 					<span class="usedby_page">All</span><br />
 					<ul>
-						<li><code>{"mime": "image/png"}</code> - Cause the object template to send a <code>Content-Type: image/png</code> HTTP header.</li>
-						<li>If not specified, object template will send a <code>Content-Type: text/plain</code> HTTP header.</li>
+						<li><code>{"mime": "image/png"}</code> - Cause the object template to send a <code>Content-Type: image/png</code> HTTP header (PNG image).</li>
+						<li>If not specified, object template will send a <code>Content-Type: text/plain</code> HTTP header (plain text).</li>
 					</ul>
 				</td>
 			</tr>
@@ -318,4 +317,228 @@ CREATE TABLE "Sitemap" (
 		.usedby_object { background-color: pink; } .usedby_object:before { content: 'Object - '; }
 		.usedby_api { background-color: lightgreen; } .usedby_api:before { content: 'API - '; }
 	</style>
+</div>
+
+<div class="main_title">
+	<h1 id="session">Bearweb Session</h1>
+</div>
+<div>
+	<p>A transaction represents a HTTP request from the client-side to the server-side and the corresponding response from the server-side to the client-side.</p>
+	<p>For Bearweb CMS, a request can be divided into 3 parts:</p>
+	<ul>
+		<li>URL: A request must include a URL (this is also mandatory for HTTP, the first line of a HTTP request is always <code>METHOD URL VERSION</code>, for example: <code>GET /bearweb-resource-optimization/zh HTTP/1.1</code>). It tells the server what resource (or API) the client wants.</li>
+		<li>Session token: HTTP is stateless, which means that the server cannot know who sent the request. To differentiate clients, the server will issue a session token (a cookie) in the first transaction. The client should always include this token in all subsequent transactions to identify the client’s session. If the client disables the cookie, or omits the session token cookie, the server will issue a new one.</li>
+		<li>Data: The request can optionally include some data. This is used in APIs.</li>
+	</ul>
+	<p>For Bearweb CMS, a session is a series of transactions from the same client.</p>
+	<ul>
+		<li>Session token in cookie is used to identify the transaction’s corresponding session. As discussed above.</li>
+	</ul>
+	<p>Bearweb CMS uses two databases to record transactions and sessions.</p>
+	<pre><code>
+CREATE TABLE "Transaction" (
+	"id"	TEXT NOT NULL UNIQUE,
+	"create"	INTEGER NOT NULL DEFAULT -1,
+	"ip"	TEXT NOT NULL DEFAULT '',
+	"url"	TEXT NOT NULL DEFAULT '',
+	"status"	INTEGER NOT NULL DEFAULT 0,
+	"time"	INTEGER NOT NULL DEFAULT -1,
+	"memory"	INTEGER NOT NULL DEFAULT -1,
+	"session"	TEXT NOT NULL DEFAULT '',
+	"log"	TEXT NOT NULL DEFAULT '',
+	PRIMARY KEY("id")
+) WITHOUT ROWID,STRICT
+	</code></pre>
+	<pre><code>
+CREATE TABLE "Session" (
+	"id"		TEXT NOT NULL UNIQUE,
+	"create"	INTEGER NOT NULL DEFAULT -1,
+	"lastuse"	INTEGER NOT NULL DEFAULT -1,
+	"user"		TEXT NOT NULL DEFAULT '',
+	"key"		TEXT NOT NULL DEFAULT '',
+	PRIMARY KEY("id")
+) WITHOUT ROWID,STRICT
+	</code></pre>
+	
+</div>
+<div>
+	<div class="tablewrap"><table>
+		<caption><h2><code>Bearweb_Session.Transaction</code> Database Structure</h2></caption>
+		<thead>
+			<tr>
+				<th scope="col">Column</th>
+				<th scope="col">Type (SQLite)</th>
+				<th scope="col">Default</th>
+				<th scope="col">Description</th>
+				<th scope="col">Example</th>
+			</tr>
+		</thead><tbody>
+			<tr>
+				<th scope="row">id</th>
+				<td>text, PK, Unique, Not null</td>
+				<td>No default value</td>
+				<td>transaction ID.</td>
+				<td><ul>
+					<li><code>'AZaz09+='</code> - Use this ID to identify a transaction.</li>
+				</ul></td>
+			</tr><tr>
+				<th scope="row">create</th>
+				<td>int, Not null</td>
+				<td><code>-1</code> - Invalid value, this shouldn't happen.</td>
+				<td>Create timestamp.</td>
+				<td><ul>
+					<li><code>60</code> - Transaction created at 1970-01-01 00:01:00. This is the exact time when the server received the request, not when the client send the request.</li>
+				</ul></td>
+			</tr><tr>
+				<th scope="row">ip</th>
+				<td>text, Not null</td>
+				<td><code>''</code></td>
+				<td>Client-side IP address and port, it can be a IPv4 address or a IPv6 address.</td>
+				<td><ul>
+					<li><code>'1.2.3.4:10086'</code> - Client IP address and port.</li>
+					<li><code>'1234:5678:90ab:cdef:ff00:5599:abcd:1234:12345'</code> - Client IP address and port.</li>
+				</ul></td>
+			</tr><tr>
+				<th scope="row">url</th>
+				<td>text, Not null</td>
+				<td><code>''</code></td>
+				<td>Request resource or API URL.</td>
+				<td><ul>
+					<li><code>'hello/world.html'</code> - The URL of the accessed resource or API.</li>
+				</ul></td>
+			</tr><tr>
+				<th scope="row">status</th>
+				<td>int, Not null</td>
+				<td><code>0</code> - Invalid value, unhandled exception occured.</td>
+				<td>Response HTTP code.</td>
+				<td><ul>
+					<li><code>200</code> - Server responsed a HTTP <code>200 OK</code> to the client.</li>
+					<li><code>404</code> - Server responsed a HTTP <code>404 Not Found</code> to the client.</li>
+					<li><code>500</code> - Server responsed a HTTP <code>500 Internal Server Error</code> to the client.</li>
+					<li><code>0</code> - An unhandled exception occurred. The PHP script exited before it writes the HTTP response code to the database.</li>
+				</ul></td>
+			</tr><tr>
+				<th scope="row">time</th>
+				<td>int, Not null</td>
+				<td><code>-1</code> - Invalid value, unhandled exception occured.</td>
+				<td>Time in microseconds used to process this trqansaction. This includes the time server waiting for data transfer (this can be a very large number, like tens of seconds, if sends a file). This value comes from <code>(microtime(true) - $_SERVER["REQUEST_TIME_FLOAT"]) * 1e6</code>.</td>
+				<td><ul>
+					<li><code>25000</code> - Server uses 25ms to process this request.</li>
+					<li><code>-1</code> - An unhandled exception occurred. The PHP script exited before it writes the time to the database.</li>
+				</ul></td>
+			</tr><tr>
+				<th scope="row">memory</th>
+				<td>int, Not null</td>
+				<td><code>-1</code> - Invalid value, unhandled exception occured.</td>
+				<td>Memory usage in kiB used to process this trqansaction. This value comes from <code>memory_get_peak_usage(false) / 1024</code>.</td>
+				<td><ul>
+					<li><code>1024</code> - Server uses 1 MiB of memory to process this request.</li>
+					<li><code>-1</code> - An unhandled exception occurred. The PHP script exited before it writes the memory usage to the database.</li>
+				</ul></td>
+			</tr><tr>
+				<th scope="row">session</th>
+				<td>text, Not null</td>
+				<td><code>''</code></td>
+				<td>The ID of the corresponding session.</td>
+				<td><ul>
+					<li><code>'zaZA90=+'</code> - Use this ID to identify the corresponding session.</li>
+				</ul></td>
+			</tr><tr>
+				<th scope="row">log</th>
+				<td>text, or null</td>
+				<td><code>''</code> - Empty log.</td>
+				<td>Debug use. Use <code>$BW->log('Hello world');</code> to append a new line of log.</td>
+				<td><ul>
+					<li><code>'Hello\nStart\nDone!'</code> - Some log.</li>
+					<li><code>''</code> - No log. Or,</li>
+					<li><code>''</code> - An unhandled exception occurred. The PHP script exited before it writes the log to the database.</li>
+				</ul></td>
+			</tr>
+		</tbody>
+	</table></div>
+</div>
+<div>
+	<div class="tablewrap"><table>
+		<caption><h2><code>Bearweb_Session.Session</code> Database Structure</h2></caption>
+		<thead>
+			<tr>
+				<th scope="col">Column</th>
+				<th scope="col">Type (SQLite)</th>
+				<th scope="col">Default</th>
+				<th scope="col">Description</th>
+				<th scope="col">Example</th>
+			</tr>
+		</thead><tbody>
+			<tr>
+				<th scope="row">id</th>
+				<td>text, PK, Unique, Not null</td>
+				<td>No default value</td>
+				<td>transaction ID.</td>
+				<td><ul>
+					<li><code>'zaZA90=+'</code> - Use this ID to identify a session.</li>
+				</ul></td>
+			</tr><tr>
+				<th scope="row">create</th>
+				<td>int, Not null</td>
+				<td><code>-1</code> - Invalid value, this shouldn't happen.</td>
+				<td>Create timestamp.</td>
+				<td><ul>
+					<li><code>60</code> - Session created at 1970-01-01 00:01:00. This is the exact time when the server received the request, not when the client send the request.</li>
+				</ul></td>
+			</tr><tr>
+				<th scope="row">lastuse</th>
+				<td>int, Not null</td>
+				<td><code>-1</code> - Invalid value, this shouldn't happen.</td>
+				<td>Last use timestamp.</td>
+				<td><ul>
+					<li><code>120</code> - Session last used at 1970-01-01 00:02:00. This is the exact time when the server received the request, not when the client send the request.</li>
+				</ul></td>
+			</tr><tr>
+				<th scope="row">user</th>
+				<td>text, Not null</td>
+				<td><code>''</code> - No user binded (guest).</td>
+				<td>Session binded user ID.</td>
+				<td><ul>
+					<li><code>''</code> - Guest session.</li>
+					<li><code>'John'</code> - Session binded to user with ID 'John'.</li>
+				</ul></td>
+			</tr><tr>
+				<th scope="row">key</th>
+				<td>text, Not null</td>
+				<td><code>''</code> - Invalid.</td>
+				<td>A key used to verify the session.</td>
+				<td><ul>
+					<li><code>'90=+zaZA'</code> - Session key.</li>
+				</ul></td>
+			</tr>
+		</tbody>
+	</table></div>
+</div>
+<div>
+	<h2>Session and Transaction Database Maintenance</h2>
+	<p>To view the transaction and its corresponding session, use a view:</p>
+	<pre><code>
+CREATE VIEW `Transaction_View` AS
+	select all
+		t.`id`,
+		datetime(t.`create`, 'unixepoch') as `create`,
+		t.`ip`,
+		t.`url`,
+		t.`status`,
+		t.`time` as `time (us)`,
+		t.`memory` as `memory (kB)`,
+		t.`log`,
+		t.`session`,
+		datetime(s.`create`, 'unixepoch') as `firstuse`,
+		datetime(s.`lastuse`, 'unixepoch') as `lastuse`,
+		s.`user`,
+		s.`key`
+	from `Transaction` t join `Session` s where t.`session` = s.`id`
+order by `create` desc
+	</code></pre>
+	<p>The transaction and session database grows over time. You may want to occasionally clean expired sessions and old transactions:</p>
+	<pre><code>
+delete from `Session` where strftime(\'%s\', \'now\') - `lastuse` &gt; 30 * 24 * 3600;
+delete from `Transaction` where strftime(\'%s\', \'now\') - `create` &gt; 30 * 24 * 3600);
+	</code></pre>
 </div>
