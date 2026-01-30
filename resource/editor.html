@@ -77,7 +77,8 @@
 	dialog_success('OK', 'Read resource success') } catch (e) { dialog_error(e.name, e.message); } };
 	_('#list_reload').onclick = async event => { try {
 		let list = [];
-		const xhr = await fetch('/u/'+_('html').dataset.suser+'/resource.private', {cache: 'reload'});
+		const uid = (await BearAPI_User.whoami()).id;
+		const xhr = await fetch('/u/'+uid+'/resource.private', {cache: 'reload'});
 		if (xhr.status != 200) throw new Error('Cannot load user resource list');
 		(new DOMParser()).parseFromString(await xhr.text(), 'text/xml').firstChild.childNodes.forEach(node => {
 			list.push({
