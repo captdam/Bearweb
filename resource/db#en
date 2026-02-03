@@ -216,7 +216,7 @@ CREATE TABLE "Sitemap" (
 			</tr><tr>
 				<th scope="row">access</th>
 				<td>array of number and string</td>
-				<td>If specified, Bearweb will enable access control on this resource. Only user id or user group in the array can read this resource; others will received a <code>HTTP 403</code> error.</td>
+				<td>If specified, Bearweb will enable access control on this resource. Only user id or user group in the array can read this resource; others will received a <code>HTTP 403</code> error. Note, Bearweb CMS uses <code>string</code> for user ID and <code>int</code> for user group.</td>
 				<td>
 					<span class="usedby_cms">Core</span><br />
 					<ul>
@@ -337,15 +337,15 @@ CREATE TABLE "Sitemap" (
 	<p>Bearweb CMS uses two databases to record transactions and sessions.</p>
 	<pre><code>
 CREATE TABLE "Transaction" (
-	"id"	TEXT NOT NULL UNIQUE,
+	"id"		TEXT NOT NULL UNIQUE,
 	"create"	INTEGER NOT NULL DEFAULT -1,
-	"ip"	TEXT NOT NULL DEFAULT '',
-	"url"	TEXT NOT NULL DEFAULT '',
+	"ip"		TEXT NOT NULL DEFAULT '',
+	"url"		TEXT NOT NULL DEFAULT '',
 	"status"	INTEGER NOT NULL DEFAULT 0,
-	"time"	INTEGER NOT NULL DEFAULT -1,
+	"time"		INTEGER NOT NULL DEFAULT -1,
 	"memory"	INTEGER NOT NULL DEFAULT -1,
 	"session"	TEXT NOT NULL DEFAULT '',
-	"log"	TEXT NOT NULL DEFAULT '',
+	"log"		TEXT NOT NULL DEFAULT '',
 	PRIMARY KEY("id")
 ) WITHOUT ROWID,STRICT
 	</code></pre>
@@ -362,7 +362,7 @@ CREATE TABLE "Session" (
 	
 </div>
 <div>
-	<div class="tablewrap"><table>
+	<div class="tablewrap" id="session-transactiondb"><table>
 		<caption><h2><code>Bearweb_Session.Transaction</code> Database Structure</h2></caption>
 		<thead>
 			<tr>
@@ -377,7 +377,7 @@ CREATE TABLE "Session" (
 				<th scope="row">id</th>
 				<td>text, PK, Unique, Not null</td>
 				<td>No default value</td>
-				<td>transaction ID.</td>
+				<td>Transaction ID.</td>
 				<td><ul>
 					<li><code>'AZaz09+='</code> - Use this ID to identify a transaction.</li>
 				</ul></td>
@@ -458,7 +458,7 @@ CREATE TABLE "Session" (
 	</table></div>
 </div>
 <div>
-	<div class="tablewrap"><table>
+	<div class="tablewrap" id="session-sessiondb"><table>
 		<caption><h2><code>Bearweb_Session.Session</code> Database Structure</h2></caption>
 		<thead>
 			<tr>
@@ -473,7 +473,7 @@ CREATE TABLE "Session" (
 				<th scope="row">id</th>
 				<td>text, PK, Unique, Not null</td>
 				<td>No default value</td>
-				<td>transaction ID.</td>
+				<td>Session ID.</td>
 				<td><ul>
 					<li><code>'zaZA90=+'</code> - Use this ID to identify a session.</li>
 				</ul></td>
@@ -541,4 +541,106 @@ order by `create` desc
 delete from `Session` where strftime(\'%s\', \'now\') - `lastuse` &gt; 30 * 24 * 3600;
 delete from `Transaction` where strftime(\'%s\', \'now\') - `create` &gt; 30 * 24 * 3600);
 	</code></pre>
+</div>
+
+<div class="main_title">
+	<h1 id="user">Bearweb User</h1>
+</div>
+<div>
+	<p>Bearweb saves user in a database.</p>
+	<pre><code>
+CREATE TABLE "User" (
+	"id"		TEXT NOT NULL UNIQUE,
+	"name"		TEXT NOT NULL DEFAULT '',
+	"salt"		TEXT NOT NULL DEFAULT ':',
+	"password"	TEXT NOT NULL DEFAULT ':',
+	"registertime"	INTEGER NOT NULL DEFAULT 0,
+	"lastactive"	INTEGER NOT NULL DEFAULT 0,
+	"group"		TEXT NOT NULL DEFAULT '{}',
+	"data"		TEXT NOT NULL DEFAULT '{}',
+	PRIMARY KEY("id")
+) WITHOUT ROWID,STRICT
+	</code></pre>
+	
+</div>
+<div>
+	<div class="tablewrap" id="session-transactiondb"><table>
+		<caption><h2><code>Bearweb_User</code> Database Structure</h2></caption>
+		<thead>
+			<tr>
+				<th scope="col">Column</th>
+				<th scope="col">Type (SQLite)</th>
+				<th scope="col">Default</th>
+				<th scope="col">Description</th>
+				<th scope="col">Example</th>
+			</tr>
+		</thead><tbody>
+			<tr>
+				<th scope="row">id</th>
+				<td>text, PK, Unique, Not null</td>
+				<td>No default value</td>
+				<td>User ID.</td>
+				<td><ul>
+					<li><code>'John'</code> - Use this ID to identify a user.</li>
+				</ul></td>
+			</tr><tr>
+				<th scope="row">name</th>
+				<td>text, Not null</td>
+				<td><code>''</code></td>
+				<td>User's nickname. This name can be duplicated.</td>
+				<td><ul>
+					<li><code>'John Doe'</code> - User's nickname.</li>
+				</ul></td>
+			</tr><tr>
+				<th scope="row">salt</th>
+				<td>text, Not null</td>
+				<td><code>':'</code> - Invalid value.</td>
+				<td>Salt for password.</td>
+				<td><ul>
+					<li><code>'AZaz09+='</code> - The salt used to hash the password.</li>
+				</ul></td>
+			</tr><tr>
+				<th scope="row">password</th>
+				<td>text, Not null</td>
+				<td><code>':'</code> - Invalid value.</td>
+				<td>Password after salt 32-byte (256-bit) cipher.</td>
+				<td><ul>
+					<li><code>'zaZA90=+'</code> - The password after hash using the salt.</li>
+				</ul></td>
+			</tr><tr>
+				<th scope="row">registertime</th>
+				<td>int, Not null</td>
+				<td><code>0</code></td>
+				<td>Create timestamp.</td>
+				<td><ul>
+					<li><code>60</code> - Account created at 1970-01-01 00:01:00. This is the exact time when the server received the request, not when the client send the request.</li>
+				</ul></td>
+			</tr><tr>
+				<th scope="row">lastactive</th>
+				<td>int, Not null</td>
+				<td><code>0</code></td>
+				<td>Last active timestamp.</td>
+				<td><ul>
+					<li><code>120</code> - Account last active at 1970-01-01 00:02:00. This is the exact time when the server received the request, not when the client send the request.</li>
+				</ul></td>
+			</tr><tr>
+				<th scope="row">group</th>
+				<td>JSON array in text, Not null</td>
+				<td><code>'[]'</code> - No group.</td>
+				<td>User's group. Use <code>int</code> for group ID. Group <code>0</code> is for "admin".</td>
+				<td><ul>
+					<li><code>[0, 1]</code> - User is in admin group and "Group 1".</li>
+					<li><code>[114]</code> - User is in "Group 114".</li>
+				</ul></td>
+			</tr><tr>
+				<th scope="row">data</th>
+				<td>JSON object in text, Not null</td>
+				<td><code>'{}'</code> - Empty data.</td>
+				<td>Other data of this user.</td>
+				<td><ul>
+					<li><code>'{"key1"; "value 1", "key2": 114514}'</code> - User data.</li>
+				</ul></td>
+			</tr>
+		</tbody>
+	</table></div>
 </div>

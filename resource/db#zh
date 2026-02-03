@@ -57,7 +57,7 @@ CREATE TABLE "Sitemap" (
 			<tr>
 				<th scope="row">url</th>
 				<td>text, PK, Unique, Not null</td>
-				<td>No default value</td>
+				<td>无默认值</td>
 				<td>资源URL。所有的资源都通过URL进行索引。</td>
 				<td><ul>
 					<li><code>'hello/world.html'</code> - 使用这个URL来访问该资源。</li>
@@ -216,7 +216,7 @@ CREATE TABLE "Sitemap" (
 			</tr><tr>
 				<th scope="row">access</th>
 				<td>array of number and string</td>
-				<td>如果定义，Bearweb将对该资源启用访问控制。只有用户ID和组被包含在这个数组里才能访问这个资源，其它人都会收到<code>HTTP 403</code>错误。</td>
+				<td>如果定义，Bearweb将对该资源启用访问控制。只有用户ID和组被包含在这个数组里才能访问这个资源，其它人都会收到<code>HTTP 403</code>错误。注意，Bearweb CMS使用<code>string</code>作为用户名，<code>int</code>作为用户组。</td>
 				<td>
 					<span class="usedby_cms">Core</span><br />
 					<ul>
@@ -337,15 +337,15 @@ CREATE TABLE "Sitemap" (
 	<p>Bearweb CMS使用两个数据库来记录交互与会话。</p>
 	<pre><code>
 CREATE TABLE "Transaction" (
-	"id"	TEXT NOT NULL UNIQUE,
+	"id"		TEXT NOT NULL UNIQUE,
 	"create"	INTEGER NOT NULL DEFAULT -1,
-	"ip"	TEXT NOT NULL DEFAULT '',
-	"url"	TEXT NOT NULL DEFAULT '',
+	"ip"		TEXT NOT NULL DEFAULT '',
+	"url"		TEXT NOT NULL DEFAULT '',
 	"status"	INTEGER NOT NULL DEFAULT 0,
-	"time"	INTEGER NOT NULL DEFAULT -1,
+	"time"		INTEGER NOT NULL DEFAULT -1,
 	"memory"	INTEGER NOT NULL DEFAULT -1,
 	"session"	TEXT NOT NULL DEFAULT '',
-	"log"	TEXT NOT NULL DEFAULT '',
+	"log"		TEXT NOT NULL DEFAULT '',
 	PRIMARY KEY("id")
 ) WITHOUT ROWID,STRICT
 	</code></pre>
@@ -362,7 +362,7 @@ CREATE TABLE "Session" (
 	
 </div>
 <div>
-	<div class="tablewrap"><table>
+	<div class="tablewrap" id="session-transactiondb"><table>
 		<caption><h2><code>Bearweb_Session.Transaction</code>数据库结构</h2></caption>
 		<thead>
 			<tr>
@@ -376,7 +376,7 @@ CREATE TABLE "Session" (
 			<tr>
 				<th scope="row">id</th>
 				<td>text, PK, Unique, Not null</td>
-				<td>No default value</td>
+				<td>无默认值</td>
 				<td>交互ID。</td>
 				<td><ul>
 					<li><code>'AZaz09+='</code> - 使用这个ID来查找一个交互。</li>
@@ -458,7 +458,7 @@ CREATE TABLE "Session" (
 	</table></div>
 </div>
 <div>
-	<div class="tablewrap"><table>
+	<div class="tablewrap" id="session-sessiondb"><table>
 		<caption><h2><code>Bearweb_Session.Session</code>数据库结构</h2></caption>
 		<thead>
 			<tr>
@@ -472,7 +472,7 @@ CREATE TABLE "Session" (
 			<tr>
 				<th scope="row">id</th>
 				<td>text, PK, Unique, Not null</td>
-				<td>No default value</td>
+				<td>无默认值</td>
 				<td>会话ID。</td>
 				<td><ul>
 					<li><code>'zaZA90=+'</code> - 使用这个ID来查找一个会话。</li>
@@ -541,4 +541,106 @@ order by `create` desc
 delete from `Session` where strftime(\'%s\', \'now\') - `lastuse` &gt; 30 * 24 * 3600;
 delete from `Transaction` where strftime(\'%s\', \'now\') - `create` &gt; 30 * 24 * 3600);
 	</code></pre>
+</div>
+
+<div class="main_title">
+	<h1 id="user">Bearweb用户</h1>
+</div>
+<div>
+	<p>Bearweb使用数据库来保存用户信息。</p>
+	<pre><code>
+CREATE TABLE "User" (
+	"id"		TEXT NOT NULL UNIQUE,
+	"name"		TEXT NOT NULL DEFAULT '',
+	"salt"		TEXT NOT NULL DEFAULT ':',
+	"password"	TEXT NOT NULL DEFAULT ':',
+	"registertime"	INTEGER NOT NULL DEFAULT 0,
+	"lastactive"	INTEGER NOT NULL DEFAULT 0,
+	"group"		TEXT NOT NULL DEFAULT '{}',
+	"data"		TEXT NOT NULL DEFAULT '{}',
+	PRIMARY KEY("id")
+) WITHOUT ROWID,STRICT
+	</code></pre>
+	
+</div>
+<div>
+	<div class="tablewrap" id="session-transactiondb"><table>
+		<caption><h2><code>Bearweb_User</code>数据库结构</h2></caption>
+		<thead>
+			<tr>
+				<th scope="col">列</th>
+				<th scope="col">SQLite类型</th>
+				<th scope="col">默认值</th>
+				<th scope="col">解释</th>
+				<th scope="col">例子</th>
+			</tr>
+		</thead><tbody>
+			<tr>
+				<th scope="row">id</th>
+				<td>text, PK, Unique, Not null</td>
+				<td>无默认值</td>
+				<td>用户ID。</td>
+				<td><ul>
+					<li><code>'John'</code> - 使用这个ID来查找一个用户。</li>
+				</ul></td>
+			</tr><tr>
+				<th scope="row">name</th>
+				<td>text, Not null</td>
+				<td><code>''</code></td>
+				<td>用户昵称。这个昵称可以重名。</td>
+				<td><ul>
+					<li><code>'John Doe'</code> - 用户的昵称。</li>
+				</ul></td>
+			</tr><tr>
+				<th scope="row">salt</th>
+				<td>text, Not null</td>
+				<td><code>':'</code> - 非法值。</td>
+				<td>密码用盐。</td>
+				<td><ul>
+					<li><code>'AZaz09+='</code> - 密码哈希加盐。</li>
+				</ul></td>
+			</tr><tr>
+				<th scope="row">password</th>
+				<td>text, Not null</td>
+				<td><code>':'</code> - 非法值。</td>
+				<td>加盐哈希后的32字节（256-bit）密码。</td>
+				<td><ul>
+					<li><code>'zaZA90=+'</code> - 加盐哈希后的密码。</li>
+				</ul></td>
+			</tr><tr>
+				<th scope="row">registertime</th>
+				<td>int, Not null</td>
+				<td><code>0</code></td>
+				<td>创建帐号时间戳。</td>
+				<td><ul>
+					<li><code>60</code> - 帐号创建于1970-01-01 00:01:00。该值为服务器接收到请求的实际时间，而非客户端发送请求的时间。</li>
+				</ul></td>
+			</tr><tr>
+				<th scope="row">lastactive</th>
+				<td>int, Not null</td>
+				<td><code>0</code></td>
+				<td>最后活跃时间戳。</td>
+				<td><ul>
+					<li><code>120</code> - 帐号最后活跃于1970-01-01 00:02:00。该值为服务器接收到请求的实际时间，而非客户端发送请求的时间。</li>
+				</ul></td>
+			</tr><tr>
+				<th scope="row">group</th>
+				<td>JSON array in text, Not null</td>
+				<td><code>'[]'</code> - 无分组。</td>
+				<td>用户的分组。使用<code>int</code>作为组ID。组<code>0</code>为“管理员”。</td>
+				<td><ul>
+					<li><code>[0, 1]</code> - 用户在管理员分组和“分组1”。</li>
+					<li><code>[114]</code> - 用户在“分组114”。</li>
+				</ul></td>
+			</tr><tr>
+				<th scope="row">data</th>
+				<td>JSON object in text, Not null</td>
+				<td><code>'{}'</code> - 空数据。</td>
+				<td>用户的其它数据。</td>
+				<td><ul>
+					<li><code>'{"key1"; "value 1", "key2": 114514}'</code> - 用户数据。</li>
+				</ul></td>
+			</tr>
+		</tbody>
+	</table></div>
 </div>
