@@ -297,16 +297,15 @@ int main() {
 
 <div>
 	<h2>图片</h2>
-		<img src="/example/bridge.thumb.jpg" alt="吊桥" style="max-width:400px" />
+		<img src="/example/bridge.thumb.jpg" alt="吊桥" />
 		<p>这样插入一张图片：</p>
 		<pre><code>
-&lt;img src="/example/bridge.thumb.jpg" alt="吊桥" style="max-width:400px" /&gt;
+&lt;img src="/example/bridge.thumb.jpg" alt="吊桥" /&gt;
 		</code></pre>
 		<p>其中：</p>
 		<ul>
 			<li><code>src</code> - 图片链接。</li>
 			<li><code>alt</code>（可选） - 备用文字描述，在图片加载失败时显示以简明阐述图片内容。<b>强烈推荐</b>以提高用户可用性。</li>
-			<li><code>max-width</code>（可选） - 你可以限制图片的尺寸。大尺寸图片可能会占据整个屏幕。</li>
 		</ul>
 		<p>Bearweb网页模板提供了一个页面内图片浏览器。访客可以通过点击图片以放大图片、浏览高清版本（如果设置了的话）和图片的其它信息。</p>
 		<figure>

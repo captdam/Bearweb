@@ -297,16 +297,15 @@ int main() {
 
 <div>
 	<h2>Image and Figure</h2>
-		<img src="/example/bridge.thumb.jpg" alt="Lift bridge" style="max-width:400px" />
+		<img src="/example/bridge.thumb.jpg" alt="Lift bridge" />
 		<p>To insert an image, use:</p>
 		<pre><code>
-&lt;img src="/example/bridge.thumb.jpg" alt="Lift bridge" style="max-width:400px" /&gt;
+&lt;img src="/example/bridge.thumb.jpg" alt="Lift bridge" /&gt;
 		</code></pre>
 		<p>where:</p>
 		<ul>
 			<li><code>src</code> - Link to the image.</li>
 			<li><code>alt</code> (Optional) - Alternative text, description of this image in case the image cannot be loaded. <b>Highly recommended</b> for user accessibility.</li>
-			<li><code>max-width</code> (Optional) - You may want to limit the image dimension. Large width image may span the entire page width.</li>
 		</ul>
 		<p>Bearweb page template comes with a in-page image viewer. Visitor can click the image to zoom-in the image, view its HD version (if supplied) and other information about this image.</p>
 		<figure>
