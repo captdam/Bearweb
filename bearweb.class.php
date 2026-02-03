@@ -42,7 +42,7 @@
 				}
 
 				// E-tag
-				if ($this->site->create == Bearweb_Site::TIME_NULL) { # Create random E-tag for auto generated contents, and disable client-side cache
+				if ($this->site->create == Bearweb_Site::TIME_NULL) { # Create random E-tag for generated-in-time contents, and disable client-side cache
 					header('Last-Modified: '.date('D, j M Y G:i:s').' GMT');
 					header('Etag: '.base64_encode(random_bytes(48))); 
 					header('Cache-Control: no-store');
@@ -562,12 +562,12 @@
 		public string	$password;
 
 		/** Register timestamp */
-		public int	$registerTime {
+		public int	$registertime {
 			set => $value == self::TIME_CURRENT ? $_SERVER['REQUEST_TIME'] : $value;
 		}
 
 		/** Last active timestamp */
-		public int	$lastActive {
+		public int	$lastactive {
 			set => $value == self::TIME_CURRENT ? $_SERVER['REQUEST_TIME'] : $value;
 		}
 
@@ -586,8 +586,8 @@
 		 * @param string	$name		User name (nickname). Default 'Guest' for guest
 		 * @param string	$salt		Salt for password. Default ':' invalid
 		 * @param string	$password	Password after salt 32-byte (256-bit) cipher. Default ':' invalid
-		 * @param int		$registerTime	Register timestamp. Default this::TIME_NULL for no actual time, use this::TIME_CURRENT to use current timestamp
-		 * @param int		$lastActive	Last active timestamp. Default this::TIME_NULL for no actual time, use this::TIME_CURRENT to use current timestamp
+		 * @param int		$registertime	Register timestamp. Default this::TIME_NULL for no actual time, use this::TIME_CURRENT to use current timestamp
+		 * @param int		$lastactive	Last active timestamp. Default this::TIME_NULL for no actual time, use this::TIME_CURRENT to use current timestamp
 		 * @param string|array	$group		User group [114, 514, ...], group must be int (to differentiate from string id), group 0 is for admin: JSON or array. Default []
 		 * @param string|array	$group		User data [meta => data...]: JSON or array. Default []
 		 * @param string	$avatar		User avatar
@@ -597,8 +597,8 @@
 			string		$name = 'Guest',
 			string		$salt = ':',
 			string		$password = ':',
-			int		$registerTime = self::TIME_CURRENT,
-			int		$lastActive = self::TIME_CURRENT,
+			int		$registertime = self::TIME_CURRENT,
+			int		$lastactive = self::TIME_CURRENT,
 			string|array	$group = [],
 			string|array	$data = [],
 			string		$avatar = ''
@@ -607,8 +607,8 @@
 			$this->name		= $name;
 			$this->salt		= $salt;
 			$this->password		= $password;
-			$this->registerTime	= $registerTime;
-			$this->lastActive	= $lastActive;
+			$this->registertime	= $registertime;
+			$this->lastactive	= $lastactive;
 			$this->group		= $group;
 			$this->data		= $data;
 		}
@@ -631,7 +631,7 @@
 			if (!$id) return new static();
 			$user = null;
 			try {
-				$sql = static::$db->prepare('UPDATE `User` SET `lastActive` = IFNULL(?, `lastActive`) WHERE `id` = ? RETURNING *');
+				$sql = static::$db->prepare('UPDATE `User` SET `lastactive` = IFNULL(?, `lastactive`) WHERE `id` = ? RETURNING *');
 				if ($flag & self::QUERY_UPDATE_LASTACTIVE) {
 					$sql->bindValue(1, $_SERVER['REQUEST_TIME'], PDO::PARAM_INT);
 				} else {
@@ -653,13 +653,13 @@
 		 * @throws BW_DatabaseServerError Fail to write user into DB
 		 */
 		public function insert(): void { try {
-			$sql = static::$db->prepare('INSERT INTO `User` (`id`, `name`, `salt`, `password`, `registerTime`, `lastActive`, `group`, `data`) VALUES (?, ?, ?, ?, ?, ?, ?, ?)');
+			$sql = static::$db->prepare('INSERT INTO `User` (`id`, `name`, `salt`, `password`, `registertime`, `lastactive`, `group`, `data`) VALUES (?, ?, ?, ?, ?, ?, ?, ?)');
 			$sql->bindValue(1,	$this->id,				PDO::PARAM_STR	);
 			$sql->bindValue(2,	$this->name,				PDO::PARAM_STR	);
 			$sql->bindValue(3,	$this->salt,				PDO::PARAM_STR	);
 			$sql->bindValue(4,	$this->password,			PDO::PARAM_STR	);
-			$sql->bindValue(5,	$this->registerTime,			PDO::PARAM_INT	);
-			$sql->bindValue(6,	$this->lastActive,			PDO::PARAM_INT	);
+			$sql->bindValue(5,	$this->registertime,			PDO::PARAM_INT	);
+			$sql->bindValue(6,	$this->lastactive,			PDO::PARAM_INT	);
 			$sql->bindValue(7,	static::encodeJSON($this->group),	PDO::PARAM_STR	);
 			$sql->bindValue(8,	static::encodeJSON($this->data),	PDO::PARAM_STR	);
 			$sql->execute();
@@ -674,14 +674,14 @@
 			$sql = static::$db->prepare('UPDATE `User` SET
 				`name` = ?,
 				`salt` = ?,		`password` = ?,
-				`registerTime` = ?,	`lastActive` = ?,
+				`registertime` = ?,	`lastactive` = ?,
 				`group` = ?,		`data` = ?
 			WHERE `id` = ?');
 			$sql->bindValue(1,	$this->name,				PDO::PARAM_STR	);
 			$sql->bindValue(2,	$this->salt,				PDO::PARAM_STR	);
 			$sql->bindValue(3,	$this->password,			PDO::PARAM_STR	);
-			$sql->bindValue(4,	$this->registerTime,			PDO::PARAM_INT	);
-			$sql->bindValue(5,	$this->lastActive,			PDO::PARAM_INT	);
+			$sql->bindValue(4,	$this->registertime,			PDO::PARAM_INT	);
+			$sql->bindValue(5,	$this->lastactive,			PDO::PARAM_INT	);
 			$sql->bindValue(6,	static::encodeJSON($this->group),	PDO::PARAM_STR	);
 			$sql->bindValue(7,	static::encodeJSON($this->data),	PDO::PARAM_STR	);
 			$sql->bindValue(8,	$this->id,				PDO::PARAM_STR	);
@@ -694,7 +694,7 @@
 	class _Bearweb_Session { use Bearweb_DatabaseBacked;
 		const CookieSID = 'BW_SessionID';	# Client-side cookie name for session ID, visible to client-side JS
 		const CookieKey = 'BW_SessionKey';	# Client-side cookie name for session key, non-visible to client-side JS to prevent XSS
-		const Expire = 7 * 24 * 3600;		# Session expire time in seconds
+		const Expire = 7 * 24 * 3600;		# Session expire time in seconds (front-end)
 
 		final const TIME_CURRENT = -1;	# Pass this parameter to let Bearweb use current timestamp
 		final const TIME_NULL = 0;		# Some resource (like auto generated one) has no create / modify time

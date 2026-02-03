@@ -193,7 +193,6 @@ ready().then(() => { _('body').appendChild(dom({_: 'dialog', id: 'modal'})); });
 
 // Image viewer
 const imgViewer = event => {
-	console.log(event.target.getAttribute('title'), event.target.dataset.title, event.target.getAttribute('src'));
 	_('#imgViewer_img').style.background = 'center / contain no-repeat url("' + event.target.src + '")';
 	_('#imgViewer_img').replaceChildren();
 	if (event.target.dataset.hd) {

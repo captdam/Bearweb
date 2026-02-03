@@ -14,14 +14,14 @@
 				<?php if ($BW->site->template[0] == 'page-zh'): ?>
 					<form id="header_search_container" action="/search/zh" method="get" target="search"><input name="keywords" id="header_search" placeholder="使用关键字搜索 ⏎"></form>
 					<nav id="header_navCat"><ul>
-						<li><a href="/zh">Bearweb内容管理系统</a></li>
+						<li><a href="/zh">主页</a></li>
 						<li><a href="/framework/zh">架构</a></li>
 						<li><a href="/template/zh">模板</a></li>
 					</ul></nav>
 				<?php else: ?>
 					<form id="header_search_container" action="/search/en" method="get" target="search"><input name="keywords" id="header_search" placeholder="Search by keywords ⏎"></form>
 					<nav id="header_navCat"><ul>
-						<li><a href="/">Bearweb CMS</a></li>
+						<li><a href="/">Home</a></li>
 						<li><a href="/framework/en">Framework</a></li>
 						<li><a href="/template/en">Templates</a></li>
 					</ul></nav>
