@@ -76,7 +76,7 @@ CREATE TABLE "Sitemap" (
 				<td><code>'["object", "blob"]'</code> - 对象（文件）模板，直接输出内容。</td>
 				<td>进一步处理这个资源的模板。Bearweb CMS将调用<code>template[0]</code>（模板），然后<code>template[0]</code>将调用<code>template[1]</code>（子模板）。</td>
 				<td><ul>
-					<li><code>['page-en', 'direct']</code> - Bearweb CMS将调用<code>Bearweb_Site::Dir_Template</code>目录下的<code>page-en.php</code>， 然后<code>page-en.php</code>将调用<code>Bearweb_Site::Dir_Template</code>目录下的<code>page-en_direct.php</code>。</li>
+					<li><code>'['page-en', 'direct']'</code> - Bearweb CMS将调用<code>Bearweb_Site::Dir_Template</code>目录下的<code>page-en.php</code>， 然后<code>page-en.php</code>将调用<code>Bearweb_Site::Dir_Template</code>目录下的<code>page-en_direct.php</code>。</li>
 				</ul></td>
 			</tr><tr>
 				<th scope="row">owner</th>
@@ -111,7 +111,7 @@ CREATE TABLE "Sitemap" (
 				<td><code>'{}'</code> - 空元数据。</td>
 				<td>资源元素据。包含Bearweb CMS架构与模板使用的可选数据。</td>
 				<td><ul>
-					<li><code>'{"title"; "Example Title", "description": "This is an example resource."}'</code> - 见下文。</li>
+					<li><code>'{"title": "Example Title", "description": "This is an example resource."}'</code> - <a href="#sitemap-meta">见下文</a>。</li>
 				</ul></td>
 			</tr><tr>
 				<th scope="row">content</th>
@@ -130,14 +130,14 @@ CREATE TABLE "Sitemap" (
 				<td><code>'{}'</code> - 空额外数据。</td>
 				<td>资源额外素据。包含模板使用的可选数据。</td>
 				<td><ul>
-					<li><code>'{"lang-en"; "url/en", "lang-zh": "url/zh"}'</code> - 见下文。</li>
+					<li><code>'{"lang-en": "url/en", "lang-zh": "url/zh"}'</code> - <a href="#sitemap-aux">见下文</a>。</li>
 				</ul></td>
 			</tr>
 		</tbody>
 	</table></div>
 	<p><code>meta</code>和<code>aux</code>保存了可选信息。为这些可选信息各自单独创建数据库中表的列将会使得表很宽很不便于管理且产生大量不使用的值。因此，使用JSON保存它们。</p>
 	
-	<div class="tablewrap"><table>
+	<div class="tablewrap" id="sitemap-meta"><table>
 		<caption><h2>Bearweb_Site <code>meta</code>可选数据</h2></caption>
 		<thead>
 			<tr>
@@ -154,7 +154,7 @@ CREATE TABLE "Sitemap" (
 				<td>
 					<span class="usedby_page">All</span><br />
 					<ul>
-						<li><code>{"title": "示例标题"}</code> - 页面标题为“示例标题”。</li>
+						<li><code>'{"title": "示例标题"}'</code> - 页面标题为“示例标题”。</li>
 					</ul>
 				</td>
 			</tr><tr>
@@ -164,7 +164,7 @@ CREATE TABLE "Sitemap" (
 				<td>
 					<span class="usedby_page">All</span><br />
 					<ul>
-						<li><code>{"keywords": "关键字1, 关键字2, 关键字3"}</code> - 页面有3个关键字：“关键字1”、“关键字2”、“关键字3”。</li>
+						<li><code>'{"keywords": "关键字1, 关键字2, 关键字3"}'</code> - 页面有3个关键字：“关键字1”、“关键字2”、“关键字3”。</li>
 					</ul>
 				</td>
 			</tr><tr>
@@ -174,7 +174,7 @@ CREATE TABLE "Sitemap" (
 				<td>
 					<span class="usedby_page">All</span><br />
 					<ul>
-						<li><code>{"description": "这是一个简述。"}</code> - 页面简述为“这是一个简述。”。</li>
+						<li><code>'{"description": "这是一个简述。"}'</code> - 页面简述为“这是一个简述。”。</li>
 					</ul>
 				</td>
 			</tr><tr>
@@ -184,7 +184,7 @@ CREATE TABLE "Sitemap" (
 				<td>
 					<span class="usedby_cms">Core</span><br />
 					<ul>
-						<li><code>{"r301": "new/page.html"}</code> - 使Bearweb发送<code>301 Moved Permanently</code>HTTP头至“/new/page.html”。注意该值为绝对URL且省略开头的“/”。</li>
+						<li><code>'{"r301": "new/page.html"}'</code> - 使Bearweb发送<code>301 Moved Permanently</code>HTTP头至“/new/page.html”。注意该值为绝对URL且省略开头的“/”。</li>
 					</ul>
 				</td>
 			</tr><tr>
@@ -194,7 +194,7 @@ CREATE TABLE "Sitemap" (
 				<td>
 					<span class="usedby_cms">Core</span><br />
 					<ul>
-						<li><code>{"r301": "new/page.html"}</code> - 使Bearweb发送<code>302 Found</code>HTTP头至“/new/page.html”。注意该值为绝对URL且省略开头的“/”。</li>
+						<li><code>'{"r301": "new/page.html"}'</code> - 使Bearweb发送<code>302 Found</code>HTTP头至“/new/page.html”。注意该值为绝对URL且省略开头的“/”。</li>
 					</ul>
 				</td>
 			</tr><tr>
@@ -204,9 +204,9 @@ CREATE TABLE "Sitemap" (
 				<td>
 					<span class="usedby_cms">Core</span><span class="usedby_page">All</span><br />
 					<ul>
-						<li><code>{"r301": "noindex"}</code> - 不要收录本资源。</li>
-						<li><code>{"r301": "nofollow"}</code> - 不要发现本资源的链接。</li>
-						<li><code>{"r301": "noindex, nofollow"}</code> - 以上两项。</li>
+						<li><code>'{"r301": "noindex"}'</code> - 不要收录本资源。</li>
+						<li><code>'{"r301": "nofollow"}'</code> - 不要发现本资源的链接。</li>
+						<li><code>'{"r301": "noindex, nofollow"}'</code> - 以上两项。</li>
 					</ul>
 					<div class="main_note_error">
 						<p>但是有的爬虫坏得很，说了当成耳边风。</p>
@@ -220,8 +220,8 @@ CREATE TABLE "Sitemap" (
 				<td>
 					<span class="usedby_cms">Core</span><br />
 					<ul>
-						<li><code>{"access": ["Alice", 23, "Bob"]}</code> - 允许用户名为“Alice”和“Bob”的两位用户，以及分组23下的用户读取。</li>
-						<li><code>{"access": []}</code> - 任何人都看不到。</li>
+						<li><code>'{"access": ["Alice", 23, "Bob"]}'</code> - 允许用户名为“Alice”和“Bob”的两位用户，以及分组23下的用户读取。</li>
+						<li><code>'{"access": []}'</code> - 任何人都看不到。</li>
 						<li>资源所有者和管理员（组0）永远都有权读写。</li>
 					</ul>
 				</td>
@@ -232,11 +232,11 @@ CREATE TABLE "Sitemap" (
 				<td>
 					<span class="usedby_page">All</span><br />
 					<ul>
-						<li><code>{"bgimg": "sun.jpg"}</code> - 使用“/sun.jpg”作为该页海报。注意该值为绝对URL且省略开头的“/”。</li>
+						<li><code>'{"bgimg": "sun.jpg"}'</code> - 使用“/sun.jpg”作为该页海报。注意该值为绝对URL且省略开头的“/”。</li>
 					</ul>
 					<span class="usedby_page">Image</span><br />
 					<ul>
-						<li><code>{"hd": "sun.thumb.jpg"}</code> - 在图片（Image）子模版下，使用该图为缩略图。注意该值为绝对URL且省略开头的“/”。</li>
+						<li><code>'{"hd": "sun.thumb.jpg"}'</code> - 在图片（Image）子模版下，使用该图为缩略图。注意该值为绝对URL且省略开头的“/”。</li>
 					</ul>
 				</td>
 			</tr><tr>
@@ -246,7 +246,7 @@ CREATE TABLE "Sitemap" (
 				<td>
 					<span class="usedby_page">Image</span><br />
 					<ul>
-						<li><code>{"hd": "sun.jpg"}</code> - 使用“/sun.jpg”作为该页的高清大图。注意该值为绝对URL且省略开头的“/”。</li>
+						<li><code>'{"hd": "sun.jpg"}'</code> - 使用“/sun.jpg”作为该页的高清大图。注意该值为绝对URL且省略开头的“/”。</li>
 					</ul>
 				</td>
 			</tr><tr>
@@ -266,7 +266,7 @@ CREATE TABLE "Sitemap" (
 				<td>
 					<span class="usedby_api">All</span><br />
 					<ul>
-						<li><code>{"task": "login"}</code> - 执行“login”任务。</li>
+						<li><code>'{"task": "login"}'</code> - 执行“login”任务。</li>
 					</ul>
 				</td>
 			</tr>
@@ -274,7 +274,7 @@ CREATE TABLE "Sitemap" (
 	</table></div>
 	<p>上述值都为可选的。当需要使用某个值但没有定义时，Bearweb将会使用默认值。</p>
 
-	<div class="tablewrap"><table>
+	<div class="tablewrap" id="sitemap-aux"><table>
 		<caption><h2>Bearweb_Site <code>aux</code>可选数据</h2></caption>
 		<thead>
 			<tr>
@@ -291,7 +291,7 @@ CREATE TABLE "Sitemap" (
 				<td>
 					<span class="usedby_page">All</span><br />
 					<ul>
-						<li><code>{"lang-en": "url/en", "lang-zh": "url/zh"}</code> - 备选语言（包括当前语言）的URL。注意该值为绝对URL且省略开头的“/”。</li>
+						<li><code>'{"lang-en": "url/en", "lang-zh": "url/zh"}'</code> - 备选语言（包括当前语言）的URL。注意该值为绝对URL且省略开头的“/”。</li>
 					</ul>
 				</td>
 			</tr><tr>
@@ -301,7 +301,7 @@ CREATE TABLE "Sitemap" (
 				<td>
 					<span class="usedby_page">All</span><br />
 					<ul>
-						<li><code>{"mime": "image/png"}</code> - 对象模板将发送<code>Content-Type: image/png</code> HTTP头（PNG图片）。</li>
+						<li><code>'{"mime": "image/png"}'</code> - 对象模板将发送<code>Content-Type: image/png</code> HTTP头（PNG图片）。</li>
 						<li>如果没有设定，对象模板将发送<code>Content-Type: text/plain</code> HTTP头（纯文本）。</li>
 					</ul>
 				</td>
@@ -447,7 +447,7 @@ CREATE TABLE "Session" (
 				<th scope="row">log</th>
 				<td>text, or null</td>
 				<td><code>''</code> - 空log。</td>
-				<td>调试用。使用<code>$BW->log('Hello world');</code>来打一行log。</td>
+				<td>调试用。使用<code>$BW-&gt;log('Hello world');</code>来打一行log。</td>
 				<td><ul>
 					<li><code>'Hello\nStart\nDone!'</code> - 一些log。</li>
 					<li><code>''</code> - 没有log。或者也可能，</li>
@@ -538,8 +538,9 @@ order by `create` desc
 	</code></pre>
 	<p>会话与交互数据库将的体积随时间而增长。你可以定期清理过期会话和陈旧交互：</p>
 	<pre><code>
-delete from `Session` where strftime(\'%s\', \'now\') - `lastuse` &gt; 30 * 24 * 3600;
-delete from `Transaction` where strftime(\'%s\', \'now\') - `create` &gt; 30 * 24 * 3600);
+delete from `Session` where strftime('%s', 'now') - `lastuse` &gt; 30 * 24 * 3600;
+delete from `Transaction` where strftime('%s', 'now') - `create` &gt; 30 * 24 * 3600;
+vacuum;
 	</code></pre>
 </div>
 
@@ -629,8 +630,8 @@ CREATE TABLE "User" (
 				<td><code>'[]'</code> - 无分组。</td>
 				<td>用户的分组。使用<code>int</code>作为组ID。组<code>0</code>为“管理员”。</td>
 				<td><ul>
-					<li><code>[0, 1]</code> - 用户在管理员分组和“分组1”。</li>
-					<li><code>[114]</code> - 用户在“分组114”。</li>
+					<li><code>'[0, 1]'</code> - 用户在管理员分组和“分组1”。</li>
+					<li><code>'[114]'</code> - 用户在“分组114”。</li>
 				</ul></td>
 			</tr><tr>
 				<th scope="row">data</th>
@@ -638,7 +639,7 @@ CREATE TABLE "User" (
 				<td><code>'{}'</code> - 空数据。</td>
 				<td>用户的其它数据。</td>
 				<td><ul>
-					<li><code>'{"key1"; "value 1", "key2": 114514}'</code> - 用户数据。</li>
+					<li><code>'{"key1": "value 1", "key2": 114514}'</code> - 用户数据。</li>
 				</ul></td>
 			</tr>
 		</tbody>

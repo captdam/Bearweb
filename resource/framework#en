@@ -1,0 +1,885 @@
+<div class="main_title">
+	<h1>Code Style</h1>
+</div>
+<div>
+	<p>The entry point and all 3 core modules are saved in the file <code>bearweb.class.php</code>. The Bearweb CMS entry class is named <code>class _Bearweb</code>, the sitemap module is named <code>class _Bearweb_Site</code>, the session module is named <code>class _Bearweb_Session</code>, and the user module is named <code>class _Bearweb_User</code>. You should never modify <code>bearweb.class.php</code>.</p>
+	<p>In <code>index.php</code>, you should extend the entry class to <code>Bearweb</code>, and the 3 modules to <code>Bearweb_Site</code>, <code>Bearweb_Session</code>, <code>Bearweb_User</code>. You may also override any method or property in the extended classes.</p>
+	<p>Since Bearweb CMS is database-driven, you need to specify the database used in each module.</p>
+	<p>Following example shows extending the session module in <code>index.php</code>, overriding the session token cookie names and token life, specifying the session database:</p>
+	<pre><code>
+class Bearweb_Session extends _Bearweb_Session {
+	const CookieSID = 'SessionID';
+	const CookieKey = 'SessionKey';
+	const Expire = 7 * 24 * 3600;
+
+	public static function init(): void {
+		try { static::$db = new PDO('sqlite:./bw_session.db', null, null, [
+			PDO::ATTR_ERRMODE =&gt; PDO::ERRMODE_EXCEPTION,
+			PDO::ATTR_TIMEOUT =&gt; 10, #10s waiting time should be far more than enough
+			PDO::ATTR_DEFAULT_FETCH_MODE =&gt; PDO::FETCH_ASSOC
+		]); } catch (Exception $e) { throw new BW_DatabaseServerError('Fail to open DB: '.$e-&gt;getMessage(), 500); }
+	}
+}
+	</code></pre>
+	<p>Bearweb CMS uses PHP as front-end and SQLite as back-end. Bearweb CMS uses <code>int</code>, <code>string</code> and <code>array</code> (includes array and object), all them are supported by PHP, but <code>array</code> is not supported in SQLite. A PHP <code>array</code> will be converted to <code>JSON</code> in <code>string</code> type before save in database, and vice versa.</p>
+</div>
+
+<div class="main_title">
+	<h1 id="error">Error Handling</h1>
+</div>
+<div>
+	<p>Bearweb Exception Class <code>BW_Error</code> may be throwed by Bearweb modules and templates and be catched by Bearweb entry class <code>Bearweb</code>. Upon exception (either server exception or client exception), the Bearweb entry class will write the error to Apache2 log and invoke the <a href="/page/en#error">error page template</a>.</p>
+	<p>The relationship of <code>BW_Error</code> class family is given below:</p>
+	<ul>
+		<li>
+			<code style="background:pink">Exception</code> - The PHP exception class. <span class="info" style="color:red">(Do not use the base class)</span>
+			<ul>
+				<li>
+					<code style="background:pink">BW_Error</code> - Bearweb base exception class. <span class="info" style="color:red">(Do not use the base class)</span>
+					<ul>
+						<li>
+							<code style="background:pink">BW_ServerError</code> - Exception due to error condition on server-side. <span class="info" style="color:red">(Do not use the base class)</span>
+							<ul>
+								<li><code style="background:lightgreen">BW_WebServerError</code> - Exception due to error condition on server-side front-end. Such as a wrong configuration, missing template file.</li>
+								<li><code style="background:lightgreen">BW_DatabaseServerError</code> - Exception due to error condition on server-side database. Such as fail to connect database, fail to read / write database, database condition fail (e.g. unique key).</li>
+								<li><code style="background:lightgreen">BW_ExternalServerError</code> - Exception due to error condition on external server. Such as fail to read / write data to external object storage server, fail to communicate with token auth server.</li>
+							</ul>
+						</li>
+						<li>
+							<p><code style="background:lightgreen">BW_ClientError</code> - Exception due to error condition on client-side. Such as a non-existed URL (404), a wrong password, an undefined required value in a form, a bad format value in post data.</p>
+						</li>
+					</ul>
+				</li>
+			</ul>
+		</li>
+	</ul>
+</div>
+<div><h2>For Dev</h2>
+	<h3><code>BW_Error(string $message, int $code)</code> - Throw a new exception</h3>
+	<p>Use <code>throw BW_Error(string $message, int $code)</code> to interrupt the execution of the module or template and let Bearweb CMS to invoke the error page template, where:</p>
+	<ul>
+		<li><code>message</code> - A message describing the exception.</li>
+		<li><code>code</code> - A HTTP code describing the exception.</li>
+	</ul>
+	<h3><code>$e-&gt;getMessage(): string</code> - Get the error message</h3>
+	<p>Similar to the vanilla PHP <code>Exception</code> class, use <code>$e-&gt;getMessage(): string</code> to get the error message; use <code>echo $e;</code> to print the error message and other infomation like call stack.</p>
+	<p>For example:</p>
+	<pre><code>
+try {
+	...
+	$db-&gt;execute();
+} catch (Exception $e) {
+	throw new BW_DatabaseServerError('Cannot insert into sitemap database: '.$e-&gt;getMessage(), 500);
+}
+...
+echo $e-&gt;getMessage(); // echo 'BW_DatabaseServerError - Cannot insert into sitemap database: DBMS message'
+	</code></pre>
+</div>
+
+<div class="main_title">
+	<h1 id="bearweb">Entry Point</h1>
+</div>
+<div>
+	<p>When a HTTP request is received on the server-side, the underlying Apache2 will execute the PHP scripts which contain the Bearweb CMS. Next, Bearweb CMS will performe the following tasks in the Bearweb CMS entry class <code>Bearweb</code>:</p>
+	<ol>
+		<li>Initialize the 3 core modules: sitemap, session control and user management. Since Bearweb CMS is database-driven, this step includes connecting to the modules' database.</li>
+		<li><a href="#session">Session</a> control. Bearweb CMS will determine the request's associated session. If the request does not belong to any valid session, a new session will be issued, which can be used in subsequent requests.</li>
+		<li>Determine the session's binded <a href="#user">user</a>. This allows Bearweb CMS to determine privileges of this request.</li>
+		<li>Fetch the requested <a href="#sitemap">resource</a> (such as a webpage, an image) or execute the requested API, if the user has the privilege to do so.</li>
+		<li>Execute the <a href="/template/en">template</a> for that resource / API for future processes.</li>
+	</ol>
+	<p>If step 1, 2 or 3 failed, Bearweb CMS returns a fatal error.</p>
+	<p>Upon exception (either server exception or client exception) in step 4 or 5, the Bearweb entry class will write the error to Apache2 log and invoke the <a href="/page/en#error">error page template</a>.</p>
+</div>
+<div><h2>For Dev</h2>
+	<p>The 3 modules are included in the Bearweb CMS entry class <code>Bearweb</code> as member instances:</p>
+	<pre><code>
+class Bearweb {
+	protected Bearweb_Session $session;
+	protected Bearweb_User $user;
+	protected Bearweb_Site $site;
+}
+	</code></pre>
+	<p>To access a module instance, use <code>$this-&gt;module</code> or <code>$BW-&gt;module</code>. For example:</p>
+	<pre><code>
+echo $this-&gt;session-&gt;sID; // echo session ID 'AZaz09'
+echo $BW-&gt;site-&gt;url; // echo requested resource's URL 'hello.html'
+$this-&gt;session-&gt;bindUser('John'); // bind current session to user 'John'
+	</code></pre>
+	<p>For security reason, you may want to hide server-side error by override <code>Bearweb::HideServerError</code> to <code>true</code>. In this case, Bearweb CMS sends a general HTTP <code>500 Internal Server Error</code> without the actual error message to the client. Regardless the <code>Bearweb::HideServerError</code> setting, Bearweb writes the actual error message to Apache2 log.</p>
+</div>
+
+<div class="main_title">
+	<h1 id="session">Session Control</h1>
+</div>
+<div><h2>Session and Transaction</h2>
+	<p>A transaction represents a HTTP request from the client-side to the server-side and the corresponding response from the server-side to the client-side.</p>
+	<p>For Bearweb CMS, a request can be divided into 3 parts:</p>
+	<ul>
+		<li>URL: A request must include a URL (this is also mandatory for HTTP, the first line of a HTTP request is always <code>METHOD URL VERSION</code>, for example: <code>GET /bearweb-resource-optimization/zh HTTP/1.1</code>). It tells the server what resource (or API) the client wants.</li>
+		<li>Session token: HTTP is stateless, which means that the server cannot know who sent the request. To differentiate clients, the server will issue a session token (a cookie) in the first transaction. The client should always include this token in all subsequent transactions to identify the client's session. If the client disables the cookie, or omits the session token cookie, the server will issue a new one.</li>
+		<li>Data: The request can optionally include some data. This is used in APIs.</li>
+	</ul>
+	<p>As a database-driven framework, Bearweb CMS records each transaction and related information in <a href="/db/en#session-transactiondb">a database</a>.</p>
+	<p>For Bearweb CMS, a session is a series of transactions from the same client.</p>
+	<ul>
+		<li>Session token in cookie is used to identify the transaction's corresponding session. As discussed above.</li>
+	</ul>
+	<p>As a database-driven framework, Bearweb CMS records each session and related information in <a href="/db/en#session-sessiondb">a database</a>.</p>
+</div>
+<div><h2>Session Token</h2>
+	<p>Bearweb CMS uses cookies to store the session token on the client side. The token includes 3 parts:</p>
+	<ul>
+		<li>Session ID: A random, out-of-order (so the client cannot know how many sessions the server has issued), unique identifier represents the session. This cookie is HTTP-only.</li>
+		<li>Session key: A random string used to verify the session ID and for hash.</li>
+		<li>Last use time: A timestamp representing when is the last time the token is used. Only saved on server-side.</li>
+	</ul>
+	<div class="main_note_warning">
+		<p>The session key is visible to client-side JavaScript, it can be used to perform has on the client-side. A suspicious JS can "steal" this information (<a href="https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Set-Cookie#httponly" target="_blank">XSS attack</a>). To prevent this, a HTTP-only cookie, the session key, is introduced. It is non-visible to any client-side running scripts, so no one can copy to "steal" it; however, it is always included in the HTTP request sent to the server-side, allowing the server to read it.</p>
+	</div>
+	<p>In the first transaction, the client-side cookie is clean. That means, the request contains no session token. The server will issue a new session in this case. 2 cookies are sent to the client-side: the session ID and the session key.</p>
+	<p>In the subsequent transactions, the client-side cookie includes the session token. When the client sends a request to the server, it includes the session token in the request. The server can then use the session token to determine the client's session.</p>
+	<p>A suspicious request can include a forged or stolen session ID; however, it is almost impossible to forge or steal the associated key for that session ID. When Bearweb CMS receives a token without the correct key, a new session token (ID and key) will be issued and sent to the client.</p>
+	<p>If the last use time is too old, the session is expired. In this case, a new session token (ID and key) will be issued and sent to the client.</p>
+</div>
+<div><h2>Transaction Log and Session Control</h2>
+	<p>When Bearweb CMS receives a request, a <code>Bearweb_Session</code> instance is created. Based on the session token supplied in the request, Bearweb will either:</p>
+	<ul>
+		<li>Update the session's <code>lastuse</code> (last use timestamp) to current timestamp (more specifically, the time when request is received) in the <a href="/db/en#session-sessiondb">session database</a>.</li>
+		<li>Create a new session in the <a href="/db/en#session-sessiondb">session database</a>. Bearweb will generate and record the session <code>id</code> and <code>key</code>, set the <code>create</code> (create timestamp) and <code>lastuse</code> to current timestamp. The <code>user</code> (session user) is set to <code>''</code> (empty string, which means "guest").</li>
+	</ul>
+	<p>Bearweb CMS also records the transaction in the <a href="/db/en#session-transactiondb">transaction database</a>, which includes:</p>
+	<ul>
+		<li><code>id</code> - Transaction ID.</li>
+		<li><code>create</code> - Create timestamp.</li>
+		<li><code>ip</code> - Client-side IP address and port, it can be a IPv4 address or a IPv6 address.</li>
+		<li><code>url</code> - Request resource or API URL.</li>
+		<li><code>session</code> - The ID of the corresponding session.</li>
+		<li><code>log</code> - Session log, for debug use. Empty for now.</li>
+	</ul>
+	<div class="main_note_warning">
+		<p>The above two tasks writing to session and transaction databases MUST success. If any of the two writes failed, Bearweb CMS will rollback writes to the databases, and halt the process.</p>
+	</div>
+	<p>After the request is processed and the response is returned to the client, Bearweb CMS will update the <a href="/db/en#session-transactiondb">transaction in the database</a> with the following information:</p>
+	<ul>
+		<li><code>log</code> - Commit the transaction log.</li>
+		<li><code>status</code> - Response HTTP code.</li>
+		<li><code>time</code> - Time in microseconds used to process this trqansaction. This includes the time server waiting for data transfer (this can be a very large number, like tens of seconds, if sends a file). This value comes from <code>(microtime(true) - $_SERVER["REQUEST_TIME_FLOAT"]) * 1e6</code>.</li>
+		<li><code>memory</code> - Memory usage in kiB used to process this trqansaction. This value comes from <code>memory_get_peak_usage(false) / 1024</code>.</li>
+	</ul>
+	<div class="main_note_warning">
+		<p>The above task happened when the PHP engine destruct the <code>Bearweb_Session</code> instance when the process ends, and it MAY failed (although not likely to happen). This error will be silently ignored. The update will not be commit.</p>
+	</div>
+</div>
+<div><h2><code>Bearweb_Session</code> Class</h2>
+	<p>A <code>Bearweb_Session</code> instance contains the following information:</p>
+	<div class="tablewrap"><table>
+		<caption><h3><code>Bearweb_Session</code> Instance Properties</h3></caption>
+		<thead>
+			<tr>
+				<th scope="col">Name</th>
+				<th scope="col">Type (PHP)</th>
+				<th scope="col">Description</th>
+				<th scope="col">Example</th>
+			</tr>
+		</thead><tbody>
+			<tr>
+				<th scope="row">sID</th>
+				<td>public readonly string</td>
+				<td>transaction ID.</td>
+				<td><ul>
+					<li><code>'zaZA90=+'</code> - Use this ID to identify a session.</li>
+				</ul></td>
+			</tr><tr>
+				<th scope="row">sCreate</th>
+				<td>public readonly int</td>
+				<td>Create timestamp.</td>
+				<td><ul>
+					<li><code>60</code> - Session created at 1970-01-01 00:01:00. This is the exact time when the server received the request, not when the client send the request.</li>
+				</ul></td>
+			</tr><tr>
+				<th scope="row">sLastUse</th>
+				<td>public readonly int</td>
+				<td>Last use timestamp.</td>
+				<td><ul>
+					<li><code>120</code> - Session last used at 1970-01-01 00:02:00. This is the exact time when the server received the request, not when the client send the request.</li>
+				</ul></td>
+			</tr><tr>
+				<th scope="row">sUser</th>
+				<td>public readonly string</td>
+				<td>Session binded user ID.</td>
+				<td><ul>
+					<li><code>''</code> - Guest session.</li>
+					<li><code>'John'</code> - Session binded to user with ID 'John'.</li>
+				</ul></td>
+			</tr><tr>
+				<th scope="row">sKey</th>
+				<td>public readonly string</td>
+				<td>A key used to verify the session.</td>
+				<td><ul>
+					<li><code>'90=+zaZA'</code> - Session key.</li>
+				</ul></td>
+			</tr><tr>
+				<th scope="row">tID</th>
+				<td>public readonly string</td>
+				<td>Transaction ID.</td>
+				<td><ul>
+					<li><code>'AZaz09+='</code> - Use this ID to identify a transaction.</li>
+				</ul></td>
+			</tr><tr>
+				<th scope="row">tCreate</th>
+				<td>public readonly int</td>
+				<td>Create timestamp.</td>
+				<td><ul>
+					<li><code>60</code> - Transaction created at 1970-01-01 00:01:00. This is the exact time when the server received the request, not when the client send the request.</li>
+				</ul></td>
+			</tr><tr>
+				<th scope="row">tIP</th>
+				<td>public readonly string</td>
+				<td>Client-side IP address and port, it can be a IPv4 address or a IPv6 address.</td>
+				<td><ul>
+					<li><code>'1.2.3.4:10086'</code> - Client IP address and port.</li>
+					<li><code>'1234:5678:90ab:cdef:ff00:5599:abcd:1234:12345'</code> - Client IP address and port.</li>
+				</ul></td>
+			</tr><tr>
+				<th scope="row">tURL</th>
+				<td>public readonly string</td>
+				<td>Request resource or API URL.</td>
+				<td><ul>
+					<li><code>'hello/world.html'</code> - The URL of the accessed resource or API.</li>
+				</ul></td>
+			</tr><tr>
+				<th scope="row">tSID</th>
+				<td>public readonly string</td>
+				<td>The ID of the corresponding session.</td>
+				<td><ul>
+					<li><code>'zaZA90=+'</code> - Use this ID to identify the corresponding session.</li>
+				</ul></td>
+			</tr><tr>
+				<th scope="row">tLog</th>
+				<td>public readonly string</td>
+				<td>Debug use. Do not write directly; instead, use <code>$BW-&gt;log('Hello world');</code> to append a new line of log.</td>
+				<td><ul>
+					<li><code>'Hello\nStart\nDone!'</code> - Some log.</li>
+					<li><code>''</code> - No log. Or,</li>
+					<li><code>''</code> - An unhandled exception occurred. The PHP script exited before it writes the log to the database.</li>
+				</ul></td>
+			</tr>
+		</tbody>
+	</table></div>
+</div>
+<div><h3><code>log(string $log): string</code> - Append log to transaction record</h3>
+	<p>Use <code>$BW-&gt;session-&gt;log(string $log): string</code> to append a new line of log, where:</p>
+	<ul>
+		<li><code>uid</code> - User's ID.</li>
+		<li><code>return</code> - Log in full after append.</li>
+	</ul>
+	<pre><code>
+// Log is empty at first
+
+echo $BW-&gt;session-&gt;log('A'); // echo "\nA"
+$BW-&gt;session-&gt;log('B');
+echo $BW-&gt;session-&gt;log('C'); // echo "\nA\nB\nC"
+
+// At the end, "\nA\nB\nC" will be write to transaction database
+	</code></pre>
+	<p>Log is cached and will be write to database only at process ends. (Write-back)</p>
+</div>
+<div><h3><code>bindUser(string $uid): void</code> - Bind a user to the session</h3>
+	<p>Use <code>$BW-&gt;session-&gt;bindUser(string $uid): void</code> to bind the session to a user, where:</p>
+	<ul>
+		<li><code>uid</code> - User's ID.</li>
+	</ul>
+	<p>This method will write the user ID into database. Subsequent request using this session token will be recognized as the given user.</p>
+	<pre><code>
+// Transaction at time 1:
+echo $BW-&gt;session-&gt;user['ID']; // echo '', guest, current session has no user bind
+$BW-&gt;session-&gt;bindUser('uid123');
+
+// Transaction at time 2:
+echo $BW-&gt;session-&gt;user['ID']; // echo 'uid123', current session bind to user with ID 'uid123'
+
+// Transaction at time 3:
+$BW-&gt;session-&gt;bindUser(''); //Logout, bind current session back to guest
+
+// transaction at time 4:
+echo $BW-&gt;session-&gt;user['ID']; // echo '', guest, no user bind
+	</code></pre>
+	<p style="color:red">This method may throw a <code>BW_DatabaseServerError</code>.</p>
+</div>
+<div><h3><code>updateKey(): string</code> - Update session key on both server-side and client-side</h3>
+	<p>For security reason, you may want to use <code>$BW-&gt;session-&gt;updateKey(): string</code> to generate a new session key, where:</p>
+	<ul>
+		<li><code>return</code> - A new key.</li>
+	</ul>
+	<p>This method will write the new session key into database and send it to the client side. Subsequent request must use the new key.</p>
+	<p style="color:red">This method may throw a <code>BW_DatabaseServerError</code>.</p>
+</div>
+
+<div class="main_title">
+	<h1 id="user">User Management</h1>
+</div>
+<div><h2>Determine the Session User</h2>
+	<p>If the session is binded to a user, the user's ID is recorded in the session database. In this case, Bearweb CMS will fetch the <a href="/db/en#user">user database</a> to determine the user's group. Furthermore, Bearweb will update the last active time of the user.</p>
+	<p>If the session is not binded, the user is a "Guest".</p>
+	<p>A session can be binded when the client sends a "login" request using user ID and password. If the login succeeded, Bearweb CMS will update the session's user in the session database. All subsequent transactions in this session can use this user ID and group.</p>
+	<p>At the framework level, Bearweb CMS is looking for the request's user ID and group. The user ID and group determines the user's privilege when accessing a specific resource. For example, a resource can be modified by the owner and users in an admin group only; an access-controlled resource can be read by white-listed users and groups only.</p>
+</div>
+<div><h2>Password Hash</h2>
+	<p>Although using HTTPS can make the password invisible to others on the internet, the password is still exposed to the server. A suspicious program running on the server can compromise the user password. For example, you load a malware PHP library.</p>
+	<p>Hashing the password before saving it to the database using the PHP password_hash function prevents other processes from seeing raw passwords in the database, but cannot prevent suspicious code running before the hash.</p>
+	<p>Hash the password at the client-side preventing the raw password being leaked during the transmission and on the server-side.</p>
+	<p>Adding salt in hash provides more security. Making the salt dynamic adds more challenge for hackers who want to find the raw password.</p>
+	<p>Bearweb CMS uses dynamic salt when hashing to protect the user's password.</p>
+	<p>SHA-384 is used as the hash algorithm, using the JavaScript <code>window.crypto.subtle.digest('SHA-384', 'password')</code> function. HTTPS is required for this function.</p>
+	<h3>Register</h3>
+	<p>The session key (a random token generated when the session starts) is used as salt when hash the user’s raw password (the password user entered).</p>
+	<pre><code>
+hashedPassowrd = hash(sessionKey + rawPassword);
+xhr_register(id, hashedPassowrd);
+	</code></pre>
+	<p>When the server saves the user data, the session key is saved as <code>salt</code>, the hashed password is saved as server-side <code>password</code>.</p>
+	<h3>Login</h3>
+	<p>When login, the client will need to download the salt used to hash the password in the previous time to generate the same hashed password saved on the server side. However, this hashed password is not directly sent to the server, because a hacker may record this hashed password. It is challenging to find the raw password before the hash, but it is simple to use it to login (think a man-in-the-middle). Instead, the hashed password will be hashed again using the current session key (a new random token different from the previous time). The server will use the session key and the hashed password on the server-side to verify the login.</p>
+	<p>Next, the client will use the current session key to hash the user’s raw password. The server will update the salt and password to be the current session key and the hashed password using the current session key.</p>
+	<pre><code>
+oldSalt = xhr_getSalt(id);
+oldHashedPassword = hash(oldSalt + rawPassword);
+verifyHashedPassword = hash(sessionKey + oldHashedPassword);
+newHashedPassword = hash(sessionKey + rawPassword);
+xhr_login(id, verifyHashedPassword, newHashedPassword);
+	</code></pre>
+	<p>To set a new password, use the new password when calculating <code>newHashedPassword</code>.</p>
+</div>
+<div><h2><code>Bearweb_User</code> Class</h2>
+	<p>A <code>Bearweb_User</code> instance contains the following information:</p>
+	<div class="tablewrap"><table>
+		<caption><h3><code>Bearweb_User</code> Instance Properties</h3></caption>
+		<thead>
+			<tr>
+				<th scope="col">Name</th>
+				<th scope="col">Type (PHP)</th>
+				<th scope="col">Description</th>
+				<th scope="col">Example</th>
+			</tr>
+		</thead><tbody>
+			<tr>
+				<th scope="row">id</th>
+				<td>public string</td>
+				<td>User ID. Unique. <b>Case sensitive.</b></td>
+				<td><ul>
+					<li><code>'John'</code> - Use this ID to identify a user.</li>
+				</ul></td>
+			</tr><tr>
+				<th scope="row">name</th>
+				<td>public string</td>
+				<td>User's nickname. This name can be duplicated.</td>
+				<td><ul>
+					<li><code>'John Doe'</code> - User's nickname.</li>
+				</ul></td>
+			</tr><tr>
+				<th scope="row">salt</th>
+				<td>public string</td>
+				<td>Salt for password.</td>
+				<td><ul>
+					<li><code>'AZaz09+='</code> - The salt used to hash the password.</li>
+				</ul></td>
+			</tr><tr>
+				<th scope="row">password</th>
+				<td>public string</td>
+				<td>Password after salt 32-byte (256-bit) cipher.</td>
+				<td><ul>
+					<li><code>'zaZA90=+'</code> - The password after hash using the salt.</li>
+				</ul></td>
+			</tr><tr>
+				<th scope="row">registertime</th>
+				<td>public int</td>
+				<td>Create timestamp.</td>
+				<td><ul>
+					<li><code>60</code> - Account created at 1970-01-01 00:01:00. This is the exact time when the server received the request, not when the client send the request.</li>
+				</ul></td>
+			</tr><tr>
+				<th scope="row">lastactive</th>
+				<td>public int</td>
+				<td>Last active timestamp.</td>
+				<td><ul>
+					<li><code>120</code> - Account last active at 1970-01-01 00:02:00. This is the exact time when the server received the request, not when the client send the request.</li>
+				</ul></td>
+			</tr><tr>
+				<th scope="row">group</th>
+				<td>public array</td>
+				<td>User's group. Use <code>int</code> for group ID. Group <code>0</code> is for "admin".</td>
+				<td><ul>
+					<li><code>[0, 1]</code> - User is in admin group and "Group 1".</li>
+					<li><code>[114]</code> - User is in "Group 114".</li>
+				</ul></td>
+			</tr><tr>
+				<th scope="row">data</th>
+				<td>public array</td>
+				<td>Other data of this user.</td>
+				<td><ul>
+					<li><code>['key1' =&gt; 'value 1', 'key2' =&gt; 114514]'</code> - User data.</li>
+				</ul></td>
+			</tr>
+		</tbody>
+	</table></div>
+</div>
+<div>
+	<div class="tablewrap"><table>
+		<caption><h3><code>Bearweb_User</code> Construct</h3></caption>
+		<thead>
+			<tr>
+				<th scope="col">Param</th>
+				<th scope="col">Default</th>
+				<th scope="col">Accepted parameter types with example value</th>
+			</tr>
+		</thead><tbody>
+			<tr>
+				<th scope="row">id</th>
+				<td><code>string ''</code> (empty string) - No user ID.</td>
+				<td><ul>
+					<li><code>string 'John'</code></li>
+				</ul></td>
+			</tr><tr>
+				<th scope="row">name</th>
+				<td><code>string 'Guest'</code> - Guest name.</td>
+				<td><ul>
+					<li><code>string 'John Doe'</code> - User's nickname.</li>
+				</ul></td>
+			</tr><tr>
+				<th scope="row">salt</th>
+				<td><code>string ':'</code> - Invalid salt. You can set an invalid value to disable login for that user.</td>
+				<td><ul>
+					<li><code>'AZaz09+='</code> - The salt used to hash the password.</li>
+				</ul></td>
+			</tr><tr>
+				<th scope="row">password</th>
+				<td><code>string ':'</code> - Invalid salt. You can set an invalid value to disable login for that user.</td>
+				<td><ul>
+					<li><code>'zaZA90=+'</code> - The password after hash using the salt.</li>
+				</ul></td>
+			</tr><tr>
+				<th scope="row">registertime</th>
+				<td><code>Bearweb_User::TIME_CURRENT</code> - Use current timestamp.</td>
+				<td><ul>
+					<li><code>int 60</code> - Account created at 1970-01-01 00:01:00.</li>
+					<li><code>Bearweb_User::TIME_CURRENT</code> - Will be converted to current timestamp.</li>
+					<li><code>Bearweb_User::TIME_NULL</code> - No actual time.</li>
+				</ul></td>
+			</tr><tr>
+				<th scope="row">lastactive</th>
+				<td><code>Bearweb_User::TIME_CURRENT</code> - Use current timestamp.</td>
+				<td><ul>
+					<li><code>int 120</code> - Account last active at 1970-01-01 00:02:00.</li>
+					<li><code>Bearweb_User::TIME_CURRENT</code> - Will be converted to current timestamp.</li>
+					<li><code>Bearweb_User::TIME_NULL</code> - No actual time.</li>
+				</ul></td>
+			</tr><tr>
+				<th scope="row">group</th>
+				<td><code>array []</code> - No group.</td>
+				<td><ul>
+					<li><code>[0, 1]</code> - User is in admin group and "Group 1".</li>
+					<li><code>[114]</code> - User is in "Group 114".</li>
+					<li><code>'[114]'</code> - Valid JSON in string will be decoded to <code>[114]</code>.</li>
+					<li><code>'[114'</code> - Invalid JSON in string will be decoded to <code>[]</code>.</li>
+				</ul></td>
+			</tr><tr>
+				<th scope="row">data</th>
+				<td><code>array []</code> - No data.</td>
+				<td><ul>
+					<li><code>['key1' =&gt; 'value 1', 'key2' =&gt; 114514]</code> - User data.</li>
+					<li><code>'{"key1": "value 1", "key2": 114514}'</code> - Valid JSON in string will be decoded as <code>['key1' =&gt; 'value 1', 'key2' =&gt; 114514]</code>.</li>
+					<li><code>'['key1": "value 1, "key2": 114514'</code> - Invalid JSON in string will be decoded as <code>[]</code>.</li>
+				</ul></td>
+			</tr>
+		</tbody>
+	</table></div>
+</div>
+<div><h3><code>isAdmin(): bool</code>, <code>isGuest(): bool</code> - Check for admin and guest</h3>
+	<p>To check if a user instance is admin (in group 0) or guest, use:</p>
+	<pre><code>
+echo $BW-&gt;user-&gt;isGuest() ? 'Register first' : ('Hello old friend '.$BW-&gt;user-&gt;id);
+
+if($someuser-&gt;isAdmin())
+	show_system_load();
+else
+	throw new BW_ClientError('Access denied', 403);
+	</code></pre>
+	<div class="main_note_ok">
+		<p>A user is admin if the user is in group <code>0</code>.</p>
+	</div>
+	<div class="main_note_warning">
+		<p>User ID <code>''</code> (empty) is special.</p>
+		<ul>
+			<li>If the session's user ID is <code>''</code>, the session is a guest session.</li>
+			<li>If a resource's owner ID is <code>''</code>, the resource is a system-owned.</li>
+		</ul>
+	</div>
+</div>
+<div><h3><code>validID(string $uid): bool</code>, <code>validPassword(string $pass): bool</code> - User post data format check</h3>
+	<p>To check user post data format, use:</p>
+	<pre><code>
+if ( !Bearweb_User::validID($_POST['ID']) || !Bearweb_User::validPassword($_POST['password']) )
+	throw new BW_ClientError('Bad data format', 400);
+	</code></pre>
+</div>
+<div><h3><code>query(string $id, int $flag = 0): ?Bearweb_User</code> - Query a user</h3>
+	<p>Use <code>Bearweb_User::query(string $id, int $flag = 0): ?Bearweb_User</code> to get a user from the user database, where:</p>
+	<ul>
+		<li><code>id</code> - User's ID.</li>
+		<li><code>flag</code> - Bit-OR flags where:<ul>
+			<li><code>Bearweb_User::QUERY_UPDATE_LASTACTIVE</code> - Updte the user's <code>lastactive</code> before fetch.</li>
+		</ul></li>
+		<li><code>return</code> - A <code>Bearweb_User</code> instance. If the user ID doesn't existed, return <code>null</code>.</li>
+	</ul>
+	<p>For example:</p>
+	<pre><code>
+$user = Bearweb_User::query('John');
+echo 'Hello',$user-&gt;nickname;
+	</code></pre>
+	<p style="color:red">This method may throw a <code>BW_DatabaseServerError</code>.</p>
+</div>
+<div><h3><code>insert(): void</code>, <code>update(): void</code> - Create or update user</h3>
+	<p>To create or update a user, create a <code>Bearweb_User</code> instance, provide the user data; or query a user, modify the user data. Then, use <code>$user-&gt;insert()</code> to create a new user, or use <code>$user-&gt;update()</code> to modify an existing user. For example:</p>
+	<pre><code>
+$user = new Bearweb_User(
+	id:		'John',
+	registertime:	114514,
+	lastactive:	1919810,
+	... /* Other data */
+);
+$user-&gt;insert(); // Create a user
+$user-&gt;update(); // Blind modify an exsiting user
+
+$user = Bearweb_User::query('John');
+$user-&gt;nickname = 'John Doe II';
+$user-&gt;update(); // Modify a specific data of an exsiting user
+	</code></pre>
+	<p style="color:red">This method may throw a <code>BW_DatabaseServerError</code>.</p>
+</div>
+
+<div class="main_title">
+	<h1 id="sitemap">Sitemap</h1>
+</div>
+<div>
+	<p>A web server is similar to a file server. The client sends a request including URL (filename), session token (access control) and optional data (upload file) to the server in order to download a resource (file content).</p>
+	<p>Requesting a resource (for example, a webpage, an image) is in fact downloading that file fro the server.</p>
+	<p>Bearweb CMS uses a database to store the resource and associated metadata. Each resource can be indexed by the URL. The metadata allows Bearweb CMS to perform access control, instruct Bearweb CMS how to manipulate the data before returning it to the client.</p>
+	<p>This <a href="/db/en#sitemap">database is called Sitemap</a> because the table is a map of the website.</p>
+</div>
+<div><h2>Requested Resource</h2>
+	<p>Before Bearweb CMS invokes the template of this resource, Bearweb CMS will:</p>
+	<ol>
+		<li>If the resource is not found in the sitemap, a HTTP 404 Not Found is returned. Halt the process and invoke the error template.</li>
+		<li>Access control. If the resource’s <code>meta.access</code> is defined, only the user whose ID or group is included in <code>meta.access</code> can read this resource. The owner and users in the admin group always have the read privilege. If the user has no access privilege, halt the process and invoke the error template.</li>
+		<li>Redirect. If the resource’s <code>meta.r301</code> or<code>meta.r302</code> is defined, a HTTP 301 or 302 will be returned. Halt the process and invoke the error template.</li>
+		<li>Cache control. If the resource has no modify time, which means the resource is generated-in-time, Bearweb CMS will send a random E-Tag and disable client-side cache (for example, an API should always return the up-to-date data); otherwise, Bearweb CMS will allow client-side cache to reduce repeated download of this resource (for example, a stylesheet is used on all pages, we can reuse this stylesheet instead of re-download it on every page).</li>
+		<li>Aux headers. Send other HTTP headers as required.</li>
+	</ol>
+	<p>Then, Bearweb CMS will invoke the template specified by the resource’s <code>template</code> field, and pass the control to the template. See <a href="/template/en">this document for detailed description of templates</a>.</p>
+</div>
+<div><h2>3-level Sitemap</h2>
+	<h3>Fixed Map</h3>
+	<p>A resource can be hard coded in <code>Bearweb_Site::FixedMap</code>:</p>
+	<pre><code>
+const FixedMap = [
+	'favicon.ico' => ['category' => 'Web', 'create' => 1145141919, 'modify' => 1145141919, 'content' => null, 'aux' => ['mime' => 'image/x-icon']],
+	'api/dryrun' => ['category' => 'API', 'template' => ['api','general'], 'meta' => ['task' => 'nop']],
+	...
+];
+	</code></pre>
+	<p>When querying a resource, Bearweb CMS will first look for that resource in the fixed map, using the resource URL as the array key. As the name suggests, the fixed map is used to store read-only resources that never change (unless you manually do so in the code). This can include stylesheets, JavaScript files, icons, APIs.</p>
+	<p>Using a fixed map is fast and error-free. Because the resource is saved in the PHP code (program memory), which is immediately available to read.</p>
+	<div class="main_note_error">
+		<p>Creating or updating a resource that can be found in the fixed map will throw a <code>BW_DatabaseServerError</code>.</p>
+	</div>
+	<h3>Database</h3>
+	<p>If a resource can not be found in the fixed map, Bearweb CMS will query that resource in the sitemap database.</p>
+	<p>Using the database allows the resource to be modified. It is best suited to store user-generated content (such as articles and images) that can be created / modofied during site operation.</p>
+	<p>However, accessing the database requires file read and write. So, this is slow and may encounter on-the-fly errors.</p>
+	<h3>File-backed Content</h3>
+	<p>Bearweb CMS not only supports HTML webpages, but also any type of files, such as images.</p>
+	<p>Files can be large in size. For example, a photo can be a few MB or even tens of MBs. Combining all resources (including files like images) on a website can be a few GBs. Storing them in a database is not a good idea. It makes the database large and slow.</p>
+	<p>To offload the database, only the metadata is stored in the database, but the content of large files are stored in the file system. Content of small resource is saved in the database.</p>
+	<p>See <a href="https://captdam.com/bearweb-resource-optimization/en" traget="_blank">this blog for detailed explanations</a>.</p>
+</div>
+<div><h2><code>Bearweb_Site</code> Class</h2>
+	<p>A <code>Bearweb_Site</code> instance contains the following information:</p>
+	<div class="tablewrap"><table>
+		<caption><h3><code>Bearweb_Site</code> Instance Properties</h3></caption>
+		<thead>
+			<tr>
+				<th scope="col">Name</th>
+				<th scope="col">Type (PHP)</th>
+				<th scope="col">Description</th>
+				<th scope="col">Example</th>
+			</tr>
+		</thead><tbody>
+			<tr>
+				<th scope="row">url</th>
+				<td>public string</td>
+				<td>Resource URL. Unique. <b>Case sensitive.</b></td>
+				<td><ul>
+					<li><code>'hello/world.html'</code> - Use this URL to access this resource.</li>
+				</ul></td>
+			</tr><tr>
+				<th scope="row">category</th>
+				<td>public string</td>
+				<td>Resource category, for management purpose, ignored by Bearweb CMS framework.</td>
+				<td><ul>
+					<li><code>'Article'</code> - This resource is an "Article".</li>
+				</ul></td>
+			</tr><tr>
+				<th scope="row">template</th>
+				<td>public array</td>
+				<td>Template used to process this resource. Bearweb CMS will invoke <code>template[0]</code> (template), then <code>template[0]</code> will invoke <code>template[1]</code> (sub-template).</td>
+				<td><ul>
+					<li><code>['page-en', 'direct']</code> - Bearweb CMS will invoke <code>page-en.php</code> in the <code>Bearweb_Site::Dir_Template</code> directory, then, <code>page-en.php</code> will invoke <code>page-en_direct.php</code> in the <code>Bearweb_Site::Dir_Template</code> directory.</li>
+				</ul></td>
+			</tr><tr>
+				<th scope="row">owner</th>
+				<td>public string</td>
+				<td>Owner's user ID of this resource. Only the owner and admin (group 0) can modify this resource.</td>
+				<td><ul>
+					<li><code>''</code> - The system owns this resource. Such as generated resource. (Example: system generated RSS sitemap)</li>
+					<li><code>'John'</code> - User with ID "John" owns this resource. Such as articles by the user.</li>
+				</ul></td>
+			</tr><tr>
+				<th scope="row">create</th>
+				<td>public int</td>
+				<td>Create timestamp.</td>
+				<td><ul>
+					<li><code>60</code> - Account created at 1970-01-01 00:01:00. This is the exact time when the server received the request, not when the client send the request.</li>
+				</ul></td>
+			</tr><tr>
+				<th scope="row">modify</th>
+				<td>public int</td>
+				<td>Modify timestamp.</td>
+				<td><ul>
+					<li><code>0</code> - No actual time, such as API.</li>
+					<li><code>60</code> - Resource modified at 1970-01-01 00:01:00.</li>
+				</ul></td>
+			</tr><tr>
+				<th scope="row">meta</th>
+				<td>public array</td>
+				<td>Resource metadata. Optional data used by Bearweb CMS framework and the template.</td>
+				<td><ul>
+					<li><code>['title' =&gt; 'Example Title', 'description' =&gt; 'This is an example resource.']</code> - <a href="/db/en#sitemap-meta">See database document</a>.</li>
+				</ul></td>
+			</tr><tr>
+				<th scope="row">content</th>
+				<td>public string</td>
+				<td>Resource content, the content should be directly output to reduce server process load (for a webpage, that means use HTML code instead of markdown). If <code>null</code>, Bearweb will try read a file with the same pathname as the <code>url</code> under the resource directory. This is used to offload large files from the database. See <a href="https://captdam.com/bearweb-resource-optimization/en" target="_blank">my blog for details</a>.</td>
+				<td><ul>
+					<li><code>'&lt;div&gt;&lt;!-- My content in HTML --&gt;&lt;/div&gt;'</code> - An article.</li>
+					<li><code>'ABCDEFG'</code> - A plain text file.</li>
+					<li><code>48613FA87E...</code> - A binary file.</li>
+					<li><code>null</code> - File-backed resource. The Bearweb CMS will try read a file with the same pathname as the <code>url</code> under the resource directory.</li>
+					<div class="main_note_ok">
+						<code>PHP <code>string</code> can be binary.</code>
+					</div>
+				</ul></td>
+			</tr><tr>
+				<th scope="row">aux</th>
+				<td>public array</td>
+				<td>Resource auxiliary data. Optional data used by the template.</td>
+				<td><ul>
+					<li><code>['lang-en' =&gt; 'url/en', 'lang-zh' =&gt; 'url/zh']</code> - <a href="/db/en#sitemap-aux">See database document</a>.</li>
+				</ul></td>
+			</tr>
+		</tbody>
+	</table></div>
+</div>
+<div>
+	<div class="tablewrap"><table>
+		<caption><h3><code>Bearweb_Site</code> Construct</h3></caption>
+		<thead>
+			<tr>
+				<th scope="col">Param</th>
+				<th scope="col">Default</th>
+				<th scope="col">Accepted parameter types with example value</th>
+			</tr>
+		</thead><tbody>
+			<tr>
+				<th scope="row">url</th>
+				<td><code>string ''</code> (empty string)</td>
+				<td><ul>
+					<li><code>string 'hello/world.html'</code></li>
+				</ul></td>
+			</tr><tr>
+				<th scope="row">category</th>
+				<td><code>string ''</code></td>
+				<td><ul>
+					<li><code>string 'Article'</code> - This resource is an "Article".</li>
+				</ul></td>
+			</tr><tr>
+				<th scope="row">template</th>
+				<td><code>['object', 'blob']</code> - Directly output content as a file.</td>
+				<td><ul>
+					<li><code>['page', 'article']</code> - Use article webpage template.</li>
+					<li><code>'["page", "article"]'</code> - Valid JSON in string will be decoded as <code>['page', 'article']</code>.</li>
+					<li><code>'"page", "article]'</code> - Invalid JSON in string, use default value<code>['object', 'blob']</code>.</li>
+				</ul></td>
+			</tr><tr>
+				<th scope="row">owner</th>
+				<td><code>string ''</code> (empty string) - System-owned resource.</td>
+				<td><ul>
+					<li><code>''</code> - The system owns this resource.</li>
+					<li><code>'John'</code> - User with ID "John" owns this resource.</li>
+				</ul></td>
+			</tr><tr>
+				<th scope="row">create</th>
+				<td><code>Bearweb_Site::TIME_NULL</code> (0) - No actual time.</td>
+				<td><ul>
+					<li><code>int 60</code> - Resource created at 1970-01-01 00:01:00.</li>
+					<li><code>Bearweb_Site::TIME_CURRENT</code> - Will be converted to current timestamp.</li>
+					<li><code>Bearweb_Site::TIME_NULL</code> - No actual time.</li>
+				</ul></td>
+			</tr><tr>
+				<th scope="row">modify</th>
+				<td><code>Bearweb_Site::TIME_NULL</code> (0) - No actual time.</td>
+				<td><ul>
+					<li><code>int 120</code> - Resource modified at 1970-01-01 00:02:00.</li>
+					<li><code>Bearweb_Site::TIME_CURRENT</code> - Will be converted to current timestamp.</li>
+					<li><code>Bearweb_Site::TIME_NULL</code> - No actual time.</li>
+				</ul></td>
+			</tr><tr>
+				<th scope="row">meta</th>
+				<td><code>array []</code> - No metadata.</td>
+				<td><ul>
+					<li><code>['title' =&gt; 'Example Title', 'description' =&gt; 'This is an example resource.']</code> - Metadata includes title and description.</li>
+					<li><code>'{"title": "Example Title", "description": "This is an example resource."}'</code> - Valid JSON in string will be decoded as <code>['title' =&gt; 'Example Title', 'description' =&gt; 'This is an example resource.']</code>.</li>
+					<li><code>'["title: "Example Title", "description": "This is an example resource.'</code> - Inalid JSON in string will be decoded as <code>[]</code>.</li>
+				</ul></td>
+			</tr><tr>
+				<th scope="row">content</th>
+				<td><code>string ''</code> (empty string)</td>
+				<td><ul>
+					<li><code>string '...'</code> - Output data.</li>
+					<li><code>resource fopen(...)</code> - File pointer to a file with the same pathname as the <code>url</code> under the resource directory.</li>
+					<div class="main_note_ok">
+						<p>The <code>content</code> field holds a file pointer (PHP <code>resource</code>) for file-backed resource. Reading the file content from disk is delayed until the content is used.</p>
+					</div>
+				</ul></td>
+			</tr><tr>
+				<th scope="row">aux</th>
+				<td><code>array []</code> - No auxiliary data.</td>
+				<td><ul>
+					<li><code>['lang-en' =&gt; 'url/en', 'lang-zh' =&gt; 'url/zh']</code> - Alternative languages for multilingual resources.</li>
+					<li><code>'{"lang-en": "url/en", "lang-zh": "url/zh"}'</code> - Valid JSON in string will be decoded as <code>['lang-en' =&gt; 'url/en', 'lang-zh' =&gt; 'url/zh']</code>.</li>
+					<li><code>'[lang-en": "url/en", "lang-zh": "url/zh'</code> - Inalid JSON in string will be decoded as <code>[]</code>.</li>
+				</ul></td>
+			</tr>
+		</tbody>
+	</table></div>
+</div>
+<div><h3><code>access(Bearweb_User $user): bool</code> - Test user access privilege</h3>
+	<p>Use <code>$resource-&gt;access(Bearweb_User $user): bool</code> to test user access privilege on this resource, where:</p>
+	<ul>
+		<li><code>user</code> - A <code>Bearweb_User</code> instance.</li>
+	</ul>
+	<p>returns one of:</p>
+	<ul>
+		<li><code>Bearweb_Site::ACCESS_NONE</code> (0) - No read nor write.</li>
+		<li><code>Bearweb_Site::ACCESS_RO</code> (1) - Read-only.</li>
+		<li><code>Bearweb_Site::ACCESS_RW</code> (0) - Read and write.</li>
+	</ul>
+	<p>A resource is access-controlled if <code>access</code> is defined in <code>meta</code>. The owner and user in admin group always have read and write privileges. All users and guests have read privilege for resources without access control; however, resource with access control can be read by white-listed users and groups only.</p>
+</div>
+<div><h3><code>validURL(string $uid): bool</code> - User post URL format check</h3>
+	<p>To check user post URL format, use:</p>
+	<pre><code>
+if (!Bearweb_Site::validURL($_SERVER["SCRIPT_URL"])) {
+	http_response_code(400);
+	exit('Bad URL');
+}
+	</code></pre>
+	<p>The URL is valid if:</p>
+	<ul>
+		<li>Less than 128 characters in length.</li>
+		<li>Only contains alphanumeric characters <code>A-Za-z0-9</code> and a limited set of symbols <code>-_:/.</code>.</li>
+		<li>No <code>./</code> (hence <code>../</code>).</li>
+	</ul>
+</div>
+<div><h3><code>query(string $url): ?Bearweb_Site</code> - Query a resource</h3>
+	<p>Use <code>Bearweb_Site::query(string $url): ?Bearweb_Site</code> to get a resource from the sitemap database, where:</p>
+	<ul>
+		<li><code>url</code> - Resource URL.</li>
+		<li><code>return</code> - A <code>Bearweb_Site</code> instance. If the resource doesn't existed, return <code>null</code>.</li>
+	</ul>
+	<p>For example:</p>
+	<pre><code>
+$resource = Bearweb_Site::query('hello/world.html');
+echo $resource ? $resource-&gt;content : '404 Not Found';
+	</code></pre>
+	<p>Bearweb CMS will look for the resource in the fixed map first, then in the database.</p>
+	<div class="main_note_warning">
+		<p>The <code>content</code> field of the returned <code>Bearweb_Site</code> instance can be:</p>
+		<ul>
+			<li><code>string</code> - The actual content data. (Database-backed)</li>
+			<li><code>resource</code> - Pointer to content file. (File-backed)</li>
+		</ul>
+		<p>A PHP getter hook is used on <code>content</code>. Reading this variable always return the actual data (because the hook will perform file read automatically). Use <code>get_mangled_object_vars($resource)['content']</code> to get the raw value.</p>
+	</div>
+	<p style="color:red">This method may throw a <code>BW_DatabaseServerError</code>.</p>
+</div>
+<div><h3><code>dumpContent(int $len = -1, bool $header = false): void</code> - Directly output the content</h3>
+	<p>You may use <code>echo $resource-&gt;content</code> to output the content for both database-backed resource and file-backed resource. However, this is not good for file-backed resource. It requires load the content from file into memory first, whcih may cause of out-of-memory for large resource like HD images and videos.</p>
+	<p>Use <code>$resource-&gt;dumpContent(int $len = -1, bool $header = false): void</code> to directly output the content without having to load the file-backed resource into memory, where:</p>
+	<ul>
+		<li><code>len</code> - Output up to <code>len</code> bytes. This parameter doesn't apply to database-backed resource.</li>
+		<li><code>header</code> - Set to <code>true</code> to output the <code>Content-Length</code> HTTP header.</li>
+	</ul>
+	<p>For example:</p>
+	<pre><code>
+$resource = Bearweb_Site::query('hello/world.png');
+$resource-&gt;dumpContent(-1, true);
+	</code></pre>
+	<p>This method is optimizied for the object (file) template.</p>
+</div>
+<div><h3><code>getContentLength(): int</code> - Get content length</h3>
+	<p>Use <code>$resource-&gt;getContentLength(): int</code> get content length in bytes, works for both database-backed resource and file-backed resource.</p>
+	<div class="main_note_ok">
+		<p>Consider use <code>$resource-&gt;dumpContent(-1, true)</code> to output the content length header and the content data at the same time for atomicity.</p>
+	</div>
+</div>
+<div><h3><code>insert(): void</code>, <code>update(): void</code>, <code>upsert(): void</code> - Create or update resource</h3>
+	<p>To create or update a resource, create a <code>Bearweb_Site</code> instance, provide the resource data; or query a resource, modify the resource data. Then, use <code>$resource-&gt;insert()</code> to create a new resource, or use <code>$user-&gt;update()</code> to modify an existing resource, or use <code>$user-&gt;upsert()</code> to create or modify an existing resource. For example:</p>
+	<pre><code>
+$resource = new Bearweb_Site(
+	url:		'hello/world.html',
+	content:	'...',
+	... /* Other data */
+);
+$resource-&gt;insert(); // Create a resource, will fail if already existed
+$resource-&gt;update(); // Blind modify an exsiting user, will fail if not already existed
+$resource-&gt;upsert(); // Create a resource. If the resource already existed, modify it
+
+$resource = Bearweb_Site::query('John');
+$resource-&gt;content = 'Foo';
+$resource-&gt;modify = Bearweb_Site::TIME_CURRENT;
+$resource-&gt;update(); // Modify a specific field of an exsiting resource
+	</code></pre>
+	<div class="main_note_ok">
+		<p>If the <code>content</code> size is too large (100kB by default, setting <code>Bearweb_Site::Size_FileBlob</code>), the <code>content</code> will be saved in a file instead of in the database. The <code>content</code> field in the database will be <code>null</code> in this case.</p>
+		<p>You should always pass the content to these methods. Do NOT create the content file by your own. Let Bearweb CMS do it for you.</p>
+	</div>
+	<div class="main_note_error">
+		<p>You cannot create or modify a resource that existed in the fixed map.</p>
+	</div>
+	<p style="color:red">This method may throw a <code>BW_DatabaseServerError</code>.</p>
+</div>
+<div><h3><code>delete(): void</code> - Delete a resource</h3>
+	<p>To delete a resource, create a <code>Bearweb_Site</code> instance, provide the resource URL. Then, use <code>$resource-&gt;delete()</code> to delete that resource. For example:</p>
+	<pre><code>
+$resource = new Bearweb_Site(
+	url:		'hello/world.html',
+	... /* Other data will be ignored */
+);
+$resource-&gt;delete();
+	</code></pre>
+	<div class="main_note_error">
+		<p>You cannot delete a resource that existed in the fixed map.</p>
+	</div>
+	<p style="color:red">This method may throw a <code>BW_DatabaseServerError</code>.</p>
+</div>

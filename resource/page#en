@@ -528,7 +528,7 @@ else // if ($BW-&gt;site-&gt;template[0] == 'page-en') // default lang
 </div>
 
 <div>
-	<h2>Error</h2>
+	<h2 id="error">Error</h2>
 	<div class="sidebyside">
 		<figure>
 			<img src="error.png" alt="Error sub-template">

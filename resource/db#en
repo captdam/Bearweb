@@ -76,7 +76,7 @@ CREATE TABLE "Sitemap" (
 				<td><code>'["object", "blob"]'</code> - Object (file) template, direct blob output.</td>
 				<td>Template used to process this resource. Bearweb CMS will invoke <code>template[0]</code> (template), then <code>template[0]</code> will invoke <code>template[1]</code> (sub-template).</td>
 				<td><ul>
-					<li><code>['page-en', 'direct']</code> - Bearweb CMS will invoke <code>page-en.php</code> in the <code>Bearweb_Site::Dir_Template</code> directory, then, <code>page-en.php</code> will invoke <code>page-en_direct.php</code> in the <code>Bearweb_Site::Dir_Template</code> directory.</li>
+					<li><code>'['page-en', 'direct']'</code> - Bearweb CMS will invoke <code>page-en.php</code> in the <code>Bearweb_Site::Dir_Template</code> directory, then, <code>page-en.php</code> will invoke <code>page-en_direct.php</code> in the <code>Bearweb_Site::Dir_Template</code> directory.</li>
 				</ul></td>
 			</tr><tr>
 				<th scope="row">owner</th>
@@ -111,7 +111,7 @@ CREATE TABLE "Sitemap" (
 				<td><code>'{}'</code> - Empty metadate.</td>
 				<td>Resource metadata. Optional data used by Bearweb CMS framework and the template.</td>
 				<td><ul>
-					<li><code>'{"title"; "Example Title", "description": "This is an example resource."}'</code> - See below.</li>
+					<li><code>'{"title": "Example Title", "description": "This is an example resource."}'</code> - <a href="#sitemap-meta">See below</a>.</li>
 				</ul></td>
 			</tr><tr>
 				<th scope="row">content</th>
@@ -130,14 +130,14 @@ CREATE TABLE "Sitemap" (
 				<td><code>'{}'</code> - Empty aux data.</td>
 				<td>Resource auxiliary data. Optional data used by the template.</td>
 				<td><ul>
-					<li><code>'{"lang-en"; "url/en", "lang-zh": "url/zh"}'</code> - See below.</li>
+					<li><code>'{"lang-en": "url/en", "lang-zh": "url/zh"}'</code> - <a href="#sitemap-aux">See below</a>.</li>
 				</ul></td>
 			</tr>
 		</tbody>
 	</table></div>
 	<p><code>meta</code> and <code>aux</code> store optional data. It doesn't make sense to create seperate database field for each of those optional data (which will make the table extremely wide and unmanageable, and create a lot of unused field); therefore, they are aggregated into JSON objects.</p>
 	
-	<div class="tablewrap"><table>
+	<div class="tablewrap" id="sitemap-meta"><table>
 		<caption><h2>Bearweb_Site <code>meta</code> options</h2></caption>
 		<thead>
 			<tr>
@@ -154,7 +154,7 @@ CREATE TABLE "Sitemap" (
 				<td>
 					<span class="usedby_page">All</span><br />
 					<ul>
-						<li><code>{"title": "Example Title"}</code> - Page title is "Example Title".</li>
+						<li><code>'{"title": "Example Title"}'</code> - Page title is "Example Title".</li>
 					</ul>
 				</td>
 			</tr><tr>
@@ -164,7 +164,7 @@ CREATE TABLE "Sitemap" (
 				<td>
 					<span class="usedby_page">All</span><br />
 					<ul>
-						<li><code>{"keywords": "keyword1, keyword2, keyword3"}</code> - Page with 3 keywords: "keyword1", "keyword2" and "keyword3".</li>
+						<li><code>'{"keywords": "keyword1, keyword2, keyword3"}'</code> - Page with 3 keywords: "keyword1", "keyword2" and "keyword3".</li>
 					</ul>
 				</td>
 			</tr><tr>
@@ -174,7 +174,7 @@ CREATE TABLE "Sitemap" (
 				<td>
 					<span class="usedby_page">All</span><br />
 					<ul>
-						<li><code>{"description": "This is an example resource."}</code> - Page description is "This is an example resource.".</li>
+						<li><code>'{"description": "This is an example resource."}'</code> - Page description is "This is an example resource.".</li>
 					</ul>
 				</td>
 			</tr><tr>
@@ -184,7 +184,7 @@ CREATE TABLE "Sitemap" (
 				<td>
 					<span class="usedby_cms">Core</span><br />
 					<ul>
-						<li><code>{"r301": "new/page.html"}</code> - Cause Bearweb to send an HTTP <code>301 Moved Permanently</code> header to "/new/page.html". Note this value is an absolute URL without leading "/".</li>
+						<li><code>'{"r301": "new/page.html"}'</code> - Cause Bearweb to send an HTTP <code>301 Moved Permanently</code> header to "/new/page.html". Note this value is an absolute URL without leading "/".</li>
 					</ul>
 				</td>
 			</tr><tr>
@@ -194,7 +194,7 @@ CREATE TABLE "Sitemap" (
 				<td>
 					<span class="usedby_cms">Core</span><br />
 					<ul>
-						<li><code>{"r301": "new/page.html"}</code> - Cause Bearweb to send an HTTP <code>302 Found</code> header to "/new/page.html". Note this value is an absolute URL without leading "/".</li>
+						<li><code>'{"r301": "new/page.html"}'</code> - Cause Bearweb to send an HTTP <code>302 Found</code> header to "/new/page.html". Note this value is an absolute URL without leading "/".</li>
 					</ul>
 				</td>
 			</tr><tr>
@@ -204,9 +204,9 @@ CREATE TABLE "Sitemap" (
 				<td>
 					<span class="usedby_cms">Core</span><span class="usedby_page">All</span><br />
 					<ul>
-						<li><code>{"r301": "noindex"}</code> - Do not index this resource.</li>
-						<li><code>{"r301": "nofollow"}</code> - Do not links on this resource.</li>
-						<li><code>{"r301": "noindex, nofollow"}</code> - Both above.</li>
+						<li><code>'{"r301": "noindex"}'</code> - Do not index this resource.</li>
+						<li><code>'{"r301": "nofollow"}'</code> - Do not links on this resource.</li>
+						<li><code>'{"r301": "noindex, nofollow"}'</code> - Both above.</li>
 					</ul>
 					<div class="main_note_error">
 						<p>This is a request, but some inresponsible crawlers won't respect it.</p>
@@ -220,8 +220,8 @@ CREATE TABLE "Sitemap" (
 				<td>
 					<span class="usedby_cms">Core</span><br />
 					<ul>
-						<li><code>{"access": ["Alice", 23, "Bob"]}</code> - Allows user ID "Alice" and "Bob" and all users in group 23 to read this resource.</li>
-						<li><code>{"access": []}</code> - Allows nobody to read this resource.</li>
+						<li><code>'{"access": ["Alice", 23, "Bob"]}'</code> - Allows user ID "Alice" and "Bob" and all users in group 23 to read this resource.</li>
+						<li><code>'{"access": []}'</code> - Allows nobody to read this resource.</li>
 						<li>The owner and admin (group 0) always have access.</li>
 					</ul>
 				</td>
@@ -232,11 +232,11 @@ CREATE TABLE "Sitemap" (
 				<td>
 					<span class="usedby_page">All</span><br />
 					<ul>
-						<li><code>{"bgimg": "sun.jpg"}</code> - Use "/sun.jpg" as poster for this page. Note this value is an absolute URL without leading "/".</li>
+						<li><code>'{"bgimg": "sun.jpg"}'</code> - Use "/sun.jpg" as poster for this page. Note this value is an absolute URL without leading "/".</li>
 					</ul>
 					<span class="usedby_page">Image</span><br />
 					<ul>
-						<li><code>{"hd": "sun.thumb.jpg"}</code> - If in image sub-template, use this image as thumbnail. Note this value is an absolute URL without leading "/".</li>
+						<li><code>'{"hd": "sun.thumb.jpg"}'</code> - If in image sub-template, use this image as thumbnail. Note this value is an absolute URL without leading "/".</li>
 					</ul>
 				</td>
 			</tr><tr>
@@ -246,7 +246,7 @@ CREATE TABLE "Sitemap" (
 				<td>
 					<span class="usedby_page">Image</span><br />
 					<ul>
-						<li><code>{"hd": "sun.jpg"}</code> - Use "/sun.jpg" as the high definition image for this page. Note this value is an absolute URL without leading "/".</li>
+						<li><code>'{"hd": "sun.jpg"}'</code> - Use "/sun.jpg" as the high definition image for this page. Note this value is an absolute URL without leading "/".</li>
 					</ul>
 				</td>
 			</tr><tr>
@@ -266,7 +266,7 @@ CREATE TABLE "Sitemap" (
 				<td>
 					<span class="usedby_api">All</span><br />
 					<ul>
-						<li><code>{"task": "login"}</code> - Execute the "login" task.</li>
+						<li><code>'{"task": "login"}'</code> - Execute the "login" task.</li>
 					</ul>
 				</td>
 			</tr>
@@ -274,7 +274,7 @@ CREATE TABLE "Sitemap" (
 	</table></div>
 	<p>All those data are optional. Bearweb will use default value or skip it if a specific data is not given.</p>
 
-	<div class="tablewrap"><table>
+	<div class="tablewrap" id="sitemap-aux"><table>
 		<caption><h2>Bearweb_Site <code>aux</code> options</h2></caption>
 		<thead>
 			<tr>
@@ -291,7 +291,7 @@ CREATE TABLE "Sitemap" (
 				<td>
 					<span class="usedby_page">All</span><br />
 					<ul>
-						<li><code>{"lang-en": "url/en", "lang-zh": "url/zh"}</code> - Specify the target URLs for the languages (including the current language and URL). Note these values are absolute URLs without leading "/".</li>
+						<li><code>'{"lang-en": "url/en", "lang-zh": "url/zh"}'</code> - Specify the target URLs for the languages (including the current language and URL). Note these values are absolute URLs without leading "/".</li>
 					</ul>
 				</td>
 			</tr><tr>
@@ -301,7 +301,7 @@ CREATE TABLE "Sitemap" (
 				<td>
 					<span class="usedby_page">All</span><br />
 					<ul>
-						<li><code>{"mime": "image/png"}</code> - Cause the object template to send a <code>Content-Type: image/png</code> HTTP header (PNG image).</li>
+						<li><code>'{"mime": "image/png"}'</code> - Cause the object template to send a <code>Content-Type: image/png</code> HTTP header (PNG image).</li>
 						<li>If not specified, object template will send a <code>Content-Type: text/plain</code> HTTP header (plain text).</li>
 					</ul>
 				</td>
@@ -447,7 +447,7 @@ CREATE TABLE "Session" (
 				<th scope="row">log</th>
 				<td>text, or null</td>
 				<td><code>''</code> - Empty log.</td>
-				<td>Debug use. Use <code>$BW->log('Hello world');</code> to append a new line of log.</td>
+				<td>Debug use. Use <code>$BW-&gt;log('Hello world');</code> to append a new line of log.</td>
 				<td><ul>
 					<li><code>'Hello\nStart\nDone!'</code> - Some log.</li>
 					<li><code>''</code> - No log. Or,</li>
@@ -538,8 +538,9 @@ order by `create` desc
 	</code></pre>
 	<p>The transaction and session database grows over time. You may want to occasionally clean expired sessions and old transactions:</p>
 	<pre><code>
-delete from `Session` where strftime(\'%s\', \'now\') - `lastuse` &gt; 30 * 24 * 3600;
-delete from `Transaction` where strftime(\'%s\', \'now\') - `create` &gt; 30 * 24 * 3600);
+delete from `Session` where strftime('%s', 'now') - `lastuse` &gt; 30 * 24 * 3600;
+delete from `Transaction` where strftime('%s', 'now') - `create` &gt; 30 * 24 * 3600;
+vacuum;
 	</code></pre>
 </div>
 
@@ -629,8 +630,8 @@ CREATE TABLE "User" (
 				<td><code>'[]'</code> - No group.</td>
 				<td>User's group. Use <code>int</code> for group ID. Group <code>0</code> is for "admin".</td>
 				<td><ul>
-					<li><code>[0, 1]</code> - User is in admin group and "Group 1".</li>
-					<li><code>[114]</code> - User is in "Group 114".</li>
+					<li><code>'[0, 1]'</code> - User is in admin group and "Group 1".</li>
+					<li><code>'[114]'</code> - User is in "Group 114".</li>
 				</ul></td>
 			</tr><tr>
 				<th scope="row">data</th>
@@ -638,7 +639,7 @@ CREATE TABLE "User" (
 				<td><code>'{}'</code> - Empty data.</td>
 				<td>Other data of this user.</td>
 				<td><ul>
-					<li><code>'{"key1"; "value 1", "key2": 114514}'</code> - User data.</li>
+					<li><code>'{"key1": "value 1", "key2": 114514}'</code> - User data.</li>
 				</ul></td>
 			</tr>
 		</tbody>
