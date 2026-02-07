@@ -4,7 +4,7 @@
 <div>
 	<p>The entry point and all 3 core modules are saved in the file <code>bearweb.class.php</code>. The Bearweb CMS entry class is named <code>class _Bearweb</code>, the sitemap module is named <code>class _Bearweb_Site</code>, the session module is named <code>class _Bearweb_Session</code>, and the user module is named <code>class _Bearweb_User</code>. You should never modify <code>bearweb.class.php</code>.</p>
 	<p>In <code>index.php</code>, you should extend the entry class to <code>Bearweb</code>, and the 3 modules to <code>Bearweb_Site</code>, <code>Bearweb_Session</code>, <code>Bearweb_User</code>. You may also override any method or property in the extended classes.</p>
-	<p>Since Bearweb CMS is database-driven, you need to specify the database used in each module.</p>
+	<p>Since <a href="/db/en">Bearweb CMS is database-driven</a>, you need to specify the database used in each module.</p>
 	<p>Following example shows extending the session module in <code>index.php</code>, overriding the session token cookie names and token life, specifying the session database:</p>
 	<pre><code>
 class Bearweb_Session extends _Bearweb_Session {
@@ -128,18 +128,18 @@ $this-&gt;session-&gt;bindUser('John'); // bind current session to user 'John'
 	<p>As a database-driven framework, Bearweb CMS records each session and related information in <a href="/db/en#session-sessiondb">a database</a>.</p>
 </div>
 <div><h2>Session Token</h2>
-	<p>Bearweb CMS uses cookies to store the session token on the client side. The token includes 3 parts:</p>
+	<p>Bearweb CMS uses client-side cookies and server-side database to store the session token. The token includes 3 parts:</p>
 	<ul>
 		<li>Session ID: A random, out-of-order (so the client cannot know how many sessions the server has issued), unique identifier represents the session. This cookie is HTTP-only.</li>
 		<li>Session key: A random string used to verify the session ID and for hash.</li>
 		<li>Last use time: A timestamp representing when is the last time the token is used. Only saved on server-side.</li>
 	</ul>
 	<div class="main_note_warning">
-		<p>The session key is visible to client-side JavaScript, it can be used to perform has on the client-side. A suspicious JS can "steal" this information (<a href="https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Set-Cookie#httponly" target="_blank">XSS attack</a>). To prevent this, a HTTP-only cookie, the session key, is introduced. It is non-visible to any client-side running scripts, so no one can copy to "steal" it; however, it is always included in the HTTP request sent to the server-side, allowing the server to read it.</p>
+		<p>The session key is visible to client-side JavaScript, it can be used to perform hash on the client-side. A suspicious JS can "steal" this information (<a href="https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Set-Cookie#httponly" target="_blank">XSS attack</a>). To prevent this, a HTTP-only cookie, the session ID, is introduced. It is non-visible to any client-side running scripts, so no one can copy to "steal" it; however, it is always included in the HTTP request sent to the server-side, allowing the server to read it for session token verify.</p>
 	</div>
 	<p>In the first transaction, the client-side cookie is clean. That means, the request contains no session token. The server will issue a new session in this case. 2 cookies are sent to the client-side: the session ID and the session key.</p>
 	<p>In the subsequent transactions, the client-side cookie includes the session token. When the client sends a request to the server, it includes the session token in the request. The server can then use the session token to determine the client's session.</p>
-	<p>A suspicious request can include a forged or stolen session ID; however, it is almost impossible to forge or steal the associated key for that session ID. When Bearweb CMS receives a token without the correct key, a new session token (ID and key) will be issued and sent to the client.</p>
+	<p>A suspicious request can include a forged session token; however, it is almost impossible to steal the session ID (as it is HTTP-only). When Bearweb CMS receives a token without the correct ID and key, a new session token (ID and key) will be issued and sent to the client.</p>
 	<p>If the last use time is too old, the session is expired. In this case, a new session token (ID and key) will be issued and sent to the client.</p>
 </div>
 <div><h2>Transaction Log and Session Control</h2>
@@ -155,7 +155,7 @@ $this-&gt;session-&gt;bindUser('John'); // bind current session to user 'John'
 		<li><code>ip</code> - Client-side IP address and port, it can be a IPv4 address or a IPv6 address.</li>
 		<li><code>url</code> - Request resource or API URL.</li>
 		<li><code>session</code> - The ID of the corresponding session.</li>
-		<li><code>log</code> - Session log, for debug use. Empty for now.</li>
+		<li><code>log</code> - Transaction log, for debug use. Empty for now.</li>
 	</ul>
 	<div class="main_note_warning">
 		<p>The above two tasks writing to session and transaction databases MUST success. If any of the two writes failed, Bearweb CMS will rollback writes to the databases, and halt the process.</p>
@@ -186,21 +186,21 @@ $this-&gt;session-&gt;bindUser('John'); // bind current session to user 'John'
 			<tr>
 				<th scope="row">sID</th>
 				<td>public readonly string</td>
-				<td>transaction ID.</td>
+				<td>Session ID.</td>
 				<td><ul>
 					<li><code>'zaZA90=+'</code> - Use this ID to identify a session.</li>
 				</ul></td>
 			</tr><tr>
 				<th scope="row">sCreate</th>
 				<td>public readonly int</td>
-				<td>Create timestamp.</td>
+				<td>Session create timestamp.</td>
 				<td><ul>
 					<li><code>60</code> - Session created at 1970-01-01 00:01:00. This is the exact time when the server received the request, not when the client send the request.</li>
 				</ul></td>
 			</tr><tr>
 				<th scope="row">sLastUse</th>
 				<td>public readonly int</td>
-				<td>Last use timestamp.</td>
+				<td>Session last use timestamp.</td>
 				<td><ul>
 					<li><code>120</code> - Session last used at 1970-01-01 00:02:00. This is the exact time when the server received the request, not when the client send the request.</li>
 				</ul></td>
@@ -215,7 +215,7 @@ $this-&gt;session-&gt;bindUser('John'); // bind current session to user 'John'
 			</tr><tr>
 				<th scope="row">sKey</th>
 				<td>public readonly string</td>
-				<td>A key used to verify the session.</td>
+				<td>Session key.</td>
 				<td><ul>
 					<li><code>'90=+zaZA'</code> - Session key.</li>
 				</ul></td>
@@ -229,14 +229,14 @@ $this-&gt;session-&gt;bindUser('John'); // bind current session to user 'John'
 			</tr><tr>
 				<th scope="row">tCreate</th>
 				<td>public readonly int</td>
-				<td>Create timestamp.</td>
+				<td>Transaction create timestamp.</td>
 				<td><ul>
 					<li><code>60</code> - Transaction created at 1970-01-01 00:01:00. This is the exact time when the server received the request, not when the client send the request.</li>
 				</ul></td>
 			</tr><tr>
 				<th scope="row">tIP</th>
 				<td>public readonly string</td>
-				<td>Client-side IP address and port, it can be a IPv4 address or a IPv6 address.</td>
+				<td>Transaction client-side IP address and port, it can be a IPv4 address or a IPv6 address.</td>
 				<td><ul>
 					<li><code>'1.2.3.4:10086'</code> - Client IP address and port.</li>
 					<li><code>'1234:5678:90ab:cdef:ff00:5599:abcd:1234:12345'</code> - Client IP address and port.</li>
@@ -244,21 +244,21 @@ $this-&gt;session-&gt;bindUser('John'); // bind current session to user 'John'
 			</tr><tr>
 				<th scope="row">tURL</th>
 				<td>public readonly string</td>
-				<td>Request resource or API URL.</td>
+				<td>Transaction request resource or API URL.</td>
 				<td><ul>
 					<li><code>'hello/world.html'</code> - The URL of the accessed resource or API.</li>
 				</ul></td>
 			</tr><tr>
 				<th scope="row">tSID</th>
 				<td>public readonly string</td>
-				<td>The ID of the corresponding session.</td>
+				<td>The ID of the corresponding session of a transaction.</td>
 				<td><ul>
 					<li><code>'zaZA90=+'</code> - Use this ID to identify the corresponding session.</li>
 				</ul></td>
 			</tr><tr>
 				<th scope="row">tLog</th>
 				<td>public readonly string</td>
-				<td>Debug use. Do not write directly; instead, use <code>$BW-&gt;log('Hello world');</code> to append a new line of log.</td>
+				<td>Transaction log. Debug use. Do not write directly; instead, use <code>$BW-&gt;log('Hello world');</code> to append a new line of log.</td>
 				<td><ul>
 					<li><code>'Hello\nStart\nDone!'</code> - Some log.</li>
 					<li><code>''</code> - No log. Or,</li>
@@ -271,7 +271,7 @@ $this-&gt;session-&gt;bindUser('John'); // bind current session to user 'John'
 <div><h3><code>log(string $log): string</code> - Append log to transaction record</h3>
 	<p>Use <code>$BW-&gt;session-&gt;log(string $log): string</code> to append a new line of log, where:</p>
 	<ul>
-		<li><code>uid</code> - User's ID.</li>
+		<li><code>log</code> - Message.</li>
 		<li><code>return</code> - Log in full after append.</li>
 	</ul>
 	<pre><code>
@@ -327,7 +327,7 @@ echo $BW-&gt;session-&gt;user['ID']; // echo '', guest, no user bind
 </div>
 <div><h2>Password Hash</h2>
 	<p>Although using HTTPS can make the password invisible to others on the internet, the password is still exposed to the server. A suspicious program running on the server can compromise the user password. For example, you load a malware PHP library.</p>
-	<p>Hashing the password before saving it to the database using the PHP password_hash function prevents other processes from seeing raw passwords in the database, but cannot prevent suspicious code running before the hash.</p>
+	<p>Hashing the password before saving it to the database using the PHP <code>password_hash()</code> function prevents other processes from seeing raw passwords in the database, but cannot prevent suspicious code running before the hash.</p>
 	<p>Hash the password at the client-side preventing the raw password being leaked during the transmission and on the server-side.</p>
 	<p>Adding salt in hash provides more security. Making the salt dynamic adds more challenge for hackers who want to find the raw password.</p>
 	<p>Bearweb CMS uses dynamic salt when hashing to protect the user's password.</p>
@@ -454,7 +454,7 @@ xhr_login(id, verifyHashedPassword, newHashedPassword);
 				</ul></td>
 			</tr><tr>
 				<th scope="row">password</th>
-				<td><code>string ':'</code> - Invalid salt. You can set an invalid value to disable login for that user.</td>
+				<td><code>string ':'</code> - Invalid password. You can set an invalid value to disable login for that user.</td>
 				<td><ul>
 					<li><code>'zaZA90=+'</code> - The password after hash using the salt.</li>
 				</ul></td>
@@ -549,7 +549,7 @@ $user = new Bearweb_User(
 	... /* Other data */
 );
 $user-&gt;insert(); // Create a user
-$user-&gt;update(); // Blind modify an exsiting user
+$user-&gt;update(); // Overwrite an exsiting user using user id
 
 $user = Bearweb_User::query('John');
 $user-&gt;nickname = 'John Doe II';
@@ -572,8 +572,8 @@ $user-&gt;update(); // Modify a specific data of an exsiting user
 	<ol>
 		<li>If the resource is not found in the sitemap, a HTTP 404 Not Found is returned. Halt the process and invoke the error template.</li>
 		<li>Access control. If the resource’s <code>meta.access</code> is defined, only the user whose ID or group is included in <code>meta.access</code> can read this resource. The owner and users in the admin group always have the read privilege. If the user has no access privilege, halt the process and invoke the error template.</li>
-		<li>Redirect. If the resource’s <code>meta.r301</code> or<code>meta.r302</code> is defined, a HTTP 301 or 302 will be returned. Halt the process and invoke the error template.</li>
-		<li>Cache control. If the resource has no modify time, which means the resource is generated-in-time, Bearweb CMS will send a random E-Tag and disable client-side cache (for example, an API should always return the up-to-date data); otherwise, Bearweb CMS will allow client-side cache to reduce repeated download of this resource (for example, a stylesheet is used on all pages, we can reuse this stylesheet instead of re-download it on every page).</li>
+		<li>Redirect. If the resource’s <code>meta.r301</code> or <code>meta.r302</code> is defined, a HTTP 301 or 302 will be returned. Halt the process and invoke the error template.</li>
+		<li>Cache control. If the resource has no <code>modify</code> time, which means the resource is generated-in-time. Bearweb CMS will send a random E-Tag and disable client-side cache (for example, an API should always return the up-to-date data); otherwise, Bearweb CMS will allow client-side cache to reduce repeated download of this resource (for example, a stylesheet is used on all pages, we can reuse this stylesheet instead of re-download it on every page).</li>
 		<li>Aux headers. Send other HTTP headers as required.</li>
 	</ol>
 	<p>Then, Bearweb CMS will invoke the template specified by the resource’s <code>template</code> field, and pass the control to the template. See <a href="/template/en">this document for detailed description of templates</a>.</p>
@@ -599,7 +599,7 @@ const FixedMap = [
 	<p>However, accessing the database requires file read and write. So, this is slow and may encounter on-the-fly errors.</p>
 	<h3>File-backed Content</h3>
 	<p>Bearweb CMS not only supports HTML webpages, but also any type of files, such as images.</p>
-	<p>Files can be large in size. For example, a photo can be a few MB or even tens of MBs. Combining all resources (including files like images) on a website can be a few GBs. Storing them in a database is not a good idea. It makes the database large and slow.</p>
+	<p>Files can be large in size. For example, a photo can be a few MBs or even tens of MBs. Combining all resources (including files like images) on a website can be a few GBs. Storing them in a database is not a good idea. It makes the database large and slow.</p>
 	<p>To offload the database, only the metadata is stored in the database, but the content of large files are stored in the file system. Content of small resource is saved in the database.</p>
 	<p>See <a href="https://captdam.com/bearweb-resource-optimization/en" traget="_blank">this blog for detailed explanations</a>.</p>
 </div>
@@ -649,6 +649,7 @@ const FixedMap = [
 				<td>public int</td>
 				<td>Create timestamp.</td>
 				<td><ul>
+					<li><code>0</code> - No actual time, such as API.</li>
 					<li><code>60</code> - Account created at 1970-01-01 00:01:00. This is the exact time when the server received the request, not when the client send the request.</li>
 				</ul></td>
 			</tr><tr>
@@ -765,7 +766,7 @@ const FixedMap = [
 				<th scope="row">aux</th>
 				<td><code>array []</code> - No auxiliary data.</td>
 				<td><ul>
-					<li><code>['lang-en' =&gt; 'url/en', 'lang-zh' =&gt; 'url/zh']</code> - Alternative languages for multilingual resources.</li>
+					<li><code>['lang-en' =&gt; 'url/en', 'lang-zh' =&gt; 'url/zh']</code> - Alternative languages for multilingual resources saved in aux data.</li>
 					<li><code>'{"lang-en": "url/en", "lang-zh": "url/zh"}'</code> - Valid JSON in string will be decoded as <code>['lang-en' =&gt; 'url/en', 'lang-zh' =&gt; 'url/zh']</code>.</li>
 					<li><code>'[lang-en": "url/en", "lang-zh": "url/zh'</code> - Inalid JSON in string will be decoded as <code>[]</code>.</li>
 				</ul></td>
@@ -844,7 +845,7 @@ $resource-&gt;dumpContent(-1, true);
 	</div>
 </div>
 <div><h3><code>insert(): void</code>, <code>update(): void</code>, <code>upsert(): void</code> - Create or update resource</h3>
-	<p>To create or update a resource, create a <code>Bearweb_Site</code> instance, provide the resource data; or query a resource, modify the resource data. Then, use <code>$resource-&gt;insert()</code> to create a new resource, or use <code>$user-&gt;update()</code> to modify an existing resource, or use <code>$user-&gt;upsert()</code> to create or modify an existing resource. For example:</p>
+	<p>To create or update a resource, create a <code>Bearweb_Site</code> instance, provide the resource data; or query a resource, modify the resource data. Then, use <code>$resource-&gt;insert()</code> to create a new resource, or use <code>$resource-&gt;update()</code> to modify an existing resource, or use <code>$user-&gt;upsert()</code> to create or modify an existing resource. For example:</p>
 	<pre><code>
 $resource = new Bearweb_Site(
 	url:		'hello/world.html',
@@ -852,7 +853,7 @@ $resource = new Bearweb_Site(
 	... /* Other data */
 );
 $resource-&gt;insert(); // Create a resource, will fail if already existed
-$resource-&gt;update(); // Blind modify an exsiting user, will fail if not already existed
+$resource-&gt;update(); // Overwrite an exsiting user, will fail if not already existed
 $resource-&gt;upsert(); // Create a resource. If the resource already existed, modify it
 
 $resource = Bearweb_Site::query('John');

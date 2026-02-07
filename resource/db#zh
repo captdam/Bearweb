@@ -26,7 +26,7 @@
 	<h1 id="sitemap">Bearweb站点地图</h1>
 </div>
 <div>
-	<p>Requesting a webpage, a file (for example, an image), or any other resource is in fact fetching data from the database, with access control and some data manipulation. This database is called Sitemap because the table is a map of the website.</p>
+	<p>请求一个网页、一个文件（如图片），或是其它资源，说白了就是从数据库中找到该资源，判断读写权限，并进行一些数据处理。该数据库叫做站点地图（Sitemap）。</p>
 	<pre><code>
 CREATE TABLE "Sitemap" (
 	"url"		TEXT NOT NULL UNIQUE,
@@ -323,14 +323,14 @@ CREATE TABLE "Sitemap" (
 	<h1 id="session">Bearweb会话</h1>
 </div>
 <div>
-	<p>一个交互指由客户端发送给服务端的一次HTTP请求和服务端返回给客户端的相应回复。</p>
+	<p>一个交互（Transaction）指由客户端发送给服务端的一次HTTP请求和服务端返回给客户端的相应回复。</p>
 	<p>对于Bearweb CMS来说，一个请求包含了3部分：</p>
 	<ul>
 		<li>URL：每个请求都必须包含一个URL（HTTP也规定了这一点，HTTP请求的第一行永远是<code>METHOD URL VERSION</code>，比如<code>GET /bearweb-resource-optimization/zh HTTP/1.1</code>）。这个信息用来向服务器表示该请求的目标资源（或API）。</li>
 		<li>会话令牌：HTTP是无记忆的，也就是说，服务器并不知道是谁发送的请求。为了区分用户，服务器将在第一次交互时生成一个令牌（以cookie的形式）。客户端在接下来的交互中应该包含这个令牌以区分用户。如果客户端禁用了cookie或是选择不发送会话令牌cookie，服务器将会生成一个新的令牌。</li>
 		<li>数据：会话可以包括一些数据。主要用于API。=</li>
 	</ul>
-	<p>对于Bearweb CMS来说，一个会话包含了来自同一个客户端的请求。</p>
+	<p>对于Bearweb CMS来说，一个会话（Session）包含了来自同一个客户端的请求。</p>
 	<ul>
 		<li>如上文所说，使用会话令牌区分交互所属的会话。</li>
 	</ul>
@@ -548,7 +548,7 @@ vacuum;
 	<h1 id="user">Bearweb用户</h1>
 </div>
 <div>
-	<p>Bearweb使用数据库来保存用户信息。</p>
+	<p>Bearweb使用数据库来保存（User）用户信息。</p>
 	<pre><code>
 CREATE TABLE "User" (
 	"id"		TEXT NOT NULL UNIQUE,

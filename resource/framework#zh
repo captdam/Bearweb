@@ -1,0 +1,886 @@
+<div class="main_title">
+	<h1>代码风格</h1>
+</div>
+<div>
+	<p>文件<code>bearweb.class.php</code>包含进入点和3个模组，包含Bearweb CMS进入点<code>class _Bearweb</code>、站点地图模组<code>class _Bearweb_Site</code>、会话模组<code>class _Bearweb_Session</code>、用户模组<code>class _Bearweb_User</code>。不要修改<code>bearweb.class.php</code>。</p>
+	<p>在<code>index.php</code>里，你需要扩展进入点为<code>Bearweb</code>类，以及3个模组为<code>Bearweb_Site</code>、<code>Bearweb_Session</code>、<code>Bearweb_User</code>。你可以在扩展后的类中重载类方程和变量。</p>
+	<p>因为<a href="/db/zh">Bearweb CMS是数据库驱动的</a>，你将需要为每一个模组指定其数据库。</p>
+	<p>下面的例子展示了<code>index.php</code>中扩展会话模组，重载会话令牌的cookie名和有效期，指定会话数据库：</p>
+	<pre><code>
+class Bearweb_Session extends _Bearweb_Session {
+	const CookieSID = 'SessionID';
+	const CookieKey = 'SessionKey';
+	const Expire = 7 * 24 * 3600;
+
+	public static function init(): void {
+		try { static::$db = new PDO('sqlite:./bw_session.db', null, null, [
+			PDO::ATTR_ERRMODE =&gt; PDO::ERRMODE_EXCEPTION,
+			PDO::ATTR_TIMEOUT =&gt; 10, #10s waiting time should be far more than enough
+			PDO::ATTR_DEFAULT_FETCH_MODE =&gt; PDO::FETCH_ASSOC
+		]); } catch (Exception $e) { throw new BW_DatabaseServerError('Fail to open DB: '.$e-&gt;getMessage(), 500); }
+	}
+}
+	</code></pre>
+	<p>Bearweb CMS使用PHP前端于SQLite后端。Bearweb CMS使用<code>int</code>、<code>string</code>、<code>array</code>（包括数组和对象）数据类型，这些类型都被PHP支持，但是<code>array</code>作为例外不被SQLite支持。因此，一个PHP的<code>array</code>将会被转化为<code>JSON</code>并保存在<code>string</code>中，再被写入数据库。读出反之。</p>
+</div>
+
+<div class="main_title">
+	<h1 id="error">错误处理</h1>
+</div>
+<div>
+	<p>Bearweb的模组和模板在执行期间可以抛出Bearweb Exception类<code>BW_Error</code>，并被Bearweb进入点类<code>Bearweb</code>捕捉。当错误发生（无论是服务器出错还是客户端甩锅），Bearweb进入点类会讲错误记录在Apache2日志中，并执行<a href="/page/zh#error">错误页面模板</a>。</p>
+	<p>The relationship of <code>BW_Error</code> class family is given below:</p>
+	<ul>
+		<li>
+			<code style="background:pink">Exception</code> - PHP原生错误类。<span class="info" style="color:red">（不要直接使用基础类）</span>
+			<ul>
+				<li>
+					<code style="background:pink">BW_Error</code> - Bearweb基础错误类。<span class="info" style="color:red">（不要直接使用基础类）</span>
+					<ul>
+						<li>
+							<code style="background:pink">BW_ServerError</code> - 服务端导致的错误<span class="info" style="color:red">（不要直接使用基础类）</span>
+							<ul>
+								<li><code style="background:lightgreen">BW_WebServerError</code> - 服务器前端错误，例如错误配置、丢失模板文件。</li>
+								<li><code style="background:lightgreen">BW_DatabaseServerError</code> - 服务器数据库错误，例如无法连接到数据库、无法读写数据库、数据条件错误（例如唯一键冲突）。</li>
+								<li><code style="background:lightgreen">BW_ExternalServerError</code> - 外部服务器错误，例如无法读写对象储存服务器、无法连接令牌登录验证服务器。</li>
+							</ul>
+						</li>
+						<li>
+							<p><code style="background:lightgreen">BW_ClientError</code> - 客户端错误。例如读取不存在的URL（404）、错误密码、错误表单格式。</p>
+						</li>
+					</ul>
+				</li>
+			</ul>
+		</li>
+	</ul>
+</div>
+<div><h2>开发者</h2>
+	<h3><code>BW_Error(string $message, int $code)</code> - 抛出错误</h3>
+	<p>使用<code>throw BW_Error(string $message, int $code)</code>来终止当前执行的模组或模板，并让Bearweb CMS调用错误页面模板。其中：</p>
+	<ul>
+		<li><code>message</code> - 阐述错误信息。</li>
+		<li><code>code</code> - 错误对应的HTTP码。</li>
+	</ul>
+	<h3><code>$e-&gt;getMessage(): string</code> - 获取错误信息</h3>
+	<p>和PHP原生<code>Exception</code>类相似，使用<code>$e-&gt;getMessage(): string</code>来获取错误信息；或使用<code>echo $e;</code>来打印错误信息和其它相关信息，如呼叫栈。</p>
+	<p>举例：</p>
+	<pre><code>
+try {
+	...
+	$db-&gt;execute();
+} catch (Exception $e) {
+	throw new BW_DatabaseServerError('Cannot insert into sitemap database: '.$e-&gt;getMessage(), 500);
+}
+...
+echo $e-&gt;getMessage(); // echo 'BW_DatabaseServerError - Cannot insert into sitemap database: DBMS message'
+	</code></pre>
+</div>
+
+<div class="main_title">
+	<h1 id="bearweb">进入点</h1>
+</div>
+<div>
+	<p>当服务器收到一个HTTP请求，底层的Apache2将会执行包含Bearweb CMS的PHP脚本。接下来，Bearweb CMS进入点<code>Bearweb</code>会执行一下操作：</p>
+	<ol>
+		<li>初始化3个核心模组：站点地图、会话控制、用户管理。因为Bearweb CMS是数据库驱动的，这一步包括连接到模组的数据库。</li>
+		<li><a href="#session">会话</a>管理。Bearweb CMS将判断该请求所属的会话，或在请求不属于任何会话的情况下创建一个新的会话以便后续请求使用。</li>
+		<li>判断会话绑定的<a href="#user">用户</a>。这让Bearweb CMS可以判断请求所有的权限。</li>
+		<li>读取请求的<a href="#sitemap">资源</a>（例如网页、图片）或执行请求的API，如果用户有相关的权限的话。</li>
+		<li>执行该资源或API的<a href="/template/zh">模板</a>以进一步处理请求。</li>
+	</ol>
+	<p>如果前3步出错，<del>神仙也救不了，</del>Bearweb CMS返回一个致命错误。</p>
+	<p>当第4、5步错误发生（包括服务端和客户端），Bearweb进入点类将会将错误信息写入Apache2日志并调用<a href="/page/zh#error">错误页模板</a>。</p>
+</div>
+<div><h2>开发者</h2>
+	<p>3个模组都以成员变量的形式包含在Bearweb CMS进入点内<code>Bearweb</code>：</p>
+	<pre><code>
+class Bearweb {
+	protected Bearweb_Session $session;
+	protected Bearweb_User $user;
+	protected Bearweb_Site $site;
+}
+	</code></pre>
+	<p>要访问一个模组实例，可以使用<code>$this-&gt;module</code>或<code>$BW-&gt;module</code>。例如：</p>
+	<pre><code>
+echo $this-&gt;session-&gt;sID; // echo session ID 'AZaz09'
+echo $BW-&gt;site-&gt;url; // echo requested resource's URL 'hello.html'
+$this-&gt;session-&gt;bindUser('John'); // bind current session to user 'John'
+	</code></pre>
+	<p>出于安全考虑，你可以重载<code>Bearweb::HideServerError</code>为<code>true</code>来隐藏服务端错误。这样，Bearweb CMS将发送一个普通的<code>500 Internal Server Error</code>的HTTP头，不会将实际的错误信息返回给客户端。无论<code>Bearweb::HideServerError</code>设置，实际错误都会被写入Apache2日志。.</p>
+</div>
+
+<div class="main_title">
+	<h1 id="session">会话（Session）控制</h1>
+</div>
+<div><h2>会话于交互</h2>
+	<p>一个交互（Transaction）指由客户端发送给服务端的一次HTTP请求和服务端返回给客户端的相应回复。</p>
+	<p>对于Bearweb CMS来说，一个请求包含了3部分：</p>
+	<ul>
+		<li>URL：每个请求都必须包含一个URL（HTTP也规定了这一点，HTTP请求的第一行永远是<code>METHOD URL VERSION</code>，比如<code>GET /bearweb-resource-optimization/zh HTTP/1.1</code>）。这个信息用来向服务器表示该请求的目标资源（或API）。</li>
+		<li>会话令牌：HTTP是无记忆的，也就是说，服务器并不知道是谁发送的请求。为了区分用户，服务器将在第一次交互时生成一个令牌（以cookie的形式）。客户端在接下来的交互中应该包含这个令牌以区分用户。如果客户端禁用了cookie或是选择不发送会话令牌cookie，服务器将会生成一个新的令牌zh。</li>
+		<li>数据：会话可以包括一些数据。主要用于API。=</li>zh
+	</ul>
+	<p>作为一个数据库驱动的架构，Bearweb CMS将每一次交互都记录在<a href="/db/zh#session-transactiondb">数据库中</a>。</p>
+	<p>对于Bearweb CMS来说，一个会话（Session）包含了来自同一个客户端的请求。</p>
+	<ul>
+		<li>如上文所说，使用会话令牌区分交互所属的会话。</li>
+	</ul>
+	<p>作为一个数据库驱动的架构，Bearweb CMS将每一个会话都记录在<a href="/db/zh#session-sessiondb">数据库中</a>。</p>
+</div>
+<div><h2>会话令牌</h2>
+	<p>Bearweb CMS使用客户端cookie和服务器数据库来保存会话令牌。令牌包括3部分：</p>
+	<ul>
+		<li>会话ID：一串随机的、非顺序的（所以客户端无法知道服务器访问量）、唯一的字符串。HTTP-only。</li>
+		<li>会话钥匙（key）：一串随机的字符串，用于验证会话ID与哈希。</li>
+		<li>上次使用时间戳。只保存在服务端。</li>
+	</ul>
+	<div class="main_note_warning">
+		<p>会话钥匙对于客户端运行的JavaScript是可见的，可以拿来作哈希计算。一个可疑的JS可以窃取该信息（<a href="https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Set-Cookie#httponly" target="_blank">XSS攻击</a>）来冒充一个会话。为了防止该问题，我们将会话ID设置为HTTP-only。客户端运行的代码将无法看到这个cookie，也就没办法偷走了。但是，这个cookie会被包含在所有发送给服务器的HTTP请求中，允许服务器读取它作为会话令牌验证。</p>
+	</div>
+	<p>在第一次交互中，客户端的cookie是空的，也就是说，该请求不包含会话令牌。服务器将会生成一个新的会话，将2个cookie发送到客户端，即：会话ID、会话钥匙。</p>
+	<p>在接下来的交互中，客户端的cookie包含了会话令牌。当客户端发送请求到服务器时，也就包含了会话令牌。服务器通过会话令牌判断客户所属会话。</p>
+	<p>一个可疑的请求可能包含了伪造的令牌。然而，想要盗取一个会话ID几乎是不可能的（因为是HTTP-only）。当收到的令牌的ID与钥匙不符时，Bearweb CMS将生成并发送一个新的令牌。</p>
+	<p>如果上次使用时间戳太久了，该会话即过期。将使用一个新的会话。</p>
+</div>
+<div><h2>记录交互与会话控制</h2>
+	<p>当Bearweb CMS收到一个请求时将创建一个<code>Bearweb_Session</code>实例。根据请求提供的会话令牌，Bearweb将执行其一：</p>
+	<ul>
+		<li>在<a href="/db/zh#session-sessiondb">会话数据库</a>中更新该会话的<code>lastuse</code>（上次使用时间戳）为当前（服务器接收到请求时）时间戳。</li>
+		<li>在<a href="/db/zh#session-sessiondb">会话数据库</a>中创建一个新会话。Bearweb将生成并记录会话的<code>id</code>与<code>key</code>，设置<code>create</code>（创建时间戳）和<code>lastuse</code>（上次使用时间戳）为当前时间。<code>user</code>（会话用户）为<code>''</code>（空字符串，指“游客”）。</li>
+	</ul>
+	<p>Bearweb CMS也会<a href="/db/zh#session-transactiondb">交互数据库</a>中记录：</p>
+	<ul>
+		<li><code>id</code> - 交互ID。</li>
+		<li><code>create</code> - 创建时间戳。</li>
+		<li><code>ip</code> - 客户端IP地址与端口，支持IPv4与IPv6。</li>
+		<li><code>url</code> - 请求的资源或API的URL。</li>
+		<li><code>session</code> - 所属会话的ID。</li>
+		<li><code>log</code> - 交互日志，暂时为空。</li>
+	</ul>
+	<div class="main_note_warning">
+		<p>以上两项任务将需要写会话数据库与交互数据库，且必须成功。如果任意任务失败，Bearweb CMS将回滚数据库写入信息，并终止执行。</p>
+	</div>
+	<p>当请求完成并返回结果给客户端后，Bearweb CMS将更新<a href="/db/zh#session-transactiondb">数据库中的交互</a>信息：</p>
+	<ul>
+		<li><code>log</code> - 提交交互日志。</li>
+		<li><code>status</code> - 返回的HTTP码。</li>
+		<li><code>time</code> - 处理使用时间（单位：微秒）。包括等待数据传输的时间（如果发送文件的话，这个数将大到好几秒。甚至几十秒）。该值通过<code>(microtime(true) - $_SERVER["REQUEST_TIME_FLOAT"]) * 1e6</code>得到。</li>
+		<li><code>memory</code> - 处理占用内存（单位：千字节KiB）。该值通过<code>memory_get_peak_usage(false) / 1024</code>得到。</li>
+	</ul>
+	<div class="main_note_warning">
+		<p>该任务发生于执行结束前PHP引擎卸载<code>Bearweb_Session</code>实例时，这个任务（非常小概率）可能失败。该失败<del>神仙也救不了，</del>将被忽略，数据库修改将不会生效。</p>
+	</div>
+</div>
+<div><h2><code>Bearweb_Session</code>类</h2>
+	<p>一个<code>Bearweb_Session</code>类包含以下信息：</p>
+	<div class="tablewrap"><table>
+		<caption><h3><code>Bearweb_Session</code>类变量</h3></caption>
+		<thead>
+			<tr>
+				<th scope="col">变量名</th>
+				<th scope="col">类型（PHP）</th>
+				<th scope="col">阐述</th>
+				<th scope="col">示例</th>
+			</tr>
+		</thead><tbody>
+			<tr>
+				<th scope="row">sID</th>
+				<td>public readonly string</td>
+				<td>会话ID。</td>
+				<td><ul>
+					<li><code>'zaZA90=+'</code> - 使用这个ID来查找一个会话。</li>
+				</ul></td>
+			</tr><tr>
+				<th scope="row">sCreate</th>
+				<td>public readonly int</td>
+				<td>会话创建时间。</td>
+				<td><ul>
+					<li><code>60</code> - 会话创建于1970-01-01 00:01:00。该值为服务器接收到请求的实际时间，而非客户端发送请求的时间。</li>
+				</ul></td>
+			</tr><tr>
+				<th scope="row">sLastUse</th>
+				<td>public readonly int</td>
+				<td>会话上次使用时间。</td>
+				<td><ul>
+					<li><code>120</code> - 会话最后使用于1970-01-01 00:02:00。该值为服务器接收到请求的实际时间，而非客户端发送请求的时间。</li>
+				</ul></td>
+			</tr><tr>
+				<th scope="row">sUser</th>
+				<td>public readonly string</td>
+				<td>会话绑定用户ID。</td>
+				<td><ul>
+					<li><code>''</code> - 游客会话。</li>
+					<li><code>'John'</code> - 绘画绑定为用户“John”。</li>
+				</ul></td>
+			</tr><tr>
+				<th scope="row">sKey</th>
+				<td>public readonly string</td>
+				<td>会话钥匙。</td>
+				<td><ul>
+					<li><code>'90=+zaZA'</code> - 会话钥匙。</li>
+				</ul></td>
+			</tr><tr>
+				<th scope="row">tID</th>
+				<td>public readonly string</td>
+				<td>交互ID。</td>
+				<td><ul>
+					<li><code>'AZaz09+='</code> - 使用这个ID来查找一个交互。</li>
+				</ul></td>
+			</tr><tr>
+				<th scope="row">tCreate</th>
+				<td>public readonly int</td>
+				<td>交互创建时间。</td>
+				<td><ul>
+					<li><code>60</code> - 交互创建于1970-01-01 00:01:00。该值为服务器接收到请求的实际时间，而非客户端发送请求的时间。</li>
+				</ul></td>
+			</tr><tr>
+				<th scope="row">tIP</th>
+				<td>public readonly string</td>
+				<td>交互客户端IP地址与端口，可以是IPv4或IPv6地址。</td>
+				<td><ul>
+					<li><code>'1.2.3.4:10086'</code> - 客户端IP地址与端口。</li>
+					<li><code>'1234:5678:90ab:cdef:ff00:5599:abcd:1234:12345'</code> - 客户端IP地址与端口。</li>
+				</ul></td>
+			</tr><tr>
+				<th scope="row">tURL</th>
+				<td>public readonly string</td>
+				<td>交互请求的资源或API的URL。</td>
+				<td><ul>
+					<li><code>'hello/world.html'</code> - 请求的资源或API的URL。</li>
+				</ul></td>
+			</tr><tr>
+				<th scope="row">tSID</th>
+				<td>public readonly string</td>
+				<td>交互对应会话ID。</td>
+				<td><ul>
+					<li><code>'zaZA90=+'</code> - 该ID用于查找对应会话ID。</li>
+				</ul></td>
+			</tr><tr>
+				<th scope="row">tLog</th>
+				<td>public readonly string</td>
+				<td>交互日志。调试用。使用<code>$BW-&gt;log('Hello world');</code>来打一行log。</td>
+				<td><ul>
+					<li><code>'Hello\nStart\nDone!'</code> - 一些log。</li>
+					<li><code>''</code> - 没有log。或者也可能，</li>
+					<li><code>''</code> - 致命错误发生。PHP脚本在写入log前就退出了。</li>
+				</ul></td>
+			</tr>
+		</tbody>
+	</table></div>
+</div>
+<div><h3><code>log(string $log): string</code> - 添加一行交互日志</h3>
+	<p>使用<code>$BW-&gt;session-&gt;log(string $log): string</code>来添加一行交互日志，其中：</p>
+	<ul>
+		<li><code>log</code> - 信息。</li>
+		<li><code>return</code> - 添加后的日志全文。</li>
+	</ul>
+	<pre><code>
+// Log is empty at first
+
+echo $BW-&gt;session-&gt;log('A'); // echo "\nA"
+$BW-&gt;session-&gt;log('B');
+echo $BW-&gt;session-&gt;log('C'); // echo "\nA\nB\nC"
+
+// At the end, "\nA\nB\nC" will be write to transaction database
+	</code></pre>
+	<p>日志将在前端缓存，只有在进程结束后再写入数据库。（Write-back策略）</p>
+</div>
+<div><h3><code>bindUser(string $uid): void</code> - 会话绑定用户</h3>
+	<p>使用<code>$BW-&gt;session-&gt;bindUser(string $uid): void</code>来绑定会话的用户，其中：</p>
+	<ul>
+		<li><code>uid</code> - 用户ID。</li>
+	</ul>
+	<p>这个方程将写入用户到数据库。使用该会话令牌的后续请求将使用该用户。</p>
+	<pre><code>
+// Transaction at time 1:
+echo $BW-&gt;session-&gt;user['ID']; // echo '', guest, current session has no user bind
+$BW-&gt;session-&gt;bindUser('uid123');
+
+// Transaction at time 2:
+echo $BW-&gt;session-&gt;user['ID']; // echo 'uid123', current session bind to user with ID 'uid123'
+
+// Transaction at time 3:
+$BW-&gt;session-&gt;bindUser(''); //Logout, bind current session back to guest
+
+// transaction at time 4:
+echo $BW-&gt;session-&gt;user['ID']; // echo '', guest, no user bind
+	</code></pre>
+	<p style="color:red">该方程可能抛出<code>BW_DatabaseServerError</code>。</p>
+</div>
+<div><h3><code>updateKey(): string</code> - 更新服务端与客户端的会话钥匙</h3>
+	<p>出于安全考虑，你也许想使用<code>$BW-&gt;session-&gt;updateKey(): string</code>来生成新的会话钥匙，其中：</p>
+	<ul>
+		<li><code>return</code> - 新的钥匙。</li>
+	</ul>
+	<p>这个方程将把新的钥匙写入数据库并发送给客户端。后续请求必须使用新的钥匙。</p>
+	<p style="color:red">该方程可能抛出<code>BW_DatabaseServerError</code>。</p>
+</div>
+
+<div class="main_title">
+	<h1 id="user">用户（User）管理</h1>
+</div>
+<div><h2>判断会话用户</h2>
+	<p>如果一个会话绑定了用户，数据库中该会话将包含该用户的ID。该情况下，Bearweb CMS将查找<a href="/db/zh#user">用户数据库</a>来决定该用户的组。同时，Bearweb还会更新该用户的最后活动时间。</p>
+	<p>如果会话未绑定用户，用户就是“游客”。</p>
+	<p>使用用户名和密码通过“登录”请求来绑定会话用户。如果登录成功，Bearweb CMS就会更新会话数据库中的会话用户。该会话的后续交互就会使用这个用户ID与组。</p>
+	<p>在架构层面，Bearweb CMS只关注请求的用户和组。用户和组决定了用户在访问某个资源时的权限。例如，一个资源只能被所有者和管理员组修改，一个启用访问控制的资源只能被白名单用户和组读取。</p>
+</div>
+<div><h2>密码哈希</h2>
+	<p>虽然使用HTTPS防止网络上第三方看到密码，但密码仍然以明文方式呈现给服务器。服务器端的可以程序将能窃取密码。例如，加载了一个有问题的PHP库。</p>
+	<p>在保存密码到数据库前使用PHP自带的<code>password_hash()</code>哈希可以防止其它进程通过读数据库窃取密码明文，但仍然无法杜绝服务端在哈希前的密码泄露。</p>
+	<p>在客户端就进行哈希能够防止密码明文暴露在服务端或在传输过程中。</p>
+	<p>加盐能够提高安全性。使用动态的盐锦上添花。</p>
+	<p>Bearweb CMS使用动态加盐来保护密码。</p>
+	<p>哈希算法为SHA-384，使用JavaScript的<code>window.crypto.subtle.digest('SHA-384', 'password')</code>方程。该方程需要HTTPS。</p>
+	<h3>注册</h3>
+	<p>使用会话钥匙（会话开始时随机生成）作为盐对用户密码的明文（用户键盘输入）加密。</p>
+	<pre><code>
+hashedPassowrd = hash(sessionKey + rawPassword);
+xhr_register(id, hashedPassowrd);
+	</code></pre>
+	<p>服务器保存用户数据时将保存会话钥匙为<code>salt</code>、哈希过后的密码为<code>password</code>。</p>
+	<h3>登录</h3>
+	<p>在登录时，客户端首先需要下载上一次哈希时使用的盐来计算出服务器上保存的哈希过后的密码。但是，密码明文在该哈希过后的密码将不会被直接发送，而是通过当前会话钥匙被再次哈希后才发送给服务器。服务器通过数据库中上次哈希后的密码和当前会话钥匙哈希计算验证。</p>
+	<p>接下来，客户端使用用户输入的密码明文于当前会话钥匙哈希计算新的哈希过后的密码。服务器修改用户数据库使用新的哈希和密码。</p>
+	<pre><code>
+oldSalt = xhr_getSalt(id);
+oldHashedPassword = hash(oldSalt + rawPassword);
+verifyHashedPassword = hash(sessionKey + oldHashedPassword);
+newHashedPassword = hash(sessionKey + rawPassword);
+xhr_login(id, verifyHashedPassword, newHashedPassword);
+	</code></pre>
+	<p>可以通过提供新的密码来计算<code>newHashedPassword</code>的方式修改密码。</p>
+</div>
+<div><h2><code>Bearweb_User</code>类</h2>
+	<p>一个<code>Bearweb_User</code>类包含以下信息：</p>
+	<div class="tablewrap"><table>
+		<caption><h3><code>Bearweb_User</code>类变量</h3></caption>
+		<thead>
+			<tr>
+				<th scope="col">变量名</th>
+				<th scope="col">类型（PHP）</th>
+				<th scope="col">阐述</th>
+				<th scope="col">示例</th>
+			</tr>
+		</thead><tbody>
+			<tr>
+				<th scope="row">id</th>
+				<td>public string</td>
+				<td>用户ID。唯一的。<b>区分大小写。</b></td>
+				<td><ul>
+					<li><code>'John'</code> - 使用这个ID来查找一个用户。</li>
+				</ul></td>
+			</tr><tr>
+				<th scope="row">name</th>
+				<td>public string</td>
+				<td>用户昵称。这个昵称可以重名。</td>
+				<td><ul>
+					<li><code>'John Doe'</code> - 用户的昵称。</li>
+				</ul></td>
+			</tr><tr>
+				<th scope="row">salt</th>
+				<td>public string</td>
+				<td>密码用盐。</td>
+				<td><ul>
+					<li><code>'AZaz09+='</code> - 密码哈希加盐。</li>
+				</ul></td>
+			</tr><tr>
+				<th scope="row">password</th>
+				<td>public string</td>
+				<td>加盐哈希后的32字节（256-bit）密码。</td>
+				<td><ul>
+					<li><code>'zaZA90=+'</code> - 加盐哈希后的密码。</li>
+				</ul></td>
+			</tr><tr>
+				<th scope="row">registertime</th>
+				<td>public int</td>
+				<td>创建帐号时间戳。</td>
+				<td><ul>
+					<li><code>60</code> - 帐号创建于1970-01-01 00:01:00。该值为服务器接收到请求的实际时间，而非客户端发送请求的时间。</li>
+				</ul></td>
+			</tr><tr>
+				<th scope="row">lastactive</th>
+				<td>public int</td>
+				<td>最后活跃时间戳。</td>
+				<td><ul>
+					<li><code>120</code> - 帐号最后活跃于1970-01-01 00:02:00。该值为服务器接收到请求的实际时间，而非客户端发送请求的时间。</li>
+				</ul></td>
+			</tr><tr>
+				<th scope="row">group</th>
+				<td>public array</td>
+				<td>用户的分组。使用<code>int</code>作为组ID。组<code>0</code>为“管理员”。</td>
+				<td><ul>
+					<li><code>'[0, 1]'</code> - 用户在管理员分组和“分组1”。</li>
+					<li><code>'[114]'</code> - 用户在“分组114”。</li>
+				</ul></td>
+			</tr><tr>
+				<th scope="row">data</th>
+				<td>public array</td>
+				<td>用户的其它数据。</td>
+				<td><ul>
+					<li><code>'{"key1": "value 1", "key2": 114514}'</code> - 用户数据。</li>
+				</ul></td>
+			</tr>
+		</tbody>
+	</table></div>
+</div>
+<div>
+	<div class="tablewrap"><table>
+		<caption><h3><code>Bearweb_User</code>构造方法</h3></caption>
+		<thead>
+			<tr>
+				<th scope="col">参数</th>
+				<th scope="col">默认</th>
+				<th scope="col">可接受类型与例子</th>
+			</tr>
+		</thead><tbody>
+			<tr>
+				<th scope="row">id</th>
+				<td><code>string ''</code>（空字符串） - 无用户名。</td>
+				<td><ul>
+					<li><code>string 'John'</code></li>
+				</ul></td>
+			</tr><tr>
+				<th scope="row">name</th>
+				<td><code>string 'Guest'</code> - 访客昵称/</td>
+				<td><ul>
+					<li><code>'John Doe'</code> - 用户的昵称。</li>
+				</ul></td>
+			</tr><tr>
+				<th scope="row">salt</th>
+				<td><code>string ':'</code> - 非法盐。你可以通过非法格式来禁用一个用户登录。</td>
+				<td><ul>
+					<li><code>'AZaz09+='</code> - 密码哈希加盐。</li>
+				</ul></td>
+			</tr><tr>
+				<th scope="row">password</th>
+				<td><code>string ':'</code> - 非法密码。你可以通过非法格式来禁用一个用户登录。</td>
+				<td><ul>
+					<li><code>'zaZA90=+'</code> - 加盐哈希后的密码。</li>
+				</ul></td>
+			</tr><tr>
+				<th scope="row">registertime</th>
+				<td><code>Bearweb_User::TIME_CURRENT</code> - 使用当前时间戳。</td>
+				<td><ul>
+					<li><code>int 60</code> - 帐号创建于1970-01-01 00:01:00。</li>
+					<li><code>Bearweb_User::TIME_CURRENT</code> - 将转化为当前时间戳。</li>
+					<li><code>Bearweb_User::TIME_NULL</code> - 无实际时间戳。</li>
+				</ul></td>
+			</tr><tr>
+				<th scope="row">lastactive</th>
+				<td><code>Bearweb_User::TIME_CURRENT</code> - 使用当前时间戳。</td>
+				<td><ul>
+					<li><code>int 120</code> - 帐号最后活跃于1970-01-01 00:02:00。</li>
+					<li><code>Bearweb_User::TIME_CURRENT</code> - 将转化为当前时间戳。</li>
+					<li><code>Bearweb_User::TIME_NULL</code> - 无实际时间戳。</li>
+				</ul></td>
+			</tr><tr>
+				<th scope="row">group</th>
+				<td><code>array []</code> - 无分组。</td>
+				<td><ul>
+					<li><code>'[0, 1]'</code> - 用户在管理员分组和“分组1”。</li>
+					<li><code>'[114]'</code> - 用户在“分组114”。</li>
+					<li><code>'[114]'</code> - 合法JSON字符串将被解码为<code>[114]</code>。</li>
+					<li><code>'[114'</code> - 非法JSON字符串将被解码为<code>[]</code>。</li>
+				</ul></td>
+			</tr><tr>
+				<th scope="row">data</th>
+				<td><code>array []</code> - 无数据。</td>
+				<td><ul>
+					<li><code>['key1' =&gt; 'value 1', 'key2' =&gt; 114514]</code> - 用户数据。</li>
+					<li><code>'{"key1": "value 1", "key2": 114514}'</code> - 合法JSON字符串将被解码为<code>['key1' =&gt; 'value 1', 'key2' =&gt; 114514]</code>。</li>
+					<li><code>'['key1": "value 1, "key2": 114514'</code> - 非法JSON字符串将被解码为<code>[]</code>。</li>
+				</ul></td>
+			</tr>
+		</tbody>
+	</table></div>
+</div>
+<div><h3><code>isAdmin(): bool</code>, <code>isGuest(): bool</code> - 用户是否为访客或管理员</h3>
+	<p>要验证一个用户是否为访客或是否为管理员（组0），使用：</p>
+	<pre><code>
+echo $BW-&gt;user-&gt;isGuest() ? 'Register first' : ('Hello old friend '.$BW-&gt;user-&gt;id);
+
+if($someuser-&gt;isAdmin())
+	show_system_load();
+else
+	throw new BW_ClientError('Access denied', 403);
+	</code></pre>
+	<div class="main_note_ok">
+		<p>管理员分组为<code>0</code>。</p>
+	</div>
+	<div class="main_note_warning">
+		<p>用户名为<code>''</code>（空字符串）需要特殊考虑。</p>
+		<ul>
+			<li>如果指会话的用户为<code>''</code>，该会话为游客。</li>
+			<li>如果一个资源的所有者为<code>''</code>，该资源所有者为系统。</li>
+		</ul>
+	</div>
+</div>
+<div><h3><code>validID(string $uid): bool</code>, <code>validPassword(string $pass): bool</code> - 验证用户提交信息格式</h3>
+	<p>要验证用户提交信息格式，使用：</p>
+	<pre><code>
+if ( !Bearweb_User::validID($_POST['ID']) || !Bearweb_User::validPassword($_POST['password']) )
+	throw new BW_ClientError('Bad data format', 400);
+	</code></pre>
+</div>
+<div><h3><code>query(string $id, int $flag = 0): ?Bearweb_User</code> - 查找用户</h3>
+	<p>使用<code>Bearweb_User::query(string $id, int $flag = 0): ?Bearweb_User</code>来从数据库中查找一个用户，其中：</p>
+	<ul>
+		<li><code>id</code> - 用户ID。</li>
+		<li><code>flag</code> - 比特或参数，其中：<ul>
+			<li><code>Bearweb_User::QUERY_UPDATE_LASTACTIVE</code> - 查询前先修改用户<code>lastactive</code>。</li>
+		</ul></li>
+		<li><code>return</code> - 一个<code>Bearweb_User</code>实例。如果用户不存在，返回<code>null</code>。</li>
+	</ul>
+	<p>例如：</p>
+	<pre><code>
+$user = Bearweb_User::query('John');
+echo 'Hello',$user-&gt;nickname;
+	</code></pre>
+	<p style="color:red">该方程可能抛出<code>BW_DatabaseServerError</code>。</p>
+</div>
+<div><h3><code>insert(): void</code>, <code>update(): void</code> - 创建或修改用户</h3>
+	<p>要创建或修改一个用户，首先创建一个<code>Bearweb_User</code>实例，并提供用户信息；或是查找一个用户，再修改用户数据。接下来，使用<code>$user-&gt;insert()</code>来创建用户，或是<code>$user-&gt;update()</code>来修改一个用户。例如：</p>
+	<pre><code>
+$user = new Bearweb_User(
+	id:		'John',
+	registertime:	114514,
+	lastactive:	1919810,
+	... /* Other data */
+);
+$user-&gt;insert(); // 创建用户
+$user-&gt;update(); // 直接覆盖一个用户（使用该ID）
+
+$user = Bearweb_User::query('John');
+$user-&gt;nickname = 'John Doe II';
+$user-&gt;update(); // 修改一个用户的某项数据
+	</code></pre>
+	<p style="color:red">该方程可能抛出<code>BW_DatabaseServerError</code>。</p>
+</div>
+
+<div class="main_title">
+	<h1 id="sitemap">站点地图（Sitemap）</h1>
+</div>
+<div>
+	<p>网络服务器和文件服务器相似。客户端发送一个包含URL（文件名）、会话令牌（读写权限）、可选额外数据（上传文件）的请求到服务器以下载某个资源（文件内容）。</p>
+	<p>请求一个资源（例如网页、图片）说白了就是从服务器下载那个文件。</p>
+	<p>Bearweb CMS使用数据库来储存资源和相关元素据。每一个资源都可以通过URL进行索引。在数据发送给客户端前，元素据可以用于整合访问控制和数据处理。</p>
+	<p>该<a href="/db/zh#sitemap">数据库被称作站点地图</a>。</p>
+</div>
+<div><h2>请求资源</h2>
+	<p>当Bearweb CMS调用一个资源的模板前会：</p>
+	<ol>
+		<li>如果该资源不存在，就返回一个HTTP 404 Not Found。终止执行并调用错误模板。</li>
+		<li>访问控制。如果资源定义了<code>meta.access</code>，只有白名单<code>meta.access</code>中的用户和组才能读取该资源。资源的所有者和管理员永远有读权限。如果用户没有访问权限，终止执行并调用错误模板。</li>
+		<li>重定向。如果资源定义了<code>meta.r301</code>或<code>meta.r302</code>，就发送HTTP 301或302。终止执行并调用错误模板。</li>
+		<li>缓存控制。如果一个资源没有修改时间戳<code>modify</code>，该资源就是实时生成的。Bearweb CMS会发送一个随机E-Tag并禁用客户端缓存（比如说，API返回的结果应该表示最新消息）。否则，Bearweb CMS将允许客户端缓存以减少重复请求该资源（比如说，每一张网页都是用相同样式表，可以复用）。</li>
+		<li>按实际需求发送其它HTTP头。</li>
+	</ol>
+	<p>接下来，根据资源的<code>template</code>执行模板，具体参考<a href="/template/zh">模板文档</a>。</p>
+</div>
+<div><h2>三级站点地图</h2>
+	<h3>固定地图（Fixed map）</h3>
+	<p>可以把一个资源直接写在代码里<code>Bearweb_Site::FixedMap</code>：</p>
+	<pre><code>
+const FixedMap = [
+	'favicon.ico' => ['category' => 'Web', 'create' => 1145141919, 'modify' => 1145141919, 'content' => null, 'aux' => ['mime' => 'image/x-icon']],
+	'api/dryrun' => ['category' => 'API', 'template' => ['api','general'], 'meta' => ['task' => 'nop']],
+	...
+];
+	</code></pre>
+	<p>当Bearweb CMS超找一个资源是，会先通过URL作为键查看固定地图。正如其名曰，固定地图保存的资源都是只读的、固定的、永远不会改变的（存废修改代码）。这可以包括样式表、JavaScript文件、图标、API。</p>
+	<p>使用固定地图速度快且不会出错，因为该资源存在于代码中（程序内存），可以立刻使用。</p>
+	<div class="main_note_error">
+		<p>创建或修改一个可以在固定地图中找到的资源会抛出<code>BW_DatabaseServerError</code>。</p>
+	</div>
+	<h3>数据库</h3>
+	<p>如果在固定地图中找不到该资源，Bearweb CMS就会去找站点地图数据库。</p>
+	<p>数据库的资源时可被修改的。因此，适合用于保存在网站运行途中需要读写的、用户生成的内容（如文章、图片）。</p>
+	<p>不过，访问数据库需要读写文件，所以速度会慢一些，且有可能出现执行错误。</p>
+	<h3>文件支持内容</h3>
+	<p>Bearweb CMS不仅支持HTML网页，还支持文件，如图片。</p>
+	<p>文件可以很大。比如，一张照片可能会好几MB或是好几十MB。所有资源（包括图片等文件）加起来可能会上GBs，全都一股脑存入数据库会导致数据库臃肿低效，很不优雅。</p>
+	<p>要给数据库减负，我们在数据库中只保存元数据，而大文件的内容将使用外部文件保存。小文件的内容仍然保存在数据库中。</p>
+	<p>可以参考<a href="https://captdam.com/bearweb-resource-optimization/zh" traget="_blank">这一篇文章</a>。</p>
+</div>
+<div><h2><code>Bearweb_Site</code>类</h2>
+	<p>一个<code>Bearweb_Site</code>类包含以下信息：</p>
+	<div class="tablewrap"><table>
+		<caption><h3><code>Bearweb_Site</code>类变量</h3></caption>
+		<thead>
+			<tr>
+				<th scope="col">变量名</th>
+				<th scope="col">类型（PHP）</th>
+				<th scope="col">阐述</th>
+				<th scope="col">示例</th>
+			</tr>
+		</thead><tbody>
+			<tr>
+				<th scope="row">url</th>
+				<td>public string</td>
+				<td>资源URL。唯一的。<b>区分大小写。</b></td>
+				<td><ul>
+					<li><code>'hello/world.html'</code> - 使用这个URL来访问该资源。</li>
+				</ul></td>
+			</tr><tr>
+				<th scope="row">category</th>
+				<td>public string</td>
+				<td>资源分类，用于管理目的，Bearweb CMS不使用这个值。</td>
+				<td><ul>
+					<li><code>'Article'</code> - 这个资源属于一个“Article”。</li>
+				</ul></td>
+			</tr><tr>
+				<th scope="row">template</th>
+				<td>public array</td>
+				<td>进一步处理这个资源的模板。Bearweb CMS将调用<code>template[0]</code>（模板），然后<code>template[0]</code>将调用<code>template[1]</code>（子模板）。</td>
+				<td><ul>
+					<li><code>'['page-en', 'direct']'</code> - Bearweb CMS将调用<code>Bearweb_Site::Dir_Template</code>目录下的<code>page-en.php</code>， 然后<code>page-en.php</code>将调用<code>Bearweb_Site::Dir_Template</code>目录下的<code>page-en_direct.php</code>。</li>
+				</ul></td>
+			</tr><tr>
+				<th scope="row">owner</th>
+				<td>public string</td>
+				<td>资源所有者的用户ID（user id）。只有所有者和管理员（组0）才可以修改这个资源。</td>
+				<td><ul>
+					<li><code>''</code> - 系统所有资源。例如自动生成的资源（例如RSS站点地图）。</li>
+					<li><code>'John'</code> - 用户名为“John”的资源。例如用户写的文章。</li>
+				</ul></td>
+			</tr><tr>
+				<th scope="row">create</th>
+				<td>public int</td>
+				<td>创建时间戳。</td>
+				<td><ul>
+					<li><code>0</code> - 无实际时间，例如自动生成的资源。（例如RSS站点地图）</li>
+					<li><code>60</code> - 资源创建于1970-01-01 00:01:00。</li>
+				</ul></td>
+			</tr><tr>
+				<th scope="row">modify</th>
+				<td>public int</td>
+				<td>修改时间戳。</td>
+				<td><ul>
+					<li><code>0</code> - 无实际时间，例如API。</li>
+					<li><code>60</code> - 资源修改于1970-01-01 00:01:00。</li>
+				</ul></td>
+			</tr><tr>
+				<th scope="row">meta</th>
+				<td>public array</td>
+				<td>资源元素据。包含Bearweb CMS架构与模板使用的可选数据。</td>
+				<td><ul>
+					<li><code>'{"title": "Example Title", "description": "This is an example resource."}'</code> - <a href="/db/zh#sitemap-meta">参考数据库文档</a>。</li>
+				</ul></td>
+			</tr><tr>
+				<th scope="row">content</th>
+				<td>public string</td>
+				<td>资源内容。为最小化服务器负载，内容应该是最终输出的内容（对于网页来说，这里应该包含HTML而不是markdown）。如果为<code>null</code>，Bearweb将在资源目录下以<code>url</code>为文件名读取文件。这是为了不在数据库中保存大文件，参考<a href="https://captdam.com/bearweb-resource-optimization/en" target="_blank">我的博客详述</a>。</td>
+				<td><ul>
+					<li><code>'&lt;div&gt;&lt;!-- 我的HTML内容 --&gt;&lt;/div&gt;'</code> - 一篇文章。</li>
+					<li><code>'ABCDEFG'</code> - 一个纯文本文件。</li>
+					<li><code>48613FA87E...</code> - 一个二进制文件</li>
+					<li><code>null</code> - 文件支持资源。Bearweb CMS将在资源目录下以<code>url</code>为文件名读取文件。</li>
+					<div class="main_note_ok">
+						<code>PHP中<code>string</code>可以是二进制的。</code>
+					</div>
+				</ul></td>
+			</tr><tr>
+				<th scope="row">aux</th>
+				<td>public array</td>
+				<td>资源额外素据。包含模板使用的可选数据。</td>
+				<td><ul>
+					<li><code>'{"lang-en": "url/en", "lang-zh": "url/zh"}'</code> - <a href="/db/zh#sitemap-aux">参考数据库文档</a>。</li>
+				</ul></td>
+			</tr>
+		</tbody>
+	</table></div>
+</div>
+<div>
+	<div class="tablewrap"><table>
+		<caption><h3><code>Bearweb_Site</code>构造方法</h3></caption>
+		<thead>
+			<tr>
+				<th scope="col">参数</th>
+				<th scope="col">默认</th>
+				<th scope="col">可接受类型与例子</th>
+			</tr>
+		</thead><tbody>
+			<tr>
+				<th scope="row">url</th>
+				<td><code>string ''</code>（空字符串）</td>
+				<td><ul>
+					<li><code>string 'hello/world.html'</code></li>
+				</ul></td>
+			</tr><tr>
+				<th scope="row">category</th>
+				<td><code>string ''</code></td>
+				<td><ul>
+					<li><code>string 'Article'</code> - 这个资源属于一个“Article”。</li>
+				</ul></td>
+			</tr><tr>
+				<th scope="row">template</th>
+				<td><code>['object', 'blob']</code> - 对象（文件）模板，直接输出内容。</td>
+				<td><ul>
+					<li><code>['page', 'article']</code> - 使用文章网页模板。</li>
+					<li><code>'["page", "article"]'</code> - 合法JSON字符串将被解码为<code>['page', 'article']</code>。</li>
+					<li><code>'"page", "article]'</code> - 非法JSON字符串将被解码为默认值<code>['object', 'blob']</code>。</li>
+				</ul></td>
+			</tr><tr>
+				<th scope="row">owner</th>
+				<td><code>string ''</code>（空字符串） - 系统所有资源。</td>
+				<td><ul>
+					<li><code>''</code> - 系统拥有该资源。</li>
+					<li><code>'John'</code> - 名为“John”的用户拥有该资源。</li>
+				</ul></td>
+			</tr><tr>
+				<th scope="row">create</th>
+				<td><code>Bearweb_Site::TIME_NULL</code> (0) - 无实际时间。</td>
+				<td><ul>
+					<li><code>int 60</code> - 资源创建于1970-01-01 00:01:00。</li>
+					<li><code>Bearweb_Site::TIME_CURRENT</code> - 将转化为当前时间戳。</li>
+					<li><code>Bearweb_Site::TIME_NULL</code> - 无实际时间。</li>
+				</ul></td>
+			</tr><tr>
+				<th scope="row">modify</th>
+				<td><code>Bearweb_Site::TIME_NULL</code> (0) - 无实际时间。</td>
+				<td><ul>
+					<li><code>int 120</code> - 资源修改于1970-01-01 00:02:00。</li>
+					<li><code>Bearweb_Site::TIME_CURRENT</code> - 将转化为当前时间戳。</li>
+					<li><code>Bearweb_Site::TIME_NULL</code> - 无实际时间。</li>
+				</ul></td>
+			</tr><tr>
+				<th scope="row">meta</th>
+				<td><code>array []</code> - 空元数据。</td>
+				<td><ul>
+					<li><code>['title' =&gt; 'Example Title', 'description' =&gt; 'This is an example resource.']</code> - 包括标题和简述的元数据。</li>
+					<li><code>'{"title": "Example Title", "description": "This is an example resource."}'</code> - 合法JSON字符串将被解码为<code>['title' =&gt; 'Example Title', 'description' =&gt; 'This is an example resource.']</code>。</li>
+					<li><code>'["title: "Example Title", "description": "This is an example resource.'</code> - 非法JSON字符串将被解码为<code>[]</code>。</li>
+				</ul></td>
+			</tr><tr>
+				<th scope="row">content</th>
+				<td><code>string ''</code>（空字符串）</td>
+				<td><ul>
+					<li><code>string '...'</code> - 输出数据。</li>
+					<li><code>resource fopen(...)</code> - 指向资源文件夹下以资源<code>url</code>作为文件名的文件指针。</li>
+					<div class="main_note_ok">
+						<p>对于文件支持的资源，<code>content</code>变量为文件指针（PHP类型为<code>resource</code>）。只有当使用时才会实际读取该文件。</p>
+					</div>
+				</ul></td>
+			</tr><tr>
+				<th scope="row">aux</th>
+				<td><code>array []</code> - 空额外数据。</td>
+				<td><ul>
+					<li><code>['lang-en' =&gt; 'url/en', 'lang-zh' =&gt; 'url/zh']</code> - 包括多语页面的语言选项的额外数据。</li>
+					<li><code>'{"lang-en": "url/en", "lang-zh": "url/zh"}'</code> - 合法JSON字符串将被解码为<code>['lang-en' =&gt; 'url/en', 'lang-zh' =&gt; 'url/zh']</code>。</li>
+					<li><code>'[lang-en": "url/en", "lang-zh": "url/zh'</code> - 非法JSON字符串将被解码为<code>[]</code>。</li>
+				</ul></td>
+			</tr>
+		</tbody>
+	</table></div>
+</div>
+<div><h3><code>access(Bearweb_User $user): bool</code> - 测试用户访问权限</h3>
+	<p>使用<code>$resource-&gt;access(Bearweb_User $user): bool</code>来测试用户访问权限，其中：</p>
+	<ul>
+		<li><code>user</code> - 一个<code>Bearweb_User</code>实例。</li>
+	</ul>
+	<p>返回其中之一：</p>
+	<ul>
+		<li><code>Bearweb_Site::ACCESS_NONE</code>（0） - 无权读写。</li>
+		<li><code>Bearweb_Site::ACCESS_RO</code>（1） - 只读。</li>
+		<li><code>Bearweb_Site::ACCESS_RW</code>（0） - 可读写。</li>
+	</ul>
+	<p>如果一个资源的<code>meta</code>中有定义<code>access</code>，那就是一个启用访问控制的资源。所有者和管理员组用户永远拥有读写权力。对于未启用访问控制的资源，所有的用户和游客都可以读取。对于启用访问控制的资源，只有白名单用户和白名单组才可读取。</p>
+</div>
+<div><h3><code>validURL(string $uid): bool</code> - 用户提交URL格式检查</h3>
+	<p>要检查用户提交URL格式，使用：</p>
+	<pre><code>
+if (!Bearweb_Site::validURL($_SERVER["SCRIPT_URL"])) {
+	http_response_code(400);
+	exit('Bad URL');
+}
+	</code></pre>
+	<p>URL的格式要求为：</p>
+	<ul>
+		<li>少于128字符长度。</li>
+		<li>只可以使用字母与数字组合<code>A-Za-z0-9</code>于有限的符号<code>-_:/.</code>。</li>
+		<li>不可以包含<code>./</code>（自然也不可以包含<code>../</code>）。</li>
+	</ul>
+</div>
+<div><h3><code>query(string $url): ?Bearweb_Site</code> - 查找一个资源</h3>
+	<p>使用<code>Bearweb_Site::query(string $url): ?Bearweb_Site</code>来查找一个资源，其中：</p>
+	<ul>
+		<li><code>url</code> - 资源URL。</li>
+		<li><code>return</code> - 一个<code>Bearweb_Site</code>实例。如果资源不存在，返回<code>null</code>。</li>
+	</ul>
+	<p>例如：</p>
+	<pre><code>
+$resource = Bearweb_Site::query('hello/world.html');
+echo $resource ? $resource-&gt;content : '404 Not Found';
+	</code></pre>
+	<p>Bearweb CMS将首先查找固定地图，再查找数据库。</p>
+	<div class="main_note_warning">
+		<p>返回的<code>Bearweb_Site</code>实例中，<code>content</code>可以是：</p>
+		<ul>
+			<li><code>string</code> - 实际内容。（数据库支持）</li>
+			<li><code>resource</code> - 文件指针。（文件支持）</li>
+		</ul>
+		<p><code>content</code>使用PHP getter hook。读取该变量将总会返回实际数据（因为hook将自动执行文件读取）。使用<code>get_mangled_object_vars($resource)['content']</code>来获得原始值。</p>
+	</div>
+	<p style="color:red">该方程可能抛出<code>BW_DatabaseServerError</code>。</p>
+</div>
+<div><h3><code>dumpContent(int $len = -1, bool $header = false): void</code> -直接输出内容</h3>
+	<p>虽然数据库支持的资源和文件支持的资源都可以<code>echo $resource-&gt;content</code>输出内容，但这对文件支持的资源并不友好。这将需要首先将内容读入内存中，如果文件过大可能造成内存溢出的问题，例如高清大图和视频文件。</p>
+	<p>使用<code>$resource-&gt;dumpContent(int $len = -1, bool $header = false): void</code>来直接输出内容，避免将文件支持的资源读入内存，其中：</p>
+	<ul>
+		<li><code>len</code> - 输出最多<code>len</code>字节。该参数对数据库支持的资源无效。</li>
+		<li><code>header</code> - 如果为<code>true</code>，则同时输出<code>Content-Length</code> HTTP头。</li>
+	</ul>
+	<p>例如：</p>
+	<pre><code>
+$resource = Bearweb_Site::query('hello/world.png');
+$resource-&gt;dumpContent(-1, true);
+	</code></pre>
+	<p>该方程为对象（文件）模板优化。</p>
+</div>
+<div><h3><code>getContentLength(): int</code> - 获得内容大小</h3>
+	<p>使用<code>$resource-&gt;getContentLength(): int</code>来获得内容大小，对数据库支持的资源和文件支持的资源都有效。</p>
+	<div class="main_note_ok">
+		<p>为了原子性，考虑使用<code>$resource-&gt;dumpContent(-1, true)</code>来同时输出内容和长度头。</p>
+	</div>
+</div>
+<div><h3><code>insert(): void</code>, <code>update(): void</code>, <code>upsert(): void</code> - 创建或修改资源</h3>
+	<p>要创建或修改一个资源，首先创建一个<code>Bearweb_Site</code>实例，并提供资源信息；或是查找一个资源，再修改资源数据。接下来，使用<code>$resource-&gt;insert()</code>来创建一个资源，或是<code>$resource-&gt;update()</code>来修改一个资源，或是<code>$resource-&gt;upsert()</code>创建或修改一个已知的资源。例如：</p>
+	<pre><code>
+$resource = new Bearweb_Site(
+	url:		'hello/world.html',
+	content:	'...',
+	... /* Other data */
+);
+$resource-&gt;insert(); // 创建一个资源，如果已存在则会失败
+$resource-&gt;update(); // 覆盖一个已存在的资源，如果不存在就会失败
+$resource-&gt;upsert(); // 创建一个资源，如果已存在就修改
+
+$resource = Bearweb_Site::query('John');
+$resource-&gt;content = 'Foo';
+$resource-&gt;modify = Bearweb_Site::TIME_CURRENT;
+$resource-&gt;update(); // 修改一个已存在的资源的特定数据
+	</code></pre>
+	<div class="main_note_ok">
+		<p>如果<code>content</code>的体积过大（默认分界线为100kB，可以通过<code>Bearweb_Site::Size_FileBlob</code>设置），那么<code>content</code>将被保存在文件中而不是数据库中。该情况下，数据库中<code>content</code>值将为<code>null</code>。</p>
+		<p>你只要把数据字节交给这几个方程就好了。不要手动创建文件，Bearweb CMS内部逻辑会处理好。</p>
+	</div>
+	<div class="main_note_error">
+		<p>不要创建或修改固定地图中能找到的资源。</p>
+	</div>
+	<p style="color:red">该方程可能抛出<code>BW_DatabaseServerError</code>。</p>
+</div>
+<div><h3><code>delete(): void</code> - 删除一个资源</h3>
+	<p>要删除一个资源，先创建一个<code>Bearweb_Site</code>实例，只需要提供资源URL。然后，使用<code>$resource-&gt;delete()</code>来删除那个资源。例如：</p>
+	<pre><code>
+$resource = new Bearweb_Site(
+	url:		'hello/world.html',
+	... /* Other data will be ignored */
+);
+$resource-&gt;delete();
+	</code></pre>
+	<div class="main_note_error">
+		<p>不要删除固定地图中能找到的资源。</p>
+	</div>
+	<p style="color:red">该方程可能抛出<code>BW_DatabaseServerError</code>。</p>
+</div>
