@@ -32,8 +32,8 @@
 				'id'		=> $user->id,
 				'name'		=> $user->name,
 				'salt'		=> $user->salt, # Anyone can access the salt as pre condition of login, so it is ok to expose it in this API
-				'registerTime'	=> $user->registerTime,
-				'lastActive'	=> $user->lastActive,
+				'registertime'	=> $user->registertime,
+				'lastactive'	=> $user->lastactive,
 				'group'		=> $user->group
 			] + ($user->id == $_POST['id'] ? [
 				'data'		=> $user->data
@@ -65,7 +65,7 @@
 			}
 			$user->salt = $BW->session->sKey;
 			$user->password = $_POST['passwordnew'];
-			$user->lastActive = Bearweb_User::TIME_CURRENT;
+			$user->lastactive = Bearweb_User::TIME_CURRENT;
 			$user->update(); // If failed, user password and salt remains unchange and session will not bind to user
 			$BW->session->bindUser($user->id);
 			http_response_code(202);

@@ -1,4 +1,4 @@
-<?php	header('X-Powered-By: Bearweb 7.2.251117');
+<?php	header('X-Powered-By: Bearweb 7.2.260203');
 
 	class _Bearweb {
 		const HideServerError = false;
@@ -590,7 +590,6 @@
 		 * @param int		$lastactive	Last active timestamp. Default this::TIME_NULL for no actual time, use this::TIME_CURRENT to use current timestamp
 		 * @param string|array	$group		User group [114, 514, ...], group must be int (to differentiate from string id), group 0 is for admin: JSON or array. Default []
 		 * @param string|array	$group		User data [meta => data...]: JSON or array. Default []
-		 * @param string	$avatar		User avatar
 		*/
 		public function __construct(
 			string		$id = '',
@@ -600,8 +599,7 @@
 			int		$registertime = self::TIME_CURRENT,
 			int		$lastactive = self::TIME_CURRENT,
 			string|array	$group = [],
-			string|array	$data = [],
-			string		$avatar = ''
+			string|array	$data = []
 		) {
 			$this->id		= $id;
 			$this->name		= $name;
