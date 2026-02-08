@@ -8,6 +8,7 @@ const _ = (s, p = document) => p.querySelector(s);
 const __ = (s, p = document) => p.querySelectorAll(s);
 //const ready = () => new Promise(res => window.addEventListener('load',res));
 const ready = () => new Promise(res => document.readyState === "loading" ? window.addEventListener('DOMContentLoaded',res) : res);
+const delay = timeout => new Promise(res => setTimeout(res, timeout));
 const dom = j => {
 	if (typeof j == 'string') {
 		const x = (new DOMParser()).parseFromString(j, 'text/html').body;
@@ -82,11 +83,39 @@ ready().then(() => {
 	}
 });
 
+// Cookie
 const cookie = {
 	get: key => decodeURIComponent(('; '+document.cookie).split('; '+key+'=').pop().split(';')[0]),
-	set: (key, value) => document.cookie = key + '=' + encodeURIComponent(value),
+	set: (key, value, attribute) => document.cookie = key + '=' + encodeURIComponent(value) + attribute,
 	remove: key => document.cookie = key + '=; expires=Thu, 01 Jan 1970 00:00:00 GMT'
 };
+ready().then(async () => {
+	const lang =  _('html').lang ?? 'en';
+	let title = 'Cookie Consent';
+	let message = '🍪 This website uses cookies for essential functionalities. By continuing accessing the site, you accept the cookies.';
+	let button = 'I Accept';
+	if (lang.substr(0, 2) == 'zh') {
+		title = '先吃点小饼干';
+		message = '🍪 本站需要使用cookie来完成一些必要功能。继续浏览本站则代表你同意本站使用cookie。';
+		button = '没问题';
+	}
+	if (!cookie.get('BW_CookieConsent')) {
+		for (;;) {
+			try {
+				modal(dom({children: [
+					{_: 'h4', textContent: title},
+					{_: 'p', textContent: message},
+					{_: 'button', textContent: button, style: 'width:100%;margin:0;', onclick: () => {
+						cookie.set('BW_CookieConsent', '1', ';expires=max-age;max-age=9999999999;path=/;SameSite=Strict;');
+						modal();
+					}},
+				]}));
+				break;
+			} catch (e) { await delay(1); /* Wait until modal ready (modal is loaded in ready()) */ }
+		}
+
+	}
+});
 
 // Animation
 const typebox = (dom, list, speed = 200, delay = 10) => {

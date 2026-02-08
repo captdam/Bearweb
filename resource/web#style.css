@@ -88,14 +88,14 @@ tbody tr:nth-child(2n+1) { background: var(--content-bgcolor1); }
 }
 #dialog_container>* {
 	background: linear-gradient(var(--highlight-bgcolor), var(--highlight-bgcolor)) left bottom no-repeat, linear-gradient(var(--content-bgscolor), var(--content-bgscolor));
-	margin: 12px 0;
+	margin: 12px 0 0;
 }
 
 /** Modal: Simular to JS alert, but with custom style (TODO) */
 #modal {
 	width: 50vw;
 	height: 50vh;
-	left: 25vw;
+	left: calc(25vw - 10px);
 	top: 25vh;
 	overflow: auto;
 	padding: 20px;

@@ -798,8 +798,8 @@
 			$this->tSID	= $transaction['session'];
 			$this->tLog	= $transaction['log'];
 			if ($needToSendSessionCookie) {
-				setcookie(static::CookieSID, $this->sID, 0, '/', '', true, true ); # Note: Send cookie to client only if DB write success
-				setcookie(static::CookieKey, $this->sKey, 0, '/', '', true, false );
+				setcookie(static::CookieSID, $this->sID, ['expires' => 0, 'path' => '/', 'secure' => true, 'httponly' => true, 'samesite' => 'Strict']); # Note: Send cookie to client only if DB write success
+				setcookie(static::CookieKey, $this->sKey, ['expires' => 0, 'path' => '/', 'secure' => true, 'httponly' => false, 'samesite' => 'Strict']);
 			}
 
 			if (!static::$db->commit()) { throw new Exception('Cannot commit transaction'); }
@@ -838,7 +838,7 @@
 				$sql->execute();
 				$sql->closeCursor();
 			} catch (Exception $e) { throw new BW_DatabaseServerError('Cannot update session user in DB: '.$e->getMessage(), 500); }
-			setcookie(static::CookieKey, $key, 0, '/', '', true, false );
+			setcookie(static::CookieKey, $key, ['expires' => 0, 'path' => '/', 'secure' => true, 'httponly' => false, 'samesite' => 'Strict']);
 			return $key;
 		}
 
