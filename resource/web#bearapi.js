@@ -16,7 +16,11 @@ class BearAPI {
 			xhr.onloadend = event => {
 				callback({
 					status: xhr.status,
-					json: JSON.parse(xhr.responseText)
+					json: (() => { try {
+						return JSON.parse(xhr.responseText);
+					} catch (e) {
+						return {'error': 'Unknown error'};
+					} })()
 				});
 			};
 			if (typeof payload != 'undefined') {
