@@ -335,7 +335,7 @@ int main() {
 		<ul>
 			<li><code>src</code>指向的图片。如果有定义<code>data-hd</code>的话，高清大图会在后台下载，并在下载完成后替代缩略图（<code>src</code>）。</li>
 			<li>关闭浏览器、打开缩略图（<code>src</code>）与高清大图（<code>data-hd</code>）的按钮。</li>
-			<li>标题，如果有指定<code>title</code>或<code>data-title</code>的话。如果都没有，就会使用<code>src</code>。</li>
+			<li>标题，如果有指定<code>title</code>或<code>data-title</code>或<code>alt</code>的话。如果都没有，就会使用<code>src</code>。</li>
 			<li>简述，如果有指定<code>data-description</code>的话。</li>
 			<li>小标题，如果有指定<code>figcaption</code>的话。</li>
 			<li>分割渲染的关键字块，如果有指定</code>的话。</li>

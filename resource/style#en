@@ -335,7 +335,7 @@ int main() {
 		<ul>
 			<li>The image specified by <code>src</code>. If <code>data-hd</code> is supplied, the HD image will be downloaded at background and replace the thumbnail (<code>src</code>) once ready.</li>
 			<li>Buttons to close the viewer, to open the thumbnail (<code>src</code>) and the HD (<code>data-hd</code>) images in a new tab.</li>
-			<li>Title if <code>title</code> or <code>data-title</code> is provided. If not provided, will use <code>src</code>.</li>
+			<li>Title if <code>title</code> or <code>data-title</code> or <code>alt</code> is provided. If not provided, will use will use <code>src</code>.</li>
 			<li>Description if <code>data-description</code> is provided.</li>
 			<li>Caption if <code>figcaption</code> is provided.</li>
 			<li>Keywords in hashtag style if <code>data-keywords</code> is provided.</li>
