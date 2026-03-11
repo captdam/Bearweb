@@ -474,31 +474,6 @@
 				throw new BW_DatabaseServerError('Cannot unlink blob file: '.$this->url, 500);
 		}
 
-		public function util_html_head(string $domain = 'https://example.com/', string $sitename = 'Example Site', string $srcDomain = 'https://example.com/') {
-			$meta_title = htmlspecialchars($this->meta['title'] ?? '', ENT_COMPAT);
-			$meta_keywords = htmlspecialchars($this->meta['keywords'] ?? '', ENT_COMPAT);
-			$meta_description = htmlspecialchars($this->meta['description'] ?? '', ENT_COMPAT);
-			echo '<title>',$meta_title,' - ',$sitename,'</title>',
-			'<meta property="og:title" content="',$meta_title,'" />',
-			'<meta property="og:site_name" content="',$sitename,'" />',
-			'<meta property="og:type" content="website" />',
-			'<meta name="keywords" content="',$meta_keywords,'" />',
-			'<meta name="description" content="',$meta_description,'" />',
-			'<meta property="og:description" content="',$meta_description,'" />',
-			'<meta name="viewport" content="width=device-width, initial-scale=1.0" />',
-			'<meta charset="utf-8" />',
-			'<link href="/web/style.css" rel="stylesheet" type="text/css" />',
-			'<script src="'.$srcDomain.'web/bearapi.js"></script>',
-			'<script src="'.$srcDomain.'web/bearweb.js"></script>',
-			'<link rel="canonical" href="',$domain,$this->url,'" />',
-			'<meta property="og:url" content="',$domain,$this->url,'" />',
-			( array_key_exists('robots', $this->meta) ? ('<meta name="robots" content="'.htmlspecialchars($this->meta['robots'], ENT_COMPAT).'" />') : '' ),
-			( array_key_exists('img', $this->meta) ? ('<meta property="__og:image" content="/'.htmlspecialchars($this->meta['img'], ENT_COMPAT).'" />') : '' ),
-			( $this->owner ? ('<meta name="author" content="'.htmlspecialchars($this->owner, ENT_COMPAT).'" />') : '' ),
-			( array_key_exists('lang-en', $this->aux) ? ('<link rel="alternate" hreflang="en" href="/'.htmlspecialchars($this->aux['lang-en'], ENT_COMPAT).'" type="text/html" />') : '' ),
-			( array_key_exists('lang-zh', $this->aux) ? ('<link rel="alternate" hreflang="zh" href="/'.htmlspecialchars($this->aux['lang-zh'], ENT_COMPAT).'" type="text/html" />') : '' );
-		}
-
 		public function util_html_inplaceEditor() { echo'
 			<div style="background:var(--content-bgcolor1)"><form id="editor" onsubmit="event.preventDefault()" dataset-resource=""><h1>Editor</h1>
 				<textarea type="text" name="content" id="editor_content" style="width:100%;height:300px;"></textarea>
@@ -881,7 +856,7 @@
 		}
 
 		/** Use {} for object and [] for array, '' for empty data */
-		public static function encodeJSON(array $x) { return count($x) ? ( array_is_list($x) ? json_encode((array)$x) : json_encode((object)$x) ) : ''; }
+		public static function encodeJSON(array $x) { return count($x) ? ( array_is_list($x) ? json_encode((array)$x, JSON_UNESCAPED_UNICODE) : json_encode((object)$x, JSON_UNESCAPED_UNICODE) ) : ''; }
 	}
 
 	class BearIndex {

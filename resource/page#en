@@ -51,36 +51,17 @@ else // if ($BW-&gt;site-&gt;template[0] == 'page-en') // default lang
 	<p>The <code>&lt;head&gt;</code> contains metadata. Bearweb page template will:</p>
 	<div class="sidebyside">
 		<pre><code>
-&lt;head&gt;
-	&lt;?php
-		// $this = resource
-		string $domain = 'https://example.com/'
-		string $sitename = 'Example Site';
-		string $srcDomain = 'https://example.com/';
-		$meta_title = htmlspecialchars($this-&gt;meta['title'] ?? '', ENT_COMPAT);
-		$meta_keywords = htmlspecialchars($this-&gt;meta['keywords'] ?? '', ENT_COMPAT);
-		$meta_description = htmlspecialchars($this-&gt;meta['description'] ?? '', ENT_COMPAT);
-	?&gt;
-		</code></pre>
-		<div>
-			<p>To print the <code>&lt;head&gt;</code> element, you can use the helper method <code>public function util_html_head(...)</code> in the <code>resource</code> object.</p>
-			<p>You can use <code>$this-&gt;property</code> to get a specific property; use <code>htmlspecialchars($this-&gt;property, ENT_COMPAT)</code> to escape HTML characters in that property value before print.</p>
-			<p>Furthermore, in the page template, you need to hardcode the <code>$domain</code>, the <code>$sitename</code>, and the <code>$srcDomain</code> which supplies JS files.</p>
-		</div>
-	</div>
-	<div class="sidebyside">
-		<pre><code>
-	&lt;title&gt;&lt;?= $meta_title ?&gt; - &lt;?= $sitename ?&gt;&lt;/title&gt;
-	&lt;meta property="og:title" content="&lt;?= $meta_title ?&gt;" /&gt;
-	&lt;meta property="og:site_name" content="&lt;?= $sitename ?&gt;" /&gt;
+	&lt;title&gt;&lt;?= htmlspecialchars($BW-&gt;site-&gt;meta['title'] ?? '', ENT_COMPAT) ?&gt; - Example Site&lt;/title&gt;
+	&lt;meta property="og:title" content="&lt;?= htmlspecialchars($BW-&gt;site-&gt;meta['title'] ?? '', ENT_COMPAT) ?&gt;" /&gt;
+	&lt;meta property="og:site_name" content="Example Site" /&gt;
 	&lt;meta property="og:type" content="website" /&gt;
-	&lt;meta name="keywords" content="&lt;?= $meta_keywords ?&gt;" /&gt;
-	&lt;meta name="description" content="&lt;?= $meta_description ?&gt;" /&gt;
-	&lt;meta property="og:description" content="&lt;?= $meta_description ?&gt;" /&gt;
+	&lt;meta name="keywords" content="&lt;?= htmlspecialchars($BW-&gt;site-&gt;meta['keywords'] ?? '', ENT_COMPAT) ?&gt;" /&gt;
+	&lt;meta name="description" content="&lt;?= htmlspecialchars($BW-&gt;site-&gt;meta['description'] ?? '', ENT_COMPAT) ?&gt;" /&gt;
+	&lt;meta property="og:description" content="&lt;?= htmlspecialchars($BW-&gt;site-&gt;meta['description'] ?? '', ENT_COMPAT) ?&gt;" /&gt;
 		</code></pre>
 		<div>
 			<p>Print the page title, the sitename, the keywords and description.</p>
-			<p>For all webpages, you should have <code>title</code>, <code>keywords</code> and <code>description</code> in the <code>meta</code> field of the <code>resource</code> object. For example:</p>
+			<p>For all webpages, you should have <code>title</code>, <code>keywords</code> and <code>description</code> saved in the <code>meta</code> field of the <code>resource</code> object. For example:</p>
 			<pre><code>
 'meta' =&gt; [
 	'title' =&gt; 'Title of the Example Page',
@@ -88,6 +69,7 @@ else // if ($BW-&gt;site-&gt;template[0] == 'page-en') // default lang
 	'keywords' =&gt; 'keyword1, keyword2, keyword3'
 ]
 			</code></pre>
+			<p>If omit, Bearweb page template will use empty string.</p>
 			<div class="main_note_warning"><p>Use English comma (<code>,</code>) (ASCII 0x2C) to separate keywords.</p></div>
 		</div>
 	</div>
@@ -104,32 +86,25 @@ else // if ($BW-&gt;site-&gt;template[0] == 'page-en') // default lang
 	<div class="sidebyside">
 		<pre><code>
 	&lt;link href="/web/style.css" rel="stylesheet" type="text/css" /&gt;
-		</code></pre>
-		<div>
-			<p>Include the stylesheet. Since the CSS <code>url()</code> function will use the stylesheet's URL as the base URL; so, we have to supply the stylesheet from the same domain as the webpage.</p>
-		</div>
-	</div>
-	<div class="sidebyside">
-		<pre><code>
 	&lt;script src="&lt;?= $srcDomain ?&gt;web/bearapi.js"&gt;&lt;/script&gt;
 	&lt;script src="&lt;?= $srcDomain ?&gt;web/bearweb.js"&gt;&lt;/script&gt;
 		</code></pre>
 		<div>
-			<p>Include the JavaScript files. We can use external server to supply them. See <code>$srcDomain</code>.</p>
+			<p>Include the stylesheet and JavaScript files.</p>
 		</div>
 	</div>
 	<div class="sidebyside">
 		<pre><code>
-	&lt;link rel="canonical" href="&lt;?= $domain.$this-&gt;url ?&gt;" /&gt;
-	&lt;meta property="og:url" content="&lt;?= $domain.$this-&gt;url ?&gt;" /&gt;
+	&lt;link rel="canonical" href="https://example.com/&lt;?= $BW->site-&gt;url ?&gt;" /&gt;
+	&lt;meta property="og:url" content="https://example.com/&lt;?= $BW->site-&gt;url ?&gt;" /&gt;
 		</code></pre>
 		<div>
-			<p>Use <code>$domain</code>/<code>$this-&gt;url</code> as canonical. This is helpful when multiple URLs link to the same resource (for example, <code>example.com/resource</code>, <code>www.example.com/resource</code>), but you should only use one URL for this resource. It tells search engine which URL to index for this content.</p>
+			<p>Set the canonical URL. This is helpful when multiple URLs link to the same resource (for example, <code>example.com/resource</code>, <code>www.example.com/resource</code>), but you should only use one URL for this resource. It tells search engine which URL to index for this content.</p>
 		</div>
 	</div>
 	<div class="sidebyside">
 		<pre><code>
-	&lt;meta name="robots" content="&lt;?=htmlspecialchars($this-&gt;meta['robots'], ENT_COMPAT)?&gt;" /&gt;
+	&lt;meta name="robots" content="&lt;?=htmlspecialchars($BW->site-&gt;meta['robots'], ENT_COMPAT)?&gt;" /&gt;
 		</code></pre>
 		<div>
 			<p>Prevent crawlers from index and/or follow this page. It requests the crawlers to not index and/or follow this resource, but some inresponsible crawlers won't respect it.</p>
@@ -147,7 +122,7 @@ else // if ($BW-&gt;site-&gt;template[0] == 'page-en') // default lang
 	</div>
 	<div class="sidebyside">
 		<pre><code>
-	&lt;meta property="__og:image" content="/&lt;?=htmlspecialchars($this-&gt;meta['img'], ENT_COMPAT)?&gt;" /&gt;
+	&lt;meta property="__og:image" content="/&lt;?=htmlspecialchars($BW->site-&gt;meta['img'], ENT_COMPAT)?&gt;" /&gt;
 		</code></pre>
 		<div>
 			<p>Show a poster, if <code>img</code> in the <code>meta</code> field of the <code>resource</code> object is specified. For example, set <code>'meta' =&gt; ['img' =&gt; 'my/image.jpg']</code> to use <code>/my/image.jpg</code> as the poster. Note the value is the absolute URL without the leading "/".</p>
@@ -155,7 +130,7 @@ else // if ($BW-&gt;site-&gt;template[0] == 'page-en') // default lang
 	</div>
 	<div class="sidebyside">
 		<pre><code>
-	&lt;meta name="author" content="&lt;?=htmlspecialchars($this-&gt;owner, ENT_COMPAT)?&gt;" /&gt;
+	&lt;meta name="author" content="&lt;?=htmlspecialchars($BW->site-&gt;owner, ENT_COMPAT)?&gt;" /&gt;
 		</code></pre>
 		<div>
 			<p>Show the author, if <code>owner</code> is not empty (system).</p>
@@ -163,8 +138,8 @@ else // if ($BW-&gt;site-&gt;template[0] == 'page-en') // default lang
 	</div>
 	<div class="sidebyside">
 		<pre><code>
-	&lt;link rel="alternate" hreflang="en" href="/&lt;?=htmlspecialchars($this-&gt;aux['lang-en'], ENT_COMPAT)?&gt;" type="text/html" /&gt;
-	&lt;link rel="alternate" hreflang="zh" href="/&lt;?=htmlspecialchars($this-&gt;aux['lang-zh'], ENT_COMPAT)?&gt;" type="text/html" /&gt;
+	&lt;link rel="alternate" hreflang="en" href="/&lt;?=htmlspecialchars($BW->site-&gt;aux['lang-en'], ENT_COMPAT)?&gt;" type="text/html" /&gt;
+	&lt;link rel="alternate" hreflang="zh" href="/&lt;?=htmlspecialchars($BW->site-&gt;aux['lang-zh'], ENT_COMPAT)?&gt;" type="text/html" /&gt;
 &lt;/head&gt;
 		</code></pre>
 		<div>

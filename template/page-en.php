@@ -4,9 +4,28 @@
 		echo '<html lang="zh">';
 	else
 		echo '<html lang="en">';
-	echo '<head>',$BW->site->util_html_head('https://bearweb.captdam.com/', 'Bearweb CMS', 'https://bearweb.captdam.com/'),'</head>';
 ?>
-<body>
+<head>
+	<title><?= htmlspecialchars($BW->site->meta['title'] ?? '', ENT_COMPAT) ?> - Bearweb CMS</title>
+	<meta property="og:title" content="<?= htmlspecialchars($BW->site->meta['title'] ?? '', ENT_COMPAT) ?>" />
+	<meta property="og:site_name" content="Bearweb CMS" />
+	<meta property="og:type" content="website" />
+	<meta name="keywords" content="<?= htmlspecialchars($BW->site->meta['keywords'] ?? '', ENT_COMPAT) ?>" />
+	<meta name="description" content="<?= htmlspecialchars($BW->site->meta['description'] ?? '', ENT_COMPAT) ?>" />
+	<meta property="og:description" content="<?= htmlspecialchars($BW->site->meta['description'] ?? '', ENT_COMPAT) ?>" />
+	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+	<meta charset="utf-8" />
+	<link href="/web/style.css" rel="stylesheet" type="text/css" />
+	<script src="/web/bearapi.js"></script>
+	<script src="/web/bearweb.js"></script>
+	<link rel="canonical" href="'https://bearweb.captdam.com/'<?= $BW->site->url ?>" />
+	<meta property="og:url" content="'https://bearweb.captdam.com/'<?= $BW->site->url ?>" />
+	<?=  array_key_exists('robots', $BW->site->meta) ? ('<meta name="robots" content="'.htmlspecialchars($BW->site->meta['robots'], ENT_COMPAT).'" />') : '' ?>
+	<?=  array_key_exists('img', $BW->site->meta) ? ('<meta property="__og:image" content="/'.htmlspecialchars($BW->site->meta['img'], ENT_COMPAT).'" />') : '' ?>
+	<?=  $BW->site->owner ? ('<meta name="author" content="'.htmlspecialchars($BW->site->owner, ENT_COMPAT).'" />') : '' ?>
+	<?=  array_key_exists('lang-en', $BW->site->aux) ? ('<link rel="alternate" hreflang="en" href="/'.htmlspecialchars($BW->site->aux['lang-en'], ENT_COMPAT).'" type="text/html" />') : '' ?>
+	<?=  array_key_exists('lang-zh', $BW->site->aux) ? ('<link rel="alternate" hreflang="zh" href="/'.htmlspecialchars($BW->site->aux['lang-zh'], ENT_COMPAT).'" type="text/html" />') : '' ?>
+</head><body>
 	<header>
 		<div id="header_topbar">
 			<div><a id="header_logo">Bearweb</a></div>
@@ -162,7 +181,7 @@
 			</div>
 			<?= $BW->site->content ?>
 		<?php elseif ($BW->site->template[1] == 'image'): ?>
-			<div class="main_wide" style="padding: 0; text-align: center; background: center/contain no-repeat url(/'<?= htmlspecialchars($BW->site->meta['img']??'', ENT_COMPAT) ?>), #BBB; height: 100vh;">
+			<div class="main_wide" style="padding: 0; text-align: center; background: center/contain no-repeat url(/<?= htmlspecialchars($BW->site->meta['img']??'', ENT_COMPAT) ?>), #BBB; height: 100vh;">
 				<img src="/<?= htmlspecialchars($BW->site->meta['hd']??'', ENT_COMPAT) ?>" style="width: 100%; height: 100%; object-fit: contain; opacity: 0.25;" onload="this.style.opacity=1" />
 			</div>
 			<div class="tintimg" style="--bgcolor: rgba(255,255,255,0.75); --bgimg: url(/web/banner.jpeg); color: #000;">

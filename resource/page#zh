@@ -51,32 +51,13 @@ else // if ($BW-&gt;site-&gt;template[0] == 'page-en') // 默认语言
 	<p><code>&lt;head&gt;</code>包含了元素据。Bearweb页面模板将会：</p>
 	<div class="sidebyside">
 		<pre><code>
-&lt;head&gt;
-	&lt;?php
-		// $this = resource
-		string $domain = 'https://example.com/'
-		string $sitename = 'Example Site';
-		string $srcDomain = 'https://example.com/';
-		$meta_title = htmlspecialchars($this-&gt;meta['title'] ?? '', ENT_COMPAT);
-		$meta_keywords = htmlspecialchars($this-&gt;meta['keywords'] ?? '', ENT_COMPAT);
-		$meta_description = htmlspecialchars($this-&gt;meta['description'] ?? '', ENT_COMPAT);
-	?&gt;
-		</code></pre>
-		<div>
-			<p>要输出<code>&lt;head&gt;</code>，我们可以使用<code>resource</code>对象内的帮助函数<code>public function util_html_head(...)</code>。</p>
-			<p>你可以使用<code>$this-&gt;property</code>来获取一个变量，或是使用<code>htmlspecialchars($this-&gt;property, ENT_COMPAT)</code>来在输出为HTML前转义变量内的HTML关键字。</p>
-			<p>另外，在网页模板中，你需要硬编码<code>$domain</code>、<code>$sitename</code>和JS文件源的<code>$srcDomain</code>。</p>
-		</div>
-	</div>
-	<div class="sidebyside">
-		<pre><code>
-	&lt;title&gt;&lt;?= $meta_title ?&gt; - &lt;?= $sitename ?&gt;&lt;/title&gt;
-	&lt;meta property="og:title" content="&lt;?= $meta_title ?&gt;" /&gt;
-	&lt;meta property="og:site_name" content="&lt;?= $sitename ?&gt;" /&gt;
+	&lt;title&gt;&lt;?= htmlspecialchars($BW-&gt;site-&gt;meta['title'] ?? '', ENT_COMPAT) ?&gt; - Example Site&lt;/title&gt;
+	&lt;meta property="og:title" content="&lt;?= htmlspecialchars($BW-&gt;site-&gt;meta['title'] ?? '', ENT_COMPAT) ?&gt;" /&gt;
+	&lt;meta property="og:site_name" content="Example Site" /&gt;
 	&lt;meta property="og:type" content="website" /&gt;
-	&lt;meta name="keywords" content="&lt;?= $meta_keywords ?&gt;" /&gt;
-	&lt;meta name="description" content="&lt;?= $meta_description ?&gt;" /&gt;
-	&lt;meta property="og:description" content="&lt;?= $meta_description ?&gt;" /&gt;
+	&lt;meta name="keywords" content="&lt;?= htmlspecialchars($BW-&gt;site-&gt;meta['keywords'] ?? '', ENT_COMPAT) ?&gt;" /&gt;
+	&lt;meta name="description" content="&lt;?= htmlspecialchars($BW-&gt;site-&gt;meta['description'] ?? '', ENT_COMPAT) ?&gt;" /&gt;
+	&lt;meta property="og:description" content="&lt;?= htmlspecialchars($BW-&gt;site-&gt;meta['description'] ?? '', ENT_COMPAT) ?&gt;" /&gt;
 		</code></pre>
 		<div>
 			<p>输出页面标题、站点名、关键字、简述。</p>
@@ -88,6 +69,7 @@ else // if ($BW-&gt;site-&gt;template[0] == 'page-en') // 默认语言
 	'keywords' =&gt; '关键字1, 关键字2, 关键字3'
 ]
 			</code></pre>
+			<p>如果没有定义，Bearweb网页模板将使用空字符串。</p>
 			<div class="main_note_warning"><p>使用<b>英文</b>的逗号（<code>,</code>）（ASCII 0x2C）来间隔关键字。</p></div>
 		</div>
 	</div>
@@ -104,32 +86,25 @@ else // if ($BW-&gt;site-&gt;template[0] == 'page-en') // 默认语言
 	<div class="sidebyside">
 		<pre><code>
 	&lt;link href="/web/style.css" rel="stylesheet" type="text/css" /&gt;
-		</code></pre>
-		<div>
-			<p>定义样式文件。因为CSS的<code>url()</code>函数使用样式文件的URL作为base URL，因此，我们只能使用与网页相同的域名来提供样式文件。</p>
-		</div>
-	</div>
-	<div class="sidebyside">
-		<pre><code>
 	&lt;script src="&lt;?= $srcDomain ?&gt;web/bearapi.js"&gt;&lt;/script&gt;
 	&lt;script src="&lt;?= $srcDomain ?&gt;web/bearweb.js"&gt;&lt;/script&gt;
 		</code></pre>
 		<div>
-			<p>定义JavaScript文件。我们可以使用外部域名来提供这些文件，参考<code>$srcDomain</code>。</p>
+			<p>定义样式表与JavaScript文件。</p>
 		</div>
 	</div>
 	<div class="sidebyside">
 		<pre><code>
-	&lt;link rel="canonical" href="&lt;?= $domain.$this-&gt;url ?&gt;" /&gt;
-	&lt;meta property="og:url" content="&lt;?= $domain.$this-&gt;url ?&gt;" /&gt;
+	&lt;link rel="canonical" href="https://example.com/&lt;?= $BW->site-&gt;url ?&gt;" /&gt;
+	&lt;meta property="og:url" content="https://example.com/&lt;?= $BW->site-&gt;url ?&gt;" /&gt;
 		</code></pre>
 		<div>
-			<p>设置<code>$domain</code>/<code>$this-&gt;url</code>为默认地址。这在有多个URL（例如<code>example.com/resource</code>与<code>www.example.com/resource</code>）指向同一个资源的情况下定义一个规范的地址，搜索引擎将会使用这里显示的地址进行收录。</p>
+			<p>设置默认地址。这在有多个URL（例如<code>example.com/resource</code>与<code>www.example.com/resource</code>）指向同一个资源的情况下定义一个规范的地址，搜索引擎将会使用这里显示的地址进行收录。</p>
 		</div>
 	</div>
 	<div class="sidebyside">
 		<pre><code>
-	&lt;meta name="robots" content="&lt;?=htmlspecialchars($this-&gt;meta['robots'], ENT_COMPAT)?&gt;" /&gt;
+	&lt;meta name="robots" content="&lt;?=htmlspecialchars($BW->site-&gt;meta['robots'], ENT_COMPAT)?&gt;" /&gt;
 		</code></pre>
 		<div>
 			<p>禁用爬虫收录/爬取本页面。这里请求爬虫不要收录/爬取，但是有的坏爬虫根本不管。</p>
@@ -147,7 +122,7 @@ else // if ($BW-&gt;site-&gt;template[0] == 'page-en') // 默认语言
 	</div>
 	<div class="sidebyside">
 		<pre><code>
-	&lt;meta property="__og:image" content="/&lt;?=htmlspecialchars($this-&gt;meta['img'], ENT_COMPAT)?&gt;" /&gt;
+	&lt;meta property="__og:image" content="/&lt;?=htmlspecialchars($BW->site-&gt;meta['img'], ENT_COMPAT)?&gt;" /&gt;
 		</code></pre>
 		<div>
 			<p>如果在<code>resource</code>对象的<code>meta</code>变量中定义了<code>img</code>，就将展示代表页面的海报。例如，设置<code>'meta' =&gt; ['img' =&gt; 'my/image.jpg']</code>就可以使用<code>/my/image.jpg</code>作为海报。注意这里的值是绝对地址，且省略开头的“/”。</p>
@@ -155,7 +130,7 @@ else // if ($BW-&gt;site-&gt;template[0] == 'page-en') // 默认语言
 	</div>
 	<div class="sidebyside">
 		<pre><code>
-	&lt;meta name="author" content="&lt;?=htmlspecialchars($this-&gt;owner, ENT_COMPAT)?&gt;" /&gt;
+	&lt;meta name="author" content="&lt;?=htmlspecialchars($BW->site-&gt;owner, ENT_COMPAT)?&gt;" /&gt;
 		</code></pre>
 		<div>
 			<p>如果<code>owner</code>不为空字符串（系统），就展示作者。</p>
@@ -163,8 +138,8 @@ else // if ($BW-&gt;site-&gt;template[0] == 'page-en') // 默认语言
 	</div>
 	<div class="sidebyside">
 		<pre><code>
-	&lt;link rel="alternate" hreflang="en" href="/&lt;?=htmlspecialchars($this-&gt;aux['lang-en'], ENT_COMPAT)?&gt;" type="text/html" /&gt;
-	&lt;link rel="alternate" hreflang="zh" href="/&lt;?=htmlspecialchars($this-&gt;aux['lang-zh'], ENT_COMPAT)?&gt;" type="text/html" /&gt;
+	&lt;link rel="alternate" hreflang="en" href="/&lt;?=htmlspecialchars($BW->site-&gt;aux['lang-en'], ENT_COMPAT)?&gt;" type="text/html" /&gt;
+	&lt;link rel="alternate" hreflang="zh" href="/&lt;?=htmlspecialchars($BW->site-&gt;aux['lang-zh'], ENT_COMPAT)?&gt;" type="text/html" /&gt;
 &lt;/head&gt;
 		</code></pre>
 		<div>
