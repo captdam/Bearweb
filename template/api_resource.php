@@ -3,7 +3,7 @@
 		[$_POST, $_FILES] = request_parse_body([		
 			'max_file_uploads'	=> '1',
 			'max_input_vars'	=> '20',
-			'post_max_size'		=> '4M',
+			'post_max_size'		=> '32M',
 			'upload_max_filesize'	=> '32M'
 		]);
 	} catch (Exception $e) {
@@ -70,7 +70,7 @@
 				http_response_code(400);
 				return ['error' => 'Missing or bad content'];
 			}
-			$content = $encode == 'b64' ? base64_decode(file_get_contents($_FILES['content']['tmp_name'])) : file_get_contents($_FILES['content']['tmp_name']);
+			$content = file_get_contents($_FILES['content']['tmp_name']);
 			$resource = Bearweb_Site::query($_POST['url']);
 			if (!$resource) {
 				http_response_code(404);

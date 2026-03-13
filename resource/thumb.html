@@ -210,7 +210,7 @@
 					meta:		'{}',
 					aux:		'{"mime":"image/jpeg"}',
 					content:	new Blob([Uint8Array.fromBase64( await getBase64(await (await fetch(_('#hd_img').src)).blob()) )])
-				}, '', event => {
+				}, event => {
 					if (event.lengthComputable)
 						_('#hd_config_state').value = event.loaded < event.total ? 'Uploading ' + Math.floor(event.loaded/event.total*100) + '% - ' + event.loaded + ' / ' + event.total : 'Upload finished, waiting server processing';
 				});
@@ -230,7 +230,7 @@
 					meta:		'{}',
 					aux:		'{"mime":"image/jpeg"}',
 					content:	new Blob([Uint8Array.fromBase64( await getBase64(await (await fetch(_('#thumb_img').src)).blob()) )])
-				}, '', event => {
+				}, event => {
 					if (event.lengthComputable)
 						_('#thumb_config_state').value = event.loaded < event.total ? 'Uploading ' + Math.floor(event.loaded/event.total*100) + '% - ' + event.loaded + ' / ' + event.total : 'Upload finished, waiting server processing';
 				});
