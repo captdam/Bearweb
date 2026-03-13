@@ -100,20 +100,14 @@ ready().then(async () => {
 		button = '没问题';
 	}
 	if (!cookie.get('BW_CookieConsent')) {
-		for (;;) {
-			try {
-				modal(dom({children: [
-					{_: 'h4', textContent: title},
-					{_: 'p', textContent: message},
-					{_: 'button', textContent: button, style: 'width:100%;margin:0;', onclick: () => {
-						cookie.set('BW_CookieConsent', '1', ';expires=max-age;max-age=9999999999;path=/;SameSite=Strict;');
-						modal();
-					}},
-				]}));
-				break;
-			} catch (e) { await delay(1); /* Wait until modal ready (modal is loaded in ready()) */ }
-		}
-
+		dialog(dom({children: [
+			{_: 'h4', textContent: title},
+			{_: 'p', textContent: message},
+			{_: 'button', textContent: button, style: 'width:100%;margin:0;', onclick: () => {
+				cookie.set('BW_CookieConsent', '1', ';expires=max-age;max-age=9999999999;path=/;SameSite=Strict;');
+				modal();
+			}},
+		]}), 0);
 	}
 });
 
