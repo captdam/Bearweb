@@ -139,7 +139,7 @@
 
 		/** Resource content (always get string), the content should be directly output to reduce server process load, consider use $this->dumpContent() to directly dump to output to save RAM */
 		public mixed $content { // FEATURE REQUEST: resource|string
-			get => is_string(get_mangled_object_vars($this)['content']) ? $this->content : $this->__file_read(-1);
+			get => $this->__is_fileBacked() ? $this->__file_read(-1) : $this->content;
 		}
 
 		/** Resource auxiliary data, template defined data array [key => value...] */
@@ -214,21 +214,21 @@
 		/** Get content length. 
 		 * @return int Content length in bytes
 		 */
-		public function getContentLength(): int { return is_string(get_mangled_object_vars($this)['content']) ? strlen($this->content) : $this->__file_size(); }
+		public function getContentLength(): int { return $this->__is_fileBacked() ? $this->__file_size() : strlen($this->content); }
 
 		/** Directly output the content. 
 		 * This is useful for large content. Large content is saved in file, using this function prevent loading it into RAM; instead, the content is directly dumpped to output. 
-		 * You should use this::getContentLength() to obtain Content-Length header first, then disable output buffer and execute this function to minimize RAM footprint. 
+		 * You should use this->getContentLength() to obtain Content-Length header first, then disable output buffer and execute this function to minimize RAM footprint. 
 		 * @param int $len = -1 Dump up to len bytes of content, pass -1 to dump all the content
 		 * @param bool $header = flase Send Content-Length HTTP header
 		 */
 		public function dumpContent(int $len = -1, bool $header = false): void {
-			if (is_string(get_mangled_object_vars($this)['content'])) {
+			if ($this->__is_fileBacked()) {
+				$this->__file_dump($len, $header);
+			} else {
 				if ($header)
 					header('Content-Length: '.strlen($this->content));
 				echo $this->content;
-			} else {
-				$this->__file_dump($len, $header);
 			}
 		}
 
@@ -269,18 +269,14 @@
 				$sql->bindValue(5,	$this->create,				PDO::PARAM_INT	);
 				$sql->bindValue(6,	$this->modify,				PDO::PARAM_INT	);
 				$sql->bindValue(7,	static::encodeJSON($this->meta),	PDO::PARAM_STR	);
+				$sql->bindValue(8,
+					$this->getContentLength() >= static::Size_FileBlob ?
+					null : 
+					$this->content , // $this->content is the content string or the content from file (hooked)
+				$this->getContentLength() >= static::Size_FileBlob ? PDO::PARAM_NULL : PDO::PARAM_STR);
 				$sql->bindValue(9,	static::encodeJSON($this->aux),		PDO::PARAM_STR	);
-				if (strlen($this->content) >= static::Size_FileBlob) {
-					$sql->bindValue(8, null, PDO::PARAM_NULL);
-				} else {
-					$sql->bindValue(8, $this->content, PDO::PARAM_STR);
-				}
 				$sql->execute();
-				if (strlen($this->content) >= static::Size_FileBlob) {
-					$this->__file_write();
-				} else {
-					$this->__file_delete();
-				}
+				$this->getContentLength() >= static::Size_FileBlob ? $this->__file_write() : $this->__file_delete();
 				static::$db->commit();
 			} catch (Exception $e) {
 				static::$db->rollBack();
@@ -290,7 +286,7 @@
 		} catch (Exception $e) { throw new BW_DatabaseServerError('Cannot insert into sitemap database: '.$e->getMessage(), 500); } }
 
 		/** Update this resource in sitemap db. 
-		 * It is not necessary to query this resource, create a dummy resource with url and fields to modify (leave other field null to keep orginal data). 
+		 * It is not necessary to query this resource if you want to overwrite it, create a dummy resource with url and data. 
 		 * This function will use transaction. You should not be in a transaction while call this function. 
 		 * @throws BW_DatabaseServerError Fail to update sitemap db
 		 */
@@ -312,19 +308,15 @@
 				$sql->bindValue(4,	$this->create,				PDO::PARAM_INT	);
 				$sql->bindValue(5,	$this->modify,				PDO::PARAM_INT	);
 				$sql->bindValue(6,	static::encodeJSON($this->meta),	PDO::PARAM_STR	);
+				$sql->bindValue(7,
+					$this->getContentLength() >= static::Size_FileBlob ?
+					null : 
+					$this->content ,
+				$this->getContentLength() >= static::Size_FileBlob ? PDO::PARAM_NULL : PDO::PARAM_STR);
 				$sql->bindValue(8,	static::encodeJSON($this->aux),		PDO::PARAM_STR	);
 				$sql->bindValue(9,	$this->url,				PDO::PARAM_STR	);
-				if (strlen($this->content) >= static::Size_FileBlob) {
-					$sql->bindValue(7, null, PDO::PARAM_NULL);
-				} else {
-					$sql->bindValue(7, $this->content, PDO::PARAM_STR);
-				}
 				$sql->execute();
-				if (strlen($this->content) >= static::Size_FileBlob) {
-					$this->__file_write();
-				} else {
-					$this->__file_delete();
-				}
+				$this->getContentLength() >= static::Size_FileBlob ? $this->__file_write() : $this->__file_delete();
 				static::$db->commit();
 			} catch (Exception $e) {
 				static::$db->rollBack();
@@ -364,18 +356,14 @@
 				$sql->bindValue(':create',	$this->create,				PDO::PARAM_INT	);
 				$sql->bindValue(':modify',	$this->modify,				PDO::PARAM_INT	);
 				$sql->bindValue(':meta',	static::encodeJSON($this->meta),	PDO::PARAM_STR	);
+				$sql->bindValue(':content',
+					$this->getContentLength() >= static::Size_FileBlob ?
+					null : 
+					$this->content ,
+				$this->getContentLength() >= static::Size_FileBlob ? PDO::PARAM_NULL : PDO::PARAM_STR);
 				$sql->bindValue(':aux',		static::encodeJSON($this->aux),		PDO::PARAM_STR	);
-				if (strlen($this->content) >= static::Size_FileBlob) {
-					$sql->bindValue(':content', null, PDO::PARAM_NULL);
-				} else {
-					$sql->bindValue(':content', $this->content, PDO::PARAM_STR);
-				}
 				$sql->execute();
-				if (strlen($this->content) >= static::Size_FileBlob) {
-					$this->__file_write();
-				} else {
-					$this->__file_delete();
-				}
+				$this->getContentLength() >= static::Size_FileBlob ? $this->__file_write() : $this->__file_delete();
 				static::$db->commit();
 			} catch (Exception $e) {
 				static::$db->rollBack();
@@ -411,8 +399,11 @@
 		/** Convert into flat filepath. # is not allowed in url (used for tag) but allowed in filename */
 		protected static function __file_path(string $url): string { return static::Dir_Resource.str_replace('/', '#', $url); }
 
-		/** Read file-backed resource content into RAM, pass -1 (default) to len for full length */
-		protected function __file_read(int $len = -1) {
+		/** Check if the content is a string or file */
+		protected function __is_fileBacked(): bool { return !is_string(get_mangled_object_vars($this)['content']); }
+
+		/** Read file-backed this->content (may be any file) into returned variable in RAM, pass -1 (default) to len for full length */
+		protected function __file_read(int $len = -1): string {
 			$file = get_mangled_object_vars($this)['content'];
 			flock($file, LOCK_SH);
 			if ($len < 0) {
@@ -428,7 +419,7 @@
 			flock($file, LOCK_UN);
 			return $content;
 		}
-		/** Get file-back resource content size */
+		/** Get file-backed this->content (may be any file) size */
 		protected function __file_size(): int {
 			$file = get_mangled_object_vars($this)['content'];
 			flock($file, LOCK_SH);
@@ -439,10 +430,11 @@
 			flock($file, LOCK_UN);
 			return $len;
 		}
-		/** Directly dump file-backed resource content to output, pass -1 (default -1) to len for full length, pass true (default false) to header to set Content-Length header */
+		/** Directly dump file-backed this->content (may be any file) to output, pass -1 (default -1) to len for full length, pass true (default false) to header to set Content-Length header */
 		protected function __file_dump(int $len = -1, bool $header = false): void {
 			$file = get_mangled_object_vars($this)['content'];
 			flock($file, LOCK_SH);
+			rewind($file); // Redundant
 			if ($len < 0) {
 				fseek($file, 0, SEEK_END);
 				$len = ftell($file);
@@ -456,18 +448,21 @@
 			flock($file, LOCK_UN);
 		}
 
-		/** Update a file-backed resource */
+		/** Create and update a file-backed resource: file is in the resource directory */
 		protected function __file_write(): void {
 			$file = fopen(static::__file_path($this->url), 'wb');
 			flock($file, LOCK_EX);
-			rewind($file);
-			if (fwrite($file, $this->content) === false)
+			rewind($file); // Redundant
+			if ($this->__is_fileBacked()) rewind(get_mangled_object_vars($this)['content']); // Redundant
+			if ( ($this->__is_fileBacked() ? stream_copy_to_stream(get_mangled_object_vars($this)['content'], $file) : fwrite($file, $this->content)) === false )
 				throw new BW_DatabaseServerError('Cannot write to blob file: '.$this->url, 500);
 			flock($file, LOCK_UN);
 			fclose($file);
 		}
 
-		/** Delete a file-backed resource. Return true if file not existed or delete success. Note file pointers still in use are still available */
+
+
+		/** Delete a file-backed resource: file is in the resource directory. Return true if file not existed or delete success. Note file pointers still in use are still available */
 		protected function __file_delete(): void {
 			$path = static::__file_path($this->url);
 			if (!(is_file($path) ? unlink($path) : true))

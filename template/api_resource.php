@@ -70,7 +70,7 @@
 				http_response_code(400);
 				return ['error' => 'Missing or bad content'];
 			}
-			$content = file_get_contents($_FILES['content']['tmp_name']);
+			$content = fopen($_FILES['content']['tmp_name'], 'r');
 			$resource = Bearweb_Site::query($_POST['url']);
 			if (!$resource) {
 				http_response_code(404);
@@ -86,6 +86,7 @@
 			$resource->content	= $content;
 			$resource->aux		= $_POST['aux'];
 			$resource->update();
+			fclose($content); // Temp file will be deleted by PHP engine at end
 			http_response_code(202);
 			return [];
 		
