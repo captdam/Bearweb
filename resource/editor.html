@@ -61,9 +61,19 @@
 	categorySet.map(x => { _('#modify_category').append(dom({_:'option', value: x.category, textContent: x.category, style: 'background:'+x.color})); });
 	
 
-	// Resource list
-	const form_modify_load = async url => { try {
-		const resource = await BearAPI_Resource.get(url, 'b64');
+	// Get a resource
+	const form_modify_load = async url => { try { // Get resource (via API, user has RW rights)
+		const win = dom({children: [
+			{_: 'h4', textContent: 'Reading server'},
+			{_: 'p', textContent: 'Downloading...'},
+			{_: 'button', textContent: 'Give up waiting (downloading will continue, cannot cancel)', style: 'width:100%;margin:0;', onclick: () => { modal(); }},
+		]});
+		modal(win);
+		const resource = await BearAPI_Resource.get(url, 'b64', event => {
+			_('p', win).textContent = Math.floor(event.loaded / 1024) + 'kB downloaded...';
+			console.log(event);
+		});
+		modal();
 		_('#modify_url').value = resource.url;
 		_('#modify_category').value = resource.category;
 		_('#modify_meta').value = JSON.stringify(resource.meta, null, ' ');
@@ -75,7 +85,9 @@
 		_('#modify_content').type = resource.aux.mime ?? 'text/plain';
 		_('#modify_content').src = 'data:'+_('#modify_content').type+';base64,'+resource.content;
 	dialog_success('OK', 'Read resource success') } catch (e) { dialog_error(e.name, e.message); } };
-	_('#list_reload').onclick = async event => { try {
+
+	// Resource list
+	_('#list_reload').onclick = async event => { try { // Get list (as normal object file, the list's owner is system, user has read-only right)
 		let list = [];
 		const uid = (await BearAPI_User.whoami()).id;
 		const xhr = await fetch('/u/'+uid+'/resource.private', {cache: 'reload'});
@@ -220,6 +232,8 @@
 			meta:		_('#modify_meta').value,
 			aux:		_('#modify_aux').value,
 			content:	new Blob([Uint8Array.fromBase64(_('#modify_content').src.split(',', 2)[1])])
+		}, event => {
+			console.log(event);
 		});
 		_('#form_modify_submit').disabled = false;
 		_('#form_modify_submit').textContent = 'Modify';

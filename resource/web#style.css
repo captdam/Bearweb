@@ -40,7 +40,7 @@ main>*:nth-child(2n+1) { background: var(--content-bgcolor1); }
 .main_wide { padding: 12px 0; }
 main>*>* { max-width: 100%; }
 
-::backdrop { background: rgba(0, 0, 0, 0.925); }
+::backdrop { background: rgba(0, 0, 0, 0.3); }
 
 
 /** -------------------------- MODULES TO USE -------------------------- **/
