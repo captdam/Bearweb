@@ -885,10 +885,10 @@
 		public function __construct(string $url, array $template, array $meta, array $aux) { parent::__construct($url, 'Bulletin', $template, $meta, '', $aux); }
 		public function add(array $r): bool {
 			$this->divider($this->lastAddResource, $r);
-			$url		= htmlspecialchars($r['url'], ENT_COMPAT);
-			$title		= htmlspecialchars($r['meta']['title'] ?? $r['url'], ENT_COMPAT);
-			$description	= htmlspecialchars($r['meta']['description'] ?? '', ENT_COMPAT);
-			$img		= htmlspecialchars($r['meta']['img'] ?? '', ENT_COMPAT);
+			$url		= $r['html-url'];
+			$title		= $r['html-title'];
+			$description	= $r['html-description'];
+			$img		= $r['html-img'];
 			$ratio		= $r['meta']['ratio'] ?? 1;
 			$this->site->content .= '<a href="/'.$url.'" style="aspect-ratio:'.($ratio).'"><img src="/'.$img.'" title="'.$title.'" alt="'.$description.'" loading="lazy" /></a>';
 			$this->lastAddResource = $r;
@@ -898,12 +898,12 @@
 	class BearIndex_Catalog extends BearIndex {
 		public function __construct(string $url, array $template, array $meta, array $aux) { parent::__construct($url, 'Catalog', $template, $meta, '', $aux); }
 		public function add(array $r): bool {
-			$url		= htmlspecialchars($r['url'], ENT_COMPAT);
-			$img		= htmlspecialchars($r['meta']['img'] ?? '', ENT_COMPAT);
-			$title		= htmlspecialchars($r['meta']['title'] ?? $r['url'], ENT_COMPAT);
-			$description	= htmlspecialchars($r['meta']['description'] ?? '', ENT_COMPAT);
-			$keywords	= htmlspecialchars($r['meta']['keywords'] ?? '', ENT_COMPAT);
-			$owner		= htmlspecialchars($r['owner'], ENT_COMPAT);
+			$url		= $r['html-url'];
+			$img		= $r['html-img'];
+			$title		= $r['html-title'];
+			$description	= $r['html-description'];
+			$keywords	= $r['html-keywords'];
+			$owner		= $r['html-owner'];
 			$modify		= date('M j, Y',$r['modify']);
 			$this->site->content .= '<a href="/'.$url.'" style="--bgimg:url(/'.$img.')"><h2>'.$title.'</h2><p>'.$description.'</p><p class="content_keywords">'.$keywords.'</p><p><i>--by '.$owner.' @ '.$modify.'</i></p></a>';
 			return true;
@@ -913,13 +913,13 @@
 		public function __construct(string $url, array $meta) { parent::__construct($url, 'Index', ['object', 'blob'], $meta, '<?xml version="1.0" encoding="UTF-8" ?><resourceset>', ['mime' => 'text/xml']); }
 		
 		public function add(array $r): bool {
-			$url		= htmlspecialchars($r['url'], ENT_COMPAT);
-			$category	= htmlspecialchars($r['category'], ENT_COMPAT);
-			$create		= htmlspecialchars($r['create'], ENT_COMPAT); // Should be number, but in case DB manually modified, it may hold string 
-			$modify		= htmlspecialchars($r['modify'], ENT_COMPAT);
-			$title		= htmlspecialchars($r['meta']['title'] ?? $r['url'], ENT_COMPAT);
+			$url		= $r['html-url'];
+			$category	= $r['html-category'];
+			$create		= intval($r['create']); // Should be number, but in case DB manually modified, it may hold string 
+			$modify		= intval($r['modify']);
+			$title		= $r['html-title'];
 			$robots		= static::dontIndex($r); // No special characters in ['access', 'r301', 'r302', 'robots', '']
-			$owner		= htmlspecialchars($r['owner'], ENT_COMPAT);
+			$owner		= $r['html-owner'];
 			$this->site->content .= '<resource><url>'.$url.'</url><category>'.$category.'</category><create>'.$create.'</create><modify>'.$modify.'</modify><title>'.$title.'</title><robots>'.$robots.'</robots><owner>'.$owner.'</owner></resource>';
 			return true;
 		}
@@ -942,11 +942,11 @@
 			);
 		}
 		public function add(array $r): bool {
-			$title		= htmlspecialchars($r['meta']['title'] ?? $r['url'], ENT_COMPAT);
-			$url		= htmlspecialchars($r['url'], ENT_COMPAT);
-			$owner		= htmlspecialchars($r['owner'], ENT_COMPAT);
-			$category	= htmlspecialchars($r['category'], ENT_COMPAT);
-			$description	= htmlspecialchars($r['meta']['description'] ?? '', ENT_COMPAT);
+			$title		= $r['html-title'];
+			$url		= $r['html-url'];
+			$owner		= $r['html-owner'];
+			$category	= $r['html-category'];
+			$description	= $r['html-description'];
 			$modify		= date(DATE_RSS,$r['modify']);
 			$this->site->content .= '<item><title>'.$title.'</title><link>'.$this->domain.$url.'</link><guid>'.$this->domain.$url.'</guid><author>'.$owner.'</author><category>'.$category.'</category><description>'.$description.'</description><pubDate>'.$modify.'</pubDate></item>';
 			return true;
@@ -980,7 +980,7 @@
 		}
 		public function add(array $r): bool {
 			if (static::dontIndex($r)) return false;
-			$url		= htmlspecialchars($r['url'], ENT_COMPAT);
+			$url		= $r['html-url'];
 			$modify		= date(DATE_W3C,$r['modify']);
 			$this->site->content .= '<url><loc>'.$this->domain.$url.'</loc><lastmod>'.$modify.'</lastmod></url>';
 			return true;
@@ -993,6 +993,13 @@
 	function _bear_reindex(array $index) {
 		foreach(Bearweb_Site::$db->query('SELECT `url`, `category`, `owner`, `create`, `modify`, `meta` FROM `Sitemap` ORDER BY `modify` DESC') as $r) { // Note: to reduce system load, we will work with raw data
 			$r['meta'] = json_decode($r['meta'], true) ?? [];
+			$r['html-url'] = htmlspecialchars($r['url'], ENT_COMPAT);
+			$r['html-category'] = htmlspecialchars($r['category'], ENT_COMPAT);
+			$r['html-owner'] = htmlspecialchars($r['owner'], ENT_COMPAT);
+			$r['html-title'] = htmlspecialchars($r['meta']['title'] ?? '', ENT_COMPAT);
+			$r['html-keywords'] = htmlspecialchars($r['meta']['keywords'] ?? '', ENT_COMPAT);
+			$r['html-description'] = htmlspecialchars($r['meta']['description'] ?? '', ENT_COMPAT);
+			$r['html-img'] = htmlspecialchars($r['meta']['img'] ?? '', ENT_COMPAT);
 			foreach ($index as $x) $x->add($r);
 		}
 		foreach ($index as $x) $x->upsert($r);
