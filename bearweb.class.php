@@ -218,17 +218,20 @@
 
 		/** Directly output the content. 
 		 * This is useful for large content. Large content is saved in file, using this function prevent loading it into RAM; instead, the content is directly dumpped to output. 
-		 * You should use this->getContentLength() to obtain Content-Length header first, then disable output buffer and execute this function to minimize RAM footprint. 
-		 * @param int $len = -1 Dump up to len bytes of content, pass -1 to dump all the content
-		 * @param bool $header = flase Send Content-Length HTTP header
+		 * @param int $len Dump up to len bytes of content, default -1 to dump all the content
+		 * @param bool $header Send Content-Length HTTP header, default flase. The file may be override by another process, if you need to send length header, set this to true (for atomic operation)
+		 * @param string $encode Encode the output, default '' for raw. You may use 'b64' for base 64
 		 */
-		public function dumpContent(int $len = -1, bool $header = false): void {
+		public function dumpContent(int $len = -1, bool $header = false, string $encode = ''): void {
 			if ($this->__is_fileBacked()) {
-				$this->__file_dump($len, $header);
+				$this->__file_dump($len, $header, $encode);
 			} else {
 				if ($header)
 					header('Content-Length: '.strlen($this->content));
-				echo $this->content;
+				switch ($encode) {
+					case 'b64': echo base64_encode($this->content); break;
+					default: echo $this->content;
+				}
 			}
 		}
 
@@ -413,7 +416,7 @@
 					throw new BW_DatabaseServerError('Cannot get size for blob file: '.$this->url, 500);
 			}
 			rewind($file);
-			$content = fread($file,$len);
+			$content = $len > 0 ? fread($file, $len) : '';
 			if ($content === false)
 				throw new BW_DatabaseServerError('Cannot read from blob file: '.$this->url, 500);
 			flock($file, LOCK_UN);
@@ -430,8 +433,8 @@
 			flock($file, LOCK_UN);
 			return $len;
 		}
-		/** Directly dump file-backed this->content (may be any file) to output, pass -1 (default -1) to len for full length, pass true (default false) to header to set Content-Length header */
-		protected function __file_dump(int $len = -1, bool $header = false): void {
+		/** Directly dump file-backed this->content (may be any file) to output, pass -1 (default -1) to len for full length, pass true (default false) to header to set Content-Length header in the same transaction */
+		protected function __file_dump(int $len = -1, bool $header = false, string $encode = ''): void {
 			$file = get_mangled_object_vars($this)['content'];
 			flock($file, LOCK_SH);
 			rewind($file); // Redundant
@@ -444,7 +447,10 @@
 			if ($header)
 				header('Content-Length: '.$len);
 			rewind($file);
-			fpassthru($file);
+			switch ($encode) {
+				case 'b64': while ($segment = fread($file, 60000)) echo base64_encode($segment); break;
+				default: fpassthru($file);
+			}
 			flock($file, LOCK_UN);
 		}
 

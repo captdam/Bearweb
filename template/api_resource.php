@@ -27,11 +27,21 @@
 				http_response_code(403);
 				return ['error' => 'No write access'];
 			}
-			if ($encode == 'b64') {
-				$resource->content = base64_encode($resource->content);
-			}
-			http_response_code(200);
-			return $resource;
+			ob_end_clean(); // Special: Get content may be very large. Manual create the JSON for all fields, then dump content
+			echo '{';
+			echo '"url":"'.$resource->url.'",';
+			echo '"category":"'.$resource->category.'",';
+			echo '"template":'.json_encode($resource->template).',';
+			echo '"owner":"'.$resource->owner.'",';
+			echo '"create":'.$resource->create.',';
+			echo '"modify":'.$resource->modify.',';
+			echo '"meta":'.json_encode($resource->meta).',';
+			echo '"content":"';
+			$resource->dumpContent(-1, false, $encode);
+			echo '",';
+			echo '"aux":'.json_encode($resource->aux).'';
+			echo '}';
+			exit;
 		
 		case 'create':
 			try {
