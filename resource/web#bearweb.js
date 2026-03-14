@@ -103,9 +103,8 @@ ready().then(async () => {
 		dialog(dom({children: [
 			{_: 'h4', textContent: title},
 			{_: 'p', textContent: message},
-			{_: 'button', textContent: button, style: 'width:100%;margin:0;', onclick: () => {
+			{_: 'button', textContent: button, style: 'width:100%;margin:0;', onclick: () => { // Click anywhere to close dialog, but only click this button can set the cookie and disable this notice
 				cookie.set('BW_CookieConsent', '1', ';expires=max-age;max-age=9999999999;path=/;SameSite=Strict;');
-				modal();
 			}},
 		]}), 0);
 	}
