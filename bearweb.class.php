@@ -139,7 +139,7 @@
 
 		/** Resource content (always get string), the content should be directly output to reduce server process load, consider use $this->dumpContent() to directly dump to output to save RAM */
 		public mixed $content { // FEATURE REQUEST: resource|string
-			get => $this->__is_fileBacked() ? $this->__file_read(-1) : $this->content;
+			get => $this->content_isFileBacked() ? $this->__file_read(-1) : $this->content;
 		}
 
 		/** Resource auxiliary data, template defined data array [key => value...] */
@@ -214,7 +214,7 @@
 		/** Get content length. 
 		 * @return int Content length in bytes
 		 */
-		public function getContentLength(): int { return $this->__is_fileBacked() ? $this->__file_size() : strlen($this->content); }
+		public function getContentLength(): int { return $this->content_isFileBacked() ? $this->__file_size() : strlen($this->content); }
 
 		/** Directly output the content. 
 		 * This is useful for large content. Large content is saved in file, using this function prevent loading it into RAM; instead, the content is directly dumpped to output. 
@@ -223,7 +223,7 @@
 		 * @param string $encode Encode the output, default '' for raw. You may use 'b64' for base 64
 		 */
 		public function dumpContent(int $len = -1, bool $header = false, string $encode = ''): void {
-			if ($this->__is_fileBacked()) {
+			if ($this->content_isFileBacked()) {
 				$this->__file_dump($len, $header, $encode);
 			} else {
 				if ($header)
@@ -403,7 +403,7 @@
 		protected static function __file_path(string $url): string { return static::Dir_Resource.str_replace('/', '#', $url); }
 
 		/** Check if the content is a string or file */
-		protected function __is_fileBacked(): bool { return !is_string(get_mangled_object_vars($this)['content']); }
+		public function content_isFileBacked(): bool { return !is_string(get_mangled_object_vars($this)['content']); }
 
 		/** Read file-backed this->content (may be any file) into returned variable in RAM, pass -1 (default) to len for full length */
 		protected function __file_read(int $len = -1): string {
@@ -459,8 +459,8 @@
 			$file = fopen(static::__file_path($this->url), 'wb');
 			flock($file, LOCK_EX);
 			rewind($file); // Redundant
-			if ($this->__is_fileBacked()) rewind(get_mangled_object_vars($this)['content']); // Redundant
-			if ( ($this->__is_fileBacked() ? stream_copy_to_stream(get_mangled_object_vars($this)['content'], $file) : fwrite($file, $this->content)) === false )
+			if ($this->content_isFileBacked()) rewind(get_mangled_object_vars($this)['content']); // Redundant
+			if ( ($this->content_isFileBacked() ? stream_copy_to_stream(get_mangled_object_vars($this)['content'], $file) : fwrite($file, $this->content)) === false )
 				throw new BW_DatabaseServerError('Cannot write to blob file: '.$this->url, 500);
 			flock($file, LOCK_UN);
 			fclose($file);
@@ -996,7 +996,7 @@
 			$r['html-url'] = htmlspecialchars($r['url'], ENT_COMPAT);
 			$r['html-category'] = htmlspecialchars($r['category'], ENT_COMPAT);
 			$r['html-owner'] = htmlspecialchars($r['owner'], ENT_COMPAT);
-			$r['html-title'] = htmlspecialchars($r['meta']['title'] ?? '', ENT_COMPAT);
+			$r['html-title'] = htmlspecialchars($r['meta']['title'] ?? $r['url'], ENT_COMPAT);
 			$r['html-keywords'] = htmlspecialchars($r['meta']['keywords'] ?? '', ENT_COMPAT);
 			$r['html-description'] = htmlspecialchars($r['meta']['description'] ?? '', ENT_COMPAT);
 			$r['html-img'] = htmlspecialchars($r['meta']['img'] ?? '', ENT_COMPAT);
