@@ -28,19 +28,21 @@
 				return ['error' => 'No write access'];
 			}
 			ob_end_clean(); // Special: Get content may be very large. Manual create the JSON for all fields, then dump content
-			echo '{';
-			echo '"url":"'.$resource->url.'",';
-			echo '"category":"'.$resource->category.'",';
-			echo '"template":'.json_encode($resource->template).',';
-			echo '"owner":"'.$resource->owner.'",';
-			echo '"create":'.$resource->create.',';
-			echo '"modify":'.$resource->modify.',';
-			echo '"meta":'.json_encode($resource->meta).',';
-			echo '"content":"';
+			$json = json_encode([
+				'url'		=> $resource->url,
+				'category'	=> $resource->category,
+				'template'	=> $resource->template,
+				'owner'		=> $resource->owner,
+				'create'	=> $resource->create,
+				'modify'	=> $resource->modify,
+				'meta'		=> $resource->meta,
+				'content'	=> $resource->content_isFileBacked() ? null : ($encode == 'b64' ? base64_encode($resource->content) : $resource->content),
+				'aux'		=> $resource->aux
+			], JSON_UNESCAPED_UNICODE);
+			$json =substr($json, 0, strrpos($json, '}'));
+			echo $json,',"content":"';
 			$resource->dumpContent(-1, false, $encode);
-			echo '",';
-			echo '"aux":'.json_encode($resource->aux).'';
-			echo '}';
+			echo '"}';
 			exit;
 		
 		case 'create':
