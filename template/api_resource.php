@@ -15,7 +15,6 @@
 		http_response_code(400);
 		return ['error' => 'Missing or bad URL'];
 	}
-	$encode = $_GET['encode'] ?? '';
 
 	switch ($BW->site->meta['task']) {
 		case 'get':
@@ -36,12 +35,11 @@
 				'create'	=> $resource->create,
 				'modify'	=> $resource->modify,
 				'meta'		=> $resource->meta,
-				'content'	=> $resource->content_isFileBacked() ? null : ($encode == 'b64' ? base64_encode($resource->content) : $resource->content),
 				'aux'		=> $resource->aux
 			], JSON_UNESCAPED_UNICODE);
 			$json =substr($json, 0, strrpos($json, '}'));
 			echo $json,',"content":"';
-			$resource->dumpContent(-1, false, $encode);
+			$resource->dumpContent(-1, false, 'b64');
 			echo '"}';
 			exit;
 		

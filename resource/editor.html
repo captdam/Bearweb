@@ -69,7 +69,7 @@
 			{_: 'button', textContent: 'Give up waiting (downloading will continue, cannot cancel)', style: 'width:100%;margin:0;', onclick: () => { modal(); }},
 		]});
 		modal(win);
-		const resource = await BearAPI_Resource.get(url, 'b64', event => {
+		const resource = await BearAPI_Resource.get(url, event => {
 			_('p', win).textContent = Math.floor(event.loaded / 1024) + 'kB downloaded...';
 			console.log(event);
 		});
@@ -224,8 +224,12 @@
 
 	// Update resource
 	_('#form_modify').onsubmit = async event => { event.preventDefault(); try {
-		_('#form_modify_submit').disabled = true;
-		_('#form_modify_submit').textContent = 'Uploading';
+		const win = dom({children: [
+			{_: 'h4', textContent: 'Writing server'},
+			{_: 'p', textContent: 'Uploading...'},
+			{_: 'button', textContent: 'Give up waiting (uploading will continue, cannot cancel)', style: 'width:100%;margin:0;', onclick: () => { modal(); }},
+		]});
+		modal(win);
 		const resource = await BearAPI_Resource.update({
 			url:		_('#modify_url').value,
 			category:	_('#modify_category').value,
@@ -233,10 +237,10 @@
 			aux:		_('#modify_aux').value,
 			content:	new Blob([Uint8Array.fromBase64(_('#modify_content').src.split(',', 2)[1])])
 		}, event => {
+			_('p', win).textContent = Math.floor(event.loaded / 1024) + ' of ' + Math.floor(event.total / 1024) + 'kB uploaded...';
 			console.log(event);
 		});
-		_('#form_modify_submit').disabled = false;
-		_('#form_modify_submit').textContent = 'Modify';
+		modal();
 	dialog_success('OK', 'Update resource success') } catch (e) {
 		_('#form_modify_submit').disabled = false;
 		_('#form_modify_submit').textContent = 'Modify';

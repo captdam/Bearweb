@@ -44,8 +44,8 @@ class BearAPI {
 
 // Create, modify, read and delete resource
 class BearAPI_Resource extends BearAPI {
-	static async get(url, encode, progress) { // Get (read) a resource from server, encode = b64 for base64 encoded data (binary)
-		const res = await this.xhr('/api/resource/get?encode=' + encode, {url: url}, progress);
+	static async get(url, progress) { // Get (read) a resource from server
+		const res = await this.xhr('/api/resource/get', {url: url}, progress);
 		if (res.status != 200) this.throwError(res.status, res.json.error);
 		res.json.meta = res.json.meta == '[]' ? '{}' : res.json.meta;
 		res.json.aux = res.json.aux == '[]' ? '{}' : res.json.aux;

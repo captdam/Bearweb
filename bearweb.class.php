@@ -486,7 +486,7 @@
 				<script>
 					_(\'#editor_reload\').onclick = async event => { try {
 						const resource = await BearAPI_Resource.get(window.location.pathname.substr(1));
-						_(\'#editor_content\').value = resource.content;
+						_(\'#editor_content\').value = new TextDecoder().decode(Uint8Array.fromBase64(resource.content));
 					dialog_success(200, \'Reloaded\'); } catch (e) { dialog_error(0, \'Reload failed: \' + e); throw e; } };
 					_(\'#editor_render\').onclick = event => { try {
 						_(\'main\').replaceChildren(...(((src => { // Allows insert into DOM for live view
@@ -890,7 +890,7 @@
 			$description	= $r['html-description'];
 			$img		= $r['html-img'];
 			$ratio		= $r['meta']['ratio'] ?? 1;
-			$this->site->content .= '<a href="/'.$url.'" style="aspect-ratio:'.($ratio).'"><img src="/'.$img.'" title="'.$title.'" alt="'.$description.'" loading="lazy" /></a>';
+			$this->site->content .= '<a href="/'.$url.'" style="aspect-ratio:'.($ratio).'"><div><h3>'.$title.'</h3><p>'.$description.'</p></div><img src="/'.$img.'" title="'.$title.'" alt="'.$description.'" loading="lazy" /></a>';
 			$this->lastAddResource = $r;
 			return true;
 		}
