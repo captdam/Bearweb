@@ -340,6 +340,13 @@ int main() {
 			<li>Caption if <code>figcaption</code> is provided.</li>
 			<li>Keywords in hashtag style if <code>data-keywords</code> is provided.</li>
 		</ul>
+		<p>The in-page figure is limited to 600px wide. This works great in most case; in case you want to remove the width limit, add attribute <code>data-wide</code>.</p>
+		<pre><code>
+&lt;figure&gt;
+	&lt;img src="/example/bridge.thumb.jpg" title="Lift bridge" alt="Lift bridge" data-wide="" /&gt;
+	&lt;figcaption&gt;An old lift bridge.&lt;/figcaption&gt;
+&lt;/figure&gt;
+		</code></pre>
 	</div>
 </div>
 

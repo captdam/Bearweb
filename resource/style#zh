@@ -340,6 +340,13 @@ int main() {
 			<li>小标题，如果有指定<code>figcaption</code>的话。</li>
 			<li>分割渲染的关键字块，如果有指定</code>的话。</li>
 		</ul>
+		<p>页面中的图片宽度被限制在600px宽。则在大部分情况下都看着很棒，但是如果需要解除该限制，可以添加<code>data-wide</code>元素。</p>
+		<pre><code>
+&lt;figure&gt;
+	&lt;img src="/example/bridge.thumb.jpg" title="Lift bridge" alt="Lift bridge" data-wide="" /&gt;
+	&lt;figcaption&gt;An old lift bridge.&lt;/figcaption&gt;
+&lt;/figure&gt;
+		</code></pre>
 	</div>
 </div>
 
