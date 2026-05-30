@@ -21,7 +21,7 @@
 	<link rel="canonical" href="'https://bearweb.captdam.com/'<?= $BW->site->url ?>" />
 	<meta property="og:url" content="'https://bearweb.captdam.com/'<?= $BW->site->url ?>" />
 	<?=  array_key_exists('robots', $BW->site->meta) ? ('<meta name="robots" content="'.htmlspecialchars($BW->site->meta['robots'], ENT_COMPAT).'" />') : '' ?>
-	<?=  array_key_exists('img', $BW->site->meta) ? ('<meta property="__og:image" content="/'.htmlspecialchars($BW->site->meta['img'], ENT_COMPAT).'" />') : '' ?>
+	<?=  array_key_exists('img', $BW->site->meta) ? ('<meta property="og:image" content="/'.htmlspecialchars($BW->site->meta['img'], ENT_COMPAT).'" />') : '' ?>
 	<?=  $BW->site->owner ? ('<meta name="author" content="'.htmlspecialchars($BW->site->owner, ENT_COMPAT).'" />') : '' ?>
 	<?=  array_key_exists('lang-en', $BW->site->aux) ? ('<link rel="alternate" hreflang="en" href="/'.htmlspecialchars($BW->site->aux['lang-en'], ENT_COMPAT).'" type="text/html" />') : '' ?>
 	<?=  array_key_exists('lang-zh', $BW->site->aux) ? ('<link rel="alternate" hreflang="zh" href="/'.htmlspecialchars($BW->site->aux['lang-zh'], ENT_COMPAT).'" type="text/html" />') : '' ?>

@@ -64,7 +64,7 @@ table {
 	width: 100%;
 	overflow-x: auto;
 }
-caption { font-size: larger; padding: 12px 0; }
+caption { font-size: larger; padding: 12px 0; text-align: left; }
 thead,tfoot {
 	color: var(--highlight-color);
 	background: var(--highlight-bgcolor);
@@ -103,8 +103,8 @@ tbody tr:nth-child(2n+1) { background: var(--content-bgcolor1); }
 
 /** Figure and Image viewer: Display <figure><img> in an overlay */
 figure { text-align: center; margin: 12px 0 !important; }
-figure>img { max-width: min(600px, 100%); cursor: zoom-in; }
-figure>img[data-wide] { max-width: 100%; }
+figure>img { max-width: 100%; cursor: zoom-in; }
+figure>img:not([data-wide]) { max-width: min(600px, 100%); max-height: min(600px, 100vh); }
 #imgViewer {
 	position: fixed;
 	top: 0;
@@ -326,8 +326,18 @@ header {
 #categorylist>*:hover {
 	box-shadow: inset 0 0 0 100vmax rgba(225, 225, 225, 0.35);
 }
+#bulletinlist>* {
+	position: relative;
+	color: transparent;
+	transition: 0.3s;
+}
 #bulletinlist>*:hover {
 	filter: contrast(1.35);
+	color: white;
+}
+#bulletinlist>* div {
+	position: absolute; bottom: 0; left: 0; z-index: 9;
+	padding: 0 0.5ch;
 }
 #bulletinlist>* img {
 	width: 100%;

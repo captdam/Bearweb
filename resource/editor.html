@@ -71,7 +71,6 @@
 		modal(win);
 		const resource = await BearAPI_Resource.get(url, event => {
 			_('p', win).textContent = Math.floor(event.loaded / 1024) + 'kB downloaded...';
-			console.log(event);
 		});
 		modal();
 		_('#modify_url').value = resource.url;
@@ -238,7 +237,6 @@
 			content:	new Blob([Uint8Array.fromBase64(_('#modify_content').src.split(',', 2)[1])])
 		}, event => {
 			_('p', win).textContent = Math.floor(event.loaded / 1024) + ' of ' + Math.floor(event.total / 1024) + 'kB uploaded...';
-			console.log(event);
 		});
 		modal();
 	dialog_success('OK', 'Update resource success') } catch (e) {
