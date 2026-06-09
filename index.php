@@ -66,7 +66,7 @@
 			'api/resource/update' => ['category' => 'API', 'template' => ['api','resource'], 'meta' => ['task' => 'update', 'access' => [1]], 'aux' => ['type' => [ // Add yours ------------------------------------------------
 				// List of allowed template
 				// 'Name' => ['sitemap->category', sitemap->template[]]
-				'Content' => ['Content',['object','blob']]
+				'' => ['',['object','blob']]
 			]]],
 			'api/resource/delete' => ['category' => 'API', 'template' => ['api','resource'], 'meta' => ['task' => 'delete', 'access' => [1]]],
 			'api/resource/reindex' => ['category' => 'API', 'template' => ['api','resource'], 'meta' => ['task' => 'reindex', 'access' => [1]]],
@@ -82,7 +82,7 @@
 				'title' => 'Moderator workspace',
 				'access' => [1],
 				'robots' => 'noindex, nofollow',
-				'keywords' => 'Content, grey, Name1, color1, Name2, color2' // Add yours ------------------------------------------------
+				'keywords' => ', none, Content, grey, Name1, color1, Name2, color2' // Add yours ------------------------------------------------
 			], 'content' => null],
 			'thumb.html' => ['category' => 'CMD', 'template' => ['page-en','direct'], 'meta' => [
 				'title' => 'Thumbnail uploader',

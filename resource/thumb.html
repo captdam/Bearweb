@@ -1,4 +1,4 @@
-<div class="main_title"><h1>File picker</h1></div>
+<div class="main_title"><h1>1. Pick a File</h1></div>
 <div id="localfile" class="sidebyside" style="grid-template-columns: 1fr 2fr;">
 	<img id="localfile_content" />
 	<div>
@@ -10,13 +10,6 @@
 		<h2>关键字</h2><input id="localfile_keywords_zh" placeholder="keyword1, keyword2, keyword3 注意使用英文逗号" />
 		<h2>Description</h2><input id="localfile_description_en" placeholder="Some description about this image." />
 		<h2>简述</h2><input id="localfile_description_zh" placeholder="图片的简介." />
-		<div class="layflat">
-			<button id="localfile_btn">Open media file</button>
-			<button id="localfile_upload">Upload (Category)</button>
-			<button id="localfile_upload_thumb">Thumb only</button>
-			<button id="localfile_upload_hd">HD only</button>
-			<button id="localfile_upload_thumbhd">Thumb + HD only</button>
-		</div>
 		<div style="display:none">
 			<input id="localfile_picker" type="file" accept="image/*" />
 		</div>
@@ -25,7 +18,7 @@
 	</div>
 </div>
 
-<div class="main_title"><h1 id="thumb_title">Thumbnail</h1></div>
+<div class="main_title"><h1 id="thumb_title">2. Check the Thumbnail</h1></div>
 <div id="thumb_config">
 	<label>Width</label>
 	<input id="thumb_config_width" type="number" min="0" max="0" value="0" />
@@ -42,7 +35,7 @@
 	<img id="thumb_img" />
 </div>
 
-<div class="main_title"><h1 id="hd_title">HD</h1></div>
+<div class="main_title"><h1 id="hd_title">3. Check the HD</h1></div>
 <div id="hd_config">
 	<label>Width</label>
 	<input id="hd_config_width" type="number" min="0" max="0" value="0" />
@@ -57,6 +50,19 @@
 </div>
 <div id="hd" class="main_wide">
 	<img id="hd_img" />
+</div>
+
+<div class="main_title"><h1>4. Upload</h1></div>
+<div id="hd_action">
+	<div>
+		<div class="layflat">
+			<button id="localfile_btn">Open media file</button>
+			<button id="localfile_upload">Upload Thumb + HD + CATEGORY page</button>
+			<button id="localfile_upload_thumb">Thumb only</button>
+			<button id="localfile_upload_hd">HD only</button>
+			<button id="localfile_upload_thumbhd">Thumb + HD only</button>
+		</div>
+	</div>
 </div>
 
 <script>
@@ -206,7 +212,7 @@
 			try {
 				await BearAPI_Resource.update({
 					url:		url_hd,
-					category:	'Content',
+					category:	'',
 					meta:		'{}',
 					aux:		'{"mime":"image/jpeg"}',
 					content:	new Blob([Uint8Array.fromBase64( await getBase64(await (await fetch(_('#hd_img').src)).blob()) )])
@@ -226,7 +232,7 @@
 			try {
 				await BearAPI_Resource.update({
 					url:		url_thumb,
-					category:	'Content',
+					category:	'',
 					meta:		'{}',
 					aux:		'{"mime":"image/jpeg"}',
 					content:	new Blob([Uint8Array.fromBase64( await getBase64(await (await fetch(_('#thumb_img').src)).blob()) )])
