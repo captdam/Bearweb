@@ -5,7 +5,7 @@
 	include_once './bearweb.class.php';
 
 	class Bearweb extends _Bearweb {
-		const HideServerError = false;
+		const HideServerError = true;
 
 		protected function invokeTemplate(): void {
 			$BW = $this;
@@ -71,6 +71,7 @@
 			'api/resource/delete' => ['category' => 'API', 'template' => ['api','resource'], 'meta' => ['task' => 'delete', 'access' => [1]]],
 			'api/resource/reindex' => ['category' => 'API', 'template' => ['api','resource'], 'meta' => ['task' => 'reindex', 'access' => [1]]],
 
+			'api/user/whoami' => ['category' => 'API', 'template' => ['api','user'], 'meta' => ['task' => 'whoami']],
 			'api/user/get' => ['category' => 'API', 'template' => ['api','user'], 'meta' => ['task' => 'get']],
 			'api/user/logoff' => ['category' => 'API', 'template' => ['api','user'], 'meta' => ['task' => 'logoff']],
 			'api/user/login' => ['category' => 'API', 'template' => ['api','user'], 'meta' => ['task' => 'login']],
@@ -100,12 +101,12 @@
 			'en' => ['category' => 'Home', 'template' => ['page-en','direct'], 'create' => 1769288622, 'modify' => 1769288622, 'aux' => ['lang-en' => 'en', 'lang-zh' => 'zh'], 'content' => null, 'meta' => [
 				'title' => 'Bearweb CMS',
 				'description' => 'A light-weight, portable database-driven content management system designed for personal blog and small-size organization website.',
-				'keywords' => 'CMS, Centent Management System, PHP 8.4, Apache2, Database-driven, Blog, Web dev'
+				'keywords' => 'CMS, Centent Management System, SQLite, PHP 8.4, Apache2, Database-driven, Blog, Web dev'
 			]],
 			'zh' => ['category' => 'Home', 'template' => ['page-zh','direct'], 'create' => 1769288622, 'modify' => 1769288622, 'aux' => ['lang-en' => 'en', 'lang-zh' => 'zh'], 'content' => null, 'meta' => [
 				'title' => 'Bearweb CMS',
 				'description' => '轻量化，可移植的数据库驱动内容管理系统。专为个人博客与小型组织网站设计。',
-				'keywords' => 'CMS, 内容管理系统, PHP 8.4, Apache2, 数据库驱动, 博客, 网站开发'
+				'keywords' => 'CMS, 内容管理系统, SQLite, PHP 8.4, Apache2, 数据库驱动, 博客, 网站开发'
 			]],
 
 			'template' => ['category' => 'Home', 'template' => ['page-en','langsel'], 'create' => 1769288622, 'modify' => 1769288622, 'aux' => ['lang-en' => 'template/en', 'lang-zh' => 'template/zh']],
@@ -120,8 +121,33 @@
 				'keywords' => 'CMS, 内容管理系统, PHP 8.4, 网站开发'
 			]],
 
-			// Page template - Template and sub-templates
+			// Framework、
+			'framework' => ['category' => 'Framework', 'template' => ['page-en','langsel'], 'create' =>  1770056281, 'modify' => 1770056281, 'aux' => ['lang-en' => 'framework/en', 'lang-zh' => 'framework/zh']],
+			'framework/en' => ['category' => 'Framework', 'template' => ['page-en','article'], 'create' =>  1770056281, 'modify' => 1770056281, 'aux' => ['lang-en' => 'framework/en', 'lang-zh' => 'framework/zh'], 'content' => null, 'meta' => [
+				'title' => 'Bearweb Framework',
+				'description' => 'Bearweb CMS is a database-driven framework. This article demonstrates the framework and core modules: Sitemap, Session Control, User management.',
+				'keywords' => 'CMS, Centent Management System, Database-driven, Framework, Sitemap, Session Control, User management'
+			]],
+			'framework/zh' => ['category' => 'Framework', 'template' => ['page-zh','article'], 'create' =>  1770056281, 'modify' => 1770056281, 'aux' => ['lang-en' => 'framework/en', 'lang-zh' => 'framework/zh'], 'content' => null, 'meta' => [
+				'title' => 'Bearweb架构',
+				'description' => 'Bearweb CMS是一个数据库驱动的架构。本文将展示其架构于核心模组：站点地图、会话控制、用户管理。',
+				'keywords' => 'CMS, 内容管理系统, 数据库驱动, 架构, 站点地图, 会话控制, 用户管理'
+			]],
 
+			// Framework - database
+			'db' => ['category' => 'Framework', 'template' => ['page-en','langsel'], 'create' => 1769288622, 'modify' => 1769288622, 'aux' => ['lang-en' => 'db/en', 'lang-zh' => 'db/zh']],
+			'db/en' => ['category' => 'Framework', 'template' => ['page-en','article'], 'create' => 1769288622, 'modify' => 1769288622, 'aux' => ['lang-en' => 'db/en', 'lang-zh' => 'db/zh'], 'content' => null, 'meta' => [
+				'title' => 'Bearweb Database',
+				'description' => 'Bearweb CMS is a database-driven framework. This article demonstrates the structure of the database, including how to create, edit and maintain the database.',
+				'keywords' => 'CMS, Centent Management System, Database, DBMS, SQLite, Database-driven, Sitemap, Session Control, User management'
+			]],
+			'db/zh' => ['category' => 'Framework', 'template' => ['page-zh','article'], 'create' => 1769288622, 'modify' => 1769288622, 'aux' => ['lang-en' => 'db/en', 'lang-zh' => 'db/zh'], 'content' => null, 'meta' => [
+				'title' => 'Bearweb数据库',
+				'description' => 'Bearweb CMS是一个数据库驱动内容管理系统。这篇文章将阐述数据库的结构与如何编写、修改、维护数据库。',
+				'keywords' => 'CMS, 内容管理系统, 数据库, 数据库管理系统, SQLite, 数据库驱动, 站点地图, 会话控制, 用户管理'
+			]],
+
+			// Page template - Template and sub-templates
 			'page' => ['category' => 'Template', 'create' => 1769055184, 'modify' => 1769055184, 'template' => ['page-en','langsel'], 'aux' => ['lang-en' => 'page/en', 'lang-zh' => 'page/zh']],
 			'page/en' => ['category' => 'Template', 'create' => 1769055184, 'modify' => 1769055184, 'template' => ['page-en','article'], 'aux' => ['lang-en' => 'page/en', 'lang-zh' => 'page/zh'], 'content' => null, 'meta' => [
 				'title' => 'Bearweb Page Template',
@@ -197,6 +223,32 @@
 
 			'page/langsel.png' => ['category' => 'Content', 'create' => 1769055184, 'modify' => 1769055184, 'content' => null, 'aux' => ['mime' => 'image/png']],
 			'page/error.png' => ['category' => 'Content', 'create' => 1769055184, 'modify' => 1769055184, 'content' => null, 'aux' => ['mime' => 'image/png']],
+
+			// Page template - Styles
+			'style' => ['category' => 'Template', 'create' => 1769499752, 'modify' => 1769499752, 'template' => ['page-en','langsel'], 'aux' => ['lang-en' => 'style/en', 'lang-zh' => 'style/zh']],
+			'style/en' => ['category' => 'Template', 'create' => 1769499752, 'modify' => 1769499752, 'template' => ['page-en','article'], 'meta' => [
+				'title' => 'Bearweb Page Style',
+				'description' => 'The article demonstrates how to apply styles to HTML elements from Bearweb page template stylesheet.',
+				'keywords' => '网站开发, HTML, CSS, Stylesheet'
+			], 'content' => null, 'aux' => ['lang-en' => 'style/en', 'lang-zh' => 'style/zh']],
+			'style/zh' => ['category' => 'Template', 'create' => 1769499752, 'modify' => 1769499752, 'template' => ['page-zh','article'], 'meta' => [
+				'title' => 'Bearweb页面风格',
+				'description' => '本文展示了如何使用Bearweb网页模板的样式来美化页面HTML元素。',
+				'keywords' => 'Web dev, HTML, CSS, 样式表'
+			], 'content' => null, 'aux' => ['lang-en' => 'style/en', 'lang-zh' => 'style/zh']],
+
+			// Page template - JS util
+			'js' => ['category' => 'Template', 'create' => 1769499752, 'modify' => 1769499752, 'template' => ['page-en','langsel'], 'aux' => ['lang-en' => 'js/en', 'lang-zh' => 'js/zh']],
+			'js/en' => ['category' => 'Template', 'create' => 1769499752, 'modify' => 1769499752, 'template' => ['page-en','article'], 'meta' => [
+				'title' => 'Bearweb Page Util',
+				'description' => 'The article demonstrates how to use the util functions to manipulate the webpage.',
+				'keywords' => '网站开发, JavaScript'
+			], 'content' => null, 'aux' => ['lang-en' => 'js/en', 'lang-zh' => 'js/zh']],
+			'js/zh' => ['category' => 'Template', 'create' => 1769499752, 'modify' => 1769499752, 'template' => ['page-zh','article'], 'meta' => [
+				'title' => 'Bearweb页面工具',
+				'description' => '本文展示了如何使用Bearweb网页模板的工具来操作页面元素。',
+				'keywords' => 'Web dev, JavaScript'
+			], 'content' => null, 'aux' => ['lang-en' => 'js/en', 'lang-zh' => 'js/zh']],
 		];
 
 		public static function init(): void {
@@ -212,6 +264,10 @@
 		// const CookieSID = 'SessionID';
 		// const CookieKey = 'SessionKey';
 		// const Expire = 7 * 24 * 3600;
+
+		// const int DB_CLEAN_CHANCE = 100; # out of 1000, 0 = never, 1000 = always
+		// const int DB_CLEAN_SESSIONDAY = 30;
+		// const int DB_CLEAN_TRANSACTIONDAY = 30;
 
 		public static function init(): void {
 			try { static::$db = new PDO('sqlite:./bw_session.db', null, null, [
