@@ -410,7 +410,7 @@ int main() {
 &lt;style&gt;
 	#list_horizontal_customsize { grid-template-columns: repeat(4, 1fr); }
 	@media (min-width: 800px) {
-		#list_horizontal_customsize { grid-template-columns: repeat(8, 1fr); }
+		#list_horizontal_customsize { grid-template-columns: repeat(6, 1fr); }
 	}
 &lt;/style&gt;
 	</code></pre>
