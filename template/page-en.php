@@ -135,9 +135,9 @@
 						}
 					}
 					if (array_key_exists('lang-en', $BW->site->aux))
-						echo '<li style="list-style: \'en \'"><a hreflang="en" href="/', htmlspecialchars($BW->site->aux['lang-en'], ENT_COMPAT), '">Here is the English version of this article</a></li>';
+						echo '<li style="list-style: \'en \'"><a hreflang="en" href="/', htmlspecialchars($BW->site->aux['lang-en'], ENT_COMPAT), '">Here is the English version of this page</a></li>';
 					if (array_key_exists('lang-zh', $BW->site->aux))
-						echo '<li style="list-style: \'中 \'"><a hreflang="zh" href="/', htmlspecialchars($BW->site->aux['lang-zh'], ENT_COMPAT), '">这里是这篇文章的中文版</a></li>';
+						echo '<li style="list-style: \'中 \'"><a hreflang="zh" href="/', htmlspecialchars($BW->site->aux['lang-zh'], ENT_COMPAT), '">这里是本页面的中文版</a></li>';
 					
 				?></ul>
 			</div>
