@@ -47,7 +47,7 @@
 			try {
 				$resource = new Bearweb_Site(
 					url: $_POST['url'],
-					category: 'Content',
+					category: '',
 					template: ['object', 'blob'],
 					owner: $BW->user->id,
 					create:		Bearweb_Site::TIME_CURRENT,
