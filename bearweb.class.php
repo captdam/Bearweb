@@ -72,9 +72,7 @@
 					static::HideServerError ? $this->createErrorPage('500 - Internal Error', 'Server-side internal error.', 500) : $this->createErrorPage('500 - Unknown Error', $e->getMessage(), 500);
 				}
 				$this->invokeTemplate();
-			}
-
-			ob_end_flush();
+			} ob_end_flush();
 		}
 
 		protected function invokeTemplate(): void {
@@ -515,6 +513,7 @@
 							aux:		JSON.stringify(resource.aux),
 							content:	new Blob([_(\'#editor_content\').value])
 						});
+						window.location.reload();
 					dialog_success(200, \'Submitted\'); } catch (e) { dialog_error(0, \'Submit failed: \' + e); throw e; } };
 				</script>
 			</form></div>
