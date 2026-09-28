@@ -50,7 +50,7 @@
 					category: '',
 					template: ['object', 'blob'],
 					owner: $BW->user->id,
-					create:		Bearweb_Site::TIME_CURRENT,
+					create:		Bearweb_Site::TIME_NULL, // Create a resource only create a placeholder, no actual content
 					modify:		Bearweb_Site::TIME_CURRENT,
 					meta:		[
 						'access' => []
@@ -91,6 +91,7 @@
 			}
 			$resource->category	= $BW->site->aux['type'][$_POST['category']][0];
 			$resource->template	= $BW->site->aux['type'][$_POST['category']][1];
+			$resource->create	= ($resource->create == Bearweb_Site::TIME_NULL && !array_key_exists('access', json_decode($_POST['meta'], true))) ? Bearweb_Site::TIME_CURRENT : $resource->create; // Add create time when first public accessable
 			$resource->modify	= Bearweb_Site::TIME_CURRENT;
 			$resource->meta		= $_POST['meta'];
 			$resource->content	= $content;
