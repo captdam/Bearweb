@@ -1,0 +1,14 @@
+<div class="tintimg" style="--bgcolor: rgba(0,0,0,0.75); --bgimg: url(/web/banner.jpeg); color: #FFF; min-height: 80vh; font-size: large;">
+	<h1>Bearweb CMS</h1>
+	<p>A light-weight, portable database-driven content management system designed for personal blog and small-size organization website.</p>
+	<p class="content_keywords">CMS, Centent Management System, SQLite, PHP 8.4, Apache2, Database-driven, SQLite, Blog, Web dev</p>
+	<div class="typebox" id="banner_typebox" style="height:15ch; width: 100%; padding: 1ch 0;"></div><script>typebox(_('#banner_typebox'), [
+		"sudo service apache2 start",
+		"class Bearweb {\n\tprotected Bearweb_Session $session;\n\tprotected Bearweb_User $user;\n\tprotected Bearweb_Site $site;\n}",
+		"class Bearweb_Site { use Bearweb_DatabaseBacked;\n\tconst FixedMap = [];\n\tpublic static function query(string $url): ?static {...}\n\tpublic function access(Bearweb_User $user): int {...}\n\tpublic function update(): void {...}\n}",
+		"class Bearweb_User { use Bearweb_DatabaseBacked;\n\tpublic static function query(string $id, int $flag = 0): ?static {...}\n}",
+		"class Bearweb_Session { use Bearweb_DatabaseBacked;\n\tprivate static function keygen(): string {...}\n\tpublic function bindUser(string $uid): void {...}\n}",
+		"trait Bearweb_DatabaseBacked{\n\tpublic static PDO $db;\n\tpublic static function init(): void {...}\n}",
+		"echo '<!DOCTYPE html>';"
+	], 50, 40);</script>
+</div>
