@@ -403,7 +403,7 @@
 		/** Check if the content is a string or file */
 		public function content_isFileBacked(): bool { return !is_string(get_mangled_object_vars($this)['content']); }
 
-		/** Read file-backed this->content (may be any file) into returned variable in RAM, pass -1 (default) to len for full length */
+		/** Read file-backed this->content (may be any file) into returned variable in RAM, for up to len bytes, or pass -1 (default) to len for full length */
 		protected function __file_read(int $len = -1): string {
 			$file = get_mangled_object_vars($this)['content'];
 			flock($file, LOCK_SH);
