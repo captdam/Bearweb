@@ -252,6 +252,19 @@ ready().then(() => {
 	__('figure>img').forEach(node => { node.onclick = event => imgViewer(event); });
 });
 
+// Interval auto refresh
+setInterval(() => {
+	__('.interval').forEach(x => {
+		if (x.dataset.intervalActive != 'true') return;
+		if (x.dataset.intervalRemain <= 0) {
+			x.dataset.intervalRemain = x.dataset.intervalReset - 1;
+			x.dispatchEvent(new Event(x.dataset.intervalEvent));
+		} else {
+			x.dataset.intervalRemain--;
+		}
+	});
+}, 1000);
+
 // Homepage only: image show
 ready().then(() => {
 	if (!_('#home_imageshow')) return;

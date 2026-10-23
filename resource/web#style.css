@@ -52,8 +52,9 @@ main>*>* { max-width: 100%; }
 }
 
 /** Place two (or multiple) children contents side by side */ 
-.sidebyside { display: block; }
-.sidebyside>* { width: 100%; overflow-x: auto; }
+/*.sidebyside { display: block; }
+.sidebyside>* { width: 100%; overflow-x: auto; }*/
+.sidebyside>* { overflow-x: auto; max-width: 100%; }
 @media (min-width: 768px) { .sidebyside { display: grid; gap: 10px; grid-template-columns: 1fr 1fr; } }
 
 
@@ -172,6 +173,15 @@ figure>img:not([data-wide]) { max-width: min(600px, 100%); max-height: min(600px
 	position: fixed; width: 100vw; height: 100vh; left: 0; top: 0;
 	z-index: 50; opacity: 0.75; background: transparent !important;
 	pointer-events: none;
+}
+
+/** Interval auto refresh */
+.interval:after{
+	color: grey;
+	content:' click to active';
+}
+.interval[data-interval-active='true']:after {
+	content: ' ' attr(data-interval-remain) '/' attr(data-interval-reset);
 }
 
 
