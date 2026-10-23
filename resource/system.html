@@ -1,0 +1,288 @@
+<!-- Ensure this API is jailed in sitemap: {access: []} -->
+<div id="header" class="main_title">
+	<h1>System</h1>
+</div>
+<div class="main_wide sidebyside" style="grid-template-columns: 400px 1fr">
+	<div>
+		<h1>System:</h1>
+		<p id="mem_free" class="meter"><span>Free 0</span><span>0 RAM</span></p>
+		<p id="mem_avail" class="meter"><span>Avail 0</span><span>0 RAM</span></p>
+		<p id="mem_swap" class="meter"><span>Free 0</span><span>0 Swap</span></p>
+		<p id="mem_disk" class="meter"><span>Free 0</span><span>0 Disk</span></p>
+		<div class="layflat">
+			<button id="btn_syslog2s" class="interval" data-interval-reset="2" data-interval-remain="0" data-interval-active="true" data-interval-event="click" onclick="sysinfo_log('2s', 2000); _('#btn_syslog6m').dataset.intervalActive = 'false'; _('#btn_syslog2s').dataset.intervalActive = 'true';">Syslog2s</button>
+			<button id="btn_syslog6m" class="interval" data-interval-reset="60000" data-interval-remain="0" data-interval-active="false" data-interval-event="click" onclick="sysinfo_log('6m', 60000); _('#btn_syslog2s').dataset.intervalActive = 'false'; _('#btn_syslog6m').dataset.intervalActive = 'true';">Syslog6m</button>
+		</div>
+
+		<h1>PHP-FPM:</h1>
+		<p><b>Poll: </b><span id="fpm-status_pool"></span></p>
+		<p><b>Start: </b><span id="fpm-status_start"></span></p>
+		<p><b>Accepted con: </b><span id="fpm-status_accept"></span></p>
+		<p><b>Slow request: </b><span id="fpm-status_slow"></span></p>
+		<p><b>Peak memory: </b><span id="fpm-status_mem"></span></p>
+
+		<p><b>Listen queue:</b></p>
+		<p id="fpm-status_listen-queue" class="meter"><span>Queue 0</span><span>0 Total</span></p>
+		<p id="fpm-status_listen-max" class="meter"><span>Max 0</span><span>0 Total</span></p>
+
+		<p><b>Process:</b></p>
+		<p id="fpm-status_process-active" class="meter"><span>Active 0</span><span>0 Idel</span></p>
+		<p id="fpm-status_process-max" class="meter"><span>Max 0</span><span>0 Total</span></p>
+		<p id="fpm-status_maxchildren" class="meter">Children Number</p>
+		<div class="layflat">
+			<button id="btn_fpm" class="interval" data-interval-reset="30" data-interval-remain="0" data-interval-active="true" data-interval-event="click" onclick="mem(); fpm();">Syslog2s</button>
+		</div>
+	</div><style> .meter { display: block; width: calc(100% - 5px); text-align: center; border: solid #111 2px; } .meter>* { display: inline-block; width: calc(49% - 5px); padding: 2px; text-align: left; } .meter>*:last-child { text-align: right; } </style>
+	<div>
+		<div id="waveform_text"></div>
+		<svg id="waveform" viewBox="0 0 100 100" preserveAspectRatio="none" stroke-width="0.15"></svg>
+		<style>#waveform_text { position: absolute; padding: 0 1ch; background: rgba(255,255,255,0.25); } #waveform_text:hover { background: rgba(255,255,255,0.85); } #waveform { width: 100%; height: 400px; fill: transparent; } #waveform>* { width: 100%; height: 100%; }</style>
+
+		<div class="tablewrap"><table>
+			<thead><tr>
+				<th scope="col">PID</th><th scope="col">State</th><th scope="col">Start time (ago)</th><th scope="col">Requests</th>
+				<th scope="col">Time (us)</th><th scope="col">Memory (kB)</th><th scope="col">CPU (%)</th><th scope="col">Post (kB)</th><th scope="col">Script</th><th scope="col">Method / URL</th>
+			</tr></thead>
+			<tbody id="fpm-status_table"></tbody>
+		</table></div><style> #fpm-status_table tr>*:nth-child(4) { border-right: solid 2px #000; } </style>
+	</div>
+
+
+	
+</div>
+<script> // This API should not be included in the standard bearapi.js, this API is not for public use
+class BaerAPI_Status extends BearAPI {
+	static async mem(progress) { // Get (read) a resource from server
+		const res = await this.xhr('/api/system/mem', {}, progress);
+		if (res.status != 200) this.throwError(res.status, res.json.error);
+		return res.json;
+	}
+	static async fpm(progress) { // Get (read) a resource from server
+		const res = await this.xhr('/api/system/fpm', {}, progress);
+		if (res.status != 200) this.throwError(res.status, res.json.error);
+		return res.json;
+	}
+}
+
+const mem = async () => { try {
+	const status = await BaerAPI_Status.mem();
+
+	const meter_bgGrad = (value, total, margin = [30, 70], color = ['#F66', '#FA2', '#6F6'], cb = '#AAA') => {
+		const r = value / total * 100;
+		const c = r < margin[0] ? color[0] : r > margin[1] ? color[2] : color[1]; 
+		return 'linear-gradient(to right, '+c+', '+c+' '+r+'%, '+cb+' '+r+'%)'
+	};
+
+	const total = status['total'];
+	const free = status['free'];
+	const avail = status['avail'];
+	if (total) {
+		const free_meterleft = (free / total) * 100;
+		const avail_meterleft = (avail / total) * 100;
+		__('#mem_free>*')[0].textContent = 'Free ' + Math.round(free / 1024 / 1024) + 'M';
+		__('#mem_free>*')[1].textContent = Math.round(total / 1024 / 1024) + 'M RAM'
+		_('#mem_free').style.background = meter_bgGrad(free, total);
+		__('#mem_avail>*')[0].textContent = 'Avail ' + Math.round(avail / 1024 / 1024) + 'M';
+		__('#mem_avail>*')[1].textContent = Math.round(total / 1024 / 1024) + 'M RAM'
+		_('#mem_avail').style.background = meter_bgGrad(avail, total);
+	}
+	
+	const swaptotal = status['swaptotal'];
+	const swapfree = status['swapfree'];
+	if (swaptotal) {
+		const free_meterleft = (swapfree / swaptotal) * 100;
+		__('#mem_swap>*')[0].textContent = 'Free ' + Math.round(swapfree / 1024 / 1024) + 'M';
+		__('#mem_swap>*')[1].textContent = Math.round(swaptotal / 1024 / 1024) + 'M Swap'
+		_('#mem_swap').style.background = meter_bgGrad(swapfree, swaptotal);
+	}
+	
+	const disktotal = status['disktotal'];
+	const diskfree = status['diskfree'];
+	if (disktotal) {
+		const free_meterleft = (diskfree / disktotal) * 100;
+		__('#mem_disk>*')[0].textContent = 'Free ' + Math.round(diskfree / 1024 / 1024) + 'M';
+		__('#mem_disk>*')[1].textContent = Math.round(disktotal / 1024 / 1024) + 'M Disk'
+		_('#mem_disk').style.background = meter_bgGrad(diskfree, disktotal);
+	}
+} catch (e) { dialog_error(0, 'Memory info failed: ' + e); throw e; } };
+
+const fpm = async () => { try {
+	const status = await BaerAPI_Status.fpm();
+	
+	_('#fpm-status_pool').textContent = status.pool + ' (' + status['process-manager'] + ')';
+	_('#fpm-status_start').textContent = timestamp2str(status['start-time']) + ' (' + status['start-since'] + 's)';
+	_('#fpm-status_accept').textContent = status['accepted-conn'];
+	_('#fpm-status_slow').textContent = status['slow-requests'];
+	_('#fpm-status_mem').textContent = Math.round(status['memory-peak']/1024) + 'kB';
+
+	const listen_queue = status['listen-queue'];
+	const listen_max = status['max-listen-queue'];
+	const listen_total = status['listen-queue-len'];
+	if (listen_total) {
+		const listen_queue_meterleft = (listen_queue / listen_total) * 100;
+		const listen_max_meterleft = (listen_max / listen_total) * 100;
+		__('#fpm-status_listen-queue>*')[0].textContent = 'Active ' + listen_queue;
+		__('#fpm-status_listen-queue>*')[1].textContent = listen_total + ' Total'
+		_('#fpm-status_listen-queue').style.background = 'linear-gradient(to right, #F66, #F66 '+listen_queue_meterleft+'%, #AAA '+listen_queue_meterleft+'%)';
+		__('#fpm-status_listen-max>*')[0].textContent = 'Watermark ' + listen_max;
+		__('#fpm-status_listen-max>*')[1].textContent = listen_total + ' Total'
+		_('#fpm-status_listen-max').style.background = 'linear-gradient(to right, #F66, #F66 '+listen_max_meterleft+'%, #AAA '+listen_max_meterleft+'%)';
+	}
+
+	const process_active = status['active-processes'];
+	const process_max = status['max-active-processes'];
+	const process_idel = status['idle-processes'];
+	const process_total = status['total-processes'];
+	if (process_total) {
+		const process_active_meterleft = (process_active / process_total - 0.0001) * 100;
+		const process_active_meterright = (1 - process_idel / process_total + 0.0001) * 100;
+		__('#fpm-status_process-active>*')[0].textContent = 'Active ' + process_active;
+		__('#fpm-status_process-active>*')[1].textContent = process_idel + ' Free'
+		_('#fpm-status_process-active').style.background = 'linear-gradient(to right, #F66, #F66 '+process_active_meterleft+'%, #AAA '+process_active_meterleft+'%, #AAA '+process_active_meterright+'%, #6F6 '+process_active_meterright+'%)';
+		if (process_max > process_total) { // Dynamic children, total is current children count, max is historical watermark 
+			const process_max_meterleft = (process_total / process_max) * 100;
+			__('#fpm-status_process-max>*')[0].textContent = 'Total ' + process_total;
+			__('#fpm-status_process-max>*')[1].textContent = process_max + ' Watermark';
+			_('#fpm-status_process-max').style.background = 'linear-gradient(to right, #F66, #F66 '+process_max_meterleft+'%, #AAA '+process_max_meterleft+'%)';
+		} else { // Fixed children, total is fixed upper limit, max is historical watermark 
+			const process_max_meterleft = (process_max / process_total) * 100;
+			__('#fpm-status_process-max>*')[0].textContent = 'Watermark ' + process_max;
+			__('#fpm-status_process-max>*')[1].textContent = process_total + ' Total';
+			_('#fpm-status_process-max').style.background = 'linear-gradient(to right, #F66, #F66 '+process_max_meterleft+'%, #AAA '+process_max_meterleft+'%)';
+		}
+	}
+	if (status['max-children-reached']) {
+		_('#fpm-status_maxchildren').textContent = 'Max Children Reached';
+		_('#fpm-status_maxchildren').style.color = 'white';
+		_('#fpm-status_maxchildren').style.background = 'red';
+	} else {
+		_('#fpm-status_maxchildren').textContent = 'Children Number OK';
+		_('#fpm-status_maxchildren').style.color = 'green';
+		_('#fpm-status_maxchildren').style.background = '#AAA';
+	}
+
+	let tbody = [];
+	status.procs.map(p => {
+		tbody.push(dom({_: 'tr', children: [
+			{_: 'td', textContent: p.pid},
+			{_: 'td', textContent: p.state, style: p.state == 'Idle' ? '' : 'background: orange'},
+			{_: 'td', textContent: timestamp2str(p['start-time']) + ' (' + p['start-since'] + 's)'},
+			{_: 'td', textContent: p.requests},
+
+			{_: 'td', textContent: p['request-duration']},
+			{_: 'td', textContent: Math.round(p['last-request-memory'] / 1024)},
+			{_: 'td', textContent: Math.round(p['last-request-cpu'])},
+			{_: 'td', textContent: Math.round(p['request-length'] / 1024)},
+			{_: 'td', textContent: p.script.split('/')[3] ?? ''},
+			{_: 'td', textContent: p['request-method'] + ' ' + p['request-uri']}
+		]}));
+	});
+	_('#fpm-status_table').replaceChildren(...tbody);
+
+} catch (e) { dialog_error(0, 'FPM status failed: ' + e); throw e; } };
+
+const sysinfo_log = async (filename) => { try {
+	const file = new Uint16Array(( await (( await fetch('/sysinfo_log_' + filename + '.bin') ).bytes()) ).buffer);
+
+	const data_pagesize = file[4] * 4096;
+	const svg_width = file[1] - 1;
+	const header = {
+		block_wp:	file[0],
+		block_total:	file[1],
+		ram_total:	file[2] * data_pagesize,
+		swap_total:	file[3] * data_pagesize
+	};
+
+	class MaxMin {
+		constructor(min, max) {
+			this.min = min;
+			this.max = max;
+		}
+		add(value) {
+			this.min = value < this.min ? value : this.min;
+			this.max = value > this.max ? value : this.max;
+		}
+	}
+
+	let path_cpu = '', maxmin_cpu = new MaxMin(100, 0);
+	let path_cpu5 = '', maxmin_cpu5 = new MaxMin(100, 0);
+	let path_ramFree = '', maxmin_ramFree = new MaxMin(header.ram_total, 0);
+	let path_ramShared = '', maxmin_ramShared = new MaxMin(header.ram_total, 0);
+	let path_ramBuffer = '', maxmin_ramBuffer = new MaxMin(header.ram_total, 0);
+	let path_swapFree = '', maxmin_swapFree = new MaxMin(header.swap_total, 0);
+
+	let data = [];
+	for (let i = 0; i < header.block_total; i++) {
+		let ptr = (i + header.block_wp) % header.block_total;
+		const d = {
+			uptime:		(file[8 + 8 * ptr + 1] << 16) | file[8 + 8 * ptr + 0],
+			process:	file[8 + 8 * ptr + 2],
+			load:		(file[8 + 8 * ptr + 3] & 0xFF) / 2.5, // Server gives uint8_t[2], range 0 - 250
+			load5:		(file[8 + 8 * ptr + 3] & 0xFF00) / (2.5 * 256),
+			ram_free:	file[8 + 8 * ptr + 4] * data_pagesize,
+			ram_shared:	file[8 + 8 * ptr + 5] * data_pagesize,
+			ram_buffer:	file[8 + 8 * ptr + 6] * data_pagesize,
+			swap_free:	file[8 + 8 * ptr + 7] * data_pagesize
+		};
+		data.push(d);
+
+		//max_cpu = d.load > max_cpu ? d.load : max_cpu;
+		maxmin_cpu.add(d.load);
+		maxmin_cpu5.add(d.load5);
+		maxmin_ramFree.add(d.ram_free);
+		maxmin_ramShared.add(d.ram_shared);
+		maxmin_ramBuffer.add(d.ram_buffer);
+		maxmin_swapFree.add(d.swap_free);
+
+		path_cpu += ' '+i+','+ (100-d.load);
+		path_cpu5 += ' '+i+','+ (100-d.load5);
+		path_ramFree += ' '+i+','+ (d.ram_free/data_pagesize); // Reduce svg size, don't use byte number (too large), use block size
+		path_ramBuffer += ' '+i+','+ (d.ram_buffer/data_pagesize + d.ram_free/data_pagesize) ;
+		path_ramShared += ' '+i+','+ (d.ram_shared/data_pagesize + d.ram_buffer/data_pagesize + d.ram_free/data_pagesize); // Stack display
+		path_swapFree += ' '+i+','+ d.swap_free/data_pagesize;
+	}
+	const data_last = data[data.length-1];
+	
+	_('#waveform_text').replaceChildren(
+		dom({_: 'p', textContent: 'CPU: Current '+data_last.load+'% ('+maxmin_cpu.min+'% min '+maxmin_cpu.max+'% max) - Avg5 '+data_last.load5+'% ('+maxmin_cpu5.min+'% min '+maxmin_cpu5.max+'% max) - Process '+data_last.process, style: 'color: red'}),
+		dom({_: 'p', textContent: 'RAM: Free '+data_last.ram_free/1024/1024+'MB ('+maxmin_ramFree.min/1024/1024+'MB min '+maxmin_ramFree.max/1024/1024+'MB max) - Buffer '+data_last.ram_buffer/1024/1024+'MB ('+maxmin_ramBuffer.min/1024/1024+'MB min '+maxmin_ramBuffer.max/1024/1024+'MB max) - Shared '+data_last.ram_shared/1024/1024+'MB ('+maxmin_ramShared.min/1024/1024+'MB min '+maxmin_ramShared.max/1024/1024+'MB max)', style: 'color: darkgreen'}),
+		dom({_: 'p', textContent: 'Swap: Free '+data_last.swap_free/1024/1024+'MB ('+maxmin_swapFree.min/1024/1024+'MB min '+maxmin_swapFree.max/1024/1024+'MB max)', style: 'color: blue'}),
+		dom({_: 'p', textContent: 'Uptime'+data_last.uptime+' - '+header.block_total+' samples'}),
+	);
+
+	const svg_new = (width, height) => {
+		const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+		svg.setAttribute('preserveAspectRatio', 'none');
+		svg.setAttribute('viewBox', '0 0 '+width+ ' '+height);
+		return svg;
+	};
+	const poly_new = (type, points, color='transparent', fill='transparent') => {
+		const poly = document.createElementNS('http://www.w3.org/2000/svg', type);
+		poly.setAttribute('points', points);
+		poly.setAttribute('stroke', color);
+		poly.setAttribute('fill', fill);
+		return poly;
+	};
+
+	const svg_cpu = svg_new(svg_width, 100);
+	svg_cpu.appendChild(poly_new('polyline', path_cpu, 'rgb(255, 0, 0)'));
+	svg_cpu.appendChild(poly_new('polyline', path_cpu5, 'rgb(127, 63, 63)'));
+
+	const svg_ram = svg_new(svg_width, header.ram_total/data_pagesize);
+	svg_ram.appendChild(poly_new('polygon', svg_width+',0 0,0 0,'+header.ram_total/data_pagesize+' '+svg_width+','+header.ram_total/data_pagesize, '#030', '#030'));
+	svg_ram.appendChild(poly_new('polygon', svg_width+',0 0,0' + path_ramShared, 'transparent', 'darkgreen'));
+	svg_ram.appendChild(poly_new('polygon', svg_width+',0 0,0' + path_ramBuffer, 'transparent', 'green'));
+	svg_ram.appendChild(poly_new('polygon', svg_width+',0 0,0' + path_ramFree, 'transparent', 'lightgreen'));
+
+	const svg_swap = svg_new(svg_width, header.swap_total/data_pagesize);
+	svg_swap.appendChild(poly_new('polyline', path_swapFree, 'rgb(0, 0, 255)'));
+
+	const svg_grid = svg_new(svg_width, 100);
+	for (let i = 1; i < 10; i++) {
+		const y = 10 * i;
+		svg_grid.appendChild(poly_new('polyline', svg_width+','+y+' 0,'+y, i == 5 ? 'rgba(128,128,128,0.75)' : 'rgba(128,128,128,0.45)'));
+	}
+
+	_('#waveform').replaceChildren(svg_ram, svg_grid, svg_cpu, svg_swap);
+} catch (e) { dialog_error(0, 'System info log failed: ' + e); throw e; } };
+</script>
