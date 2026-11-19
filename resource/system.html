@@ -30,11 +30,11 @@
 		<p id="fpm-status_process-max" class="meter"><span>Max 0</span><span>0 Total</span></p>
 		<p id="fpm-status_maxchildren" class="meter">Children Number</p>
 		<div class="layflat">
-			<button id="btn_fpm" class="interval" data-interval-reset="30" data-interval-remain="0" data-interval-active="true" data-interval-event="click" onclick="mem(); fpm();">Syslog2s</button>
+			<button id="btn_fpm" class="interval" data-interval-reset="30" data-interval-remain="0" data-interval-active="true" data-interval-event="click" onclick="mem(); fpm();">PHP-FPM</button>
 		</div>
 	</div><style> .meter { display: block; width: calc(100% - 5px); text-align: center; border: solid #111 2px; } .meter>* { display: inline-block; width: calc(49% - 5px); padding: 2px; text-align: left; } .meter>*:last-child { text-align: right; } </style>
 	<div>
-		<div id="waveform_text"></div>
+		<div id="waveform_text"><div id="waveform_text_overview"></div><div id="waveform_text_pointer"></div></div>
 		<svg id="waveform" viewBox="0 0 100 100" preserveAspectRatio="none" stroke-width="0.15"></svg>
 		<style>#waveform_text { position: absolute; padding: 0 1ch; background: rgba(255,255,255,0.25); } #waveform_text:hover { background: rgba(255,255,255,0.85); } #waveform { width: 100%; height: 400px; fill: transparent; } #waveform>* { width: 100%; height: 100%; }</style>
 
@@ -63,6 +63,16 @@ class BaerAPI_Status extends BearAPI {
 		return res.json;
 	}
 }
+
+const uptimeHuman = second => {
+	const day = Math.floor(second / 3600 / 24);
+	second -= day * 3600 * 24;
+	const hour = Math.floor(second / 3600);
+	second -= hour * 3600;
+	const minute = Math.floor(second / 60);
+	second -= minute * 60;
+	return [day+'d'+hour+'h'+minute+'m'+second+'s', day, hour, minute, second];
+};
 
 const mem = async () => { try {
 	const status = await BaerAPI_Status.mem();
@@ -181,16 +191,34 @@ const fpm = async () => { try {
 
 } catch (e) { dialog_error(0, 'FPM status failed: ' + e); throw e; } };
 
+let sysinfo_data = [];
+
+const svg_new = (width, height) => {
+	const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+	svg.setAttribute('preserveAspectRatio', 'none');
+	svg.setAttribute('viewBox', '0 0 '+width+ ' '+height);
+	return svg;
+};
+const poly_new = (type, points, color='transparent', fill='transparent') => {
+	const poly = document.createElementNS('http://www.w3.org/2000/svg', type);
+	poly.setAttribute('points', points);
+	poly.setAttribute('stroke', color);
+	poly.setAttribute('fill', fill);
+	return poly;
+};
+
+let sysinfo_pointer_svg = svg_new(2500, 100);
+
 const sysinfo_log = async (filename) => { try {
 	const file = new Uint16Array(( await (( await fetch('/sysinfo_log_' + filename + '.bin') ).bytes()) ).buffer);
 
-	const data_pagesize = file[4] * 4096;
+	const data_blocksize = file[4] * 4096;
 	const svg_width = file[1] - 1;
 	const header = {
-		block_wp:	file[0],
-		block_total:	file[1],
-		ram_total:	file[2] * data_pagesize,
-		swap_total:	file[3] * data_pagesize
+		data_wp:	file[0],
+		data_total:	file[1],
+		ram_total:	file[2] * data_blocksize,
+		swap_total:	file[3] * data_blocksize
 	};
 
 	class MaxMin {
@@ -210,21 +238,29 @@ const sysinfo_log = async (filename) => { try {
 	let path_ramShared = '', maxmin_ramShared = new MaxMin(header.ram_total, 0);
 	let path_ramBuffer = '', maxmin_ramBuffer = new MaxMin(header.ram_total, 0);
 	let path_swapFree = '', maxmin_swapFree = new MaxMin(header.swap_total, 0);
+	let maxmin_ramUsed = new MaxMin(header.ram_total, 0);
+	let maxmin_swapUsed = new MaxMin(header.swap_total, 0);
 
-	let data = [];
-	for (let i = 0; i < header.block_total; i++) {
-		let ptr = (i + header.block_wp) % header.block_total;
+	sysinfo_data = [];
+	for (let i = 0; i < header.data_total; i++) {
+		let ptr = (i + header.data_wp) % header.data_total;
+		const ram_free = file[8 + 8 * ptr + 4] * data_blocksize;
+		const ram_shared = file[8 + 8 * ptr + 5] * data_blocksize;
+		const ram_buffer = file[8 + 8 * ptr + 6] * data_blocksize;
+		const swap_free = file[8 + 8 * ptr + 7] * data_blocksize;
 		const d = {
 			uptime:		(file[8 + 8 * ptr + 1] << 16) | file[8 + 8 * ptr + 0],
 			process:	file[8 + 8 * ptr + 2],
 			load:		(file[8 + 8 * ptr + 3] & 0xFF) / 2.5, // Server gives uint8_t[2], range 0 - 250
 			load5:		(file[8 + 8 * ptr + 3] & 0xFF00) / (2.5 * 256),
-			ram_free:	file[8 + 8 * ptr + 4] * data_pagesize,
-			ram_shared:	file[8 + 8 * ptr + 5] * data_pagesize,
-			ram_buffer:	file[8 + 8 * ptr + 6] * data_pagesize,
-			swap_free:	file[8 + 8 * ptr + 7] * data_pagesize
+			ram_free:	ram_free,
+			ram_shared:	ram_shared,
+			ram_buffer:	ram_buffer,
+			swap_free:	swap_free,
+			ram_used:	header.ram_total - ram_free - ram_shared - ram_buffer,
+			swap_used:	header.swap_total - swap_free
 		};
-		data.push(d);
+		sysinfo_data.push(d);
 
 		//max_cpu = d.load > max_cpu ? d.load : max_cpu;
 		maxmin_cpu.add(d.load);
@@ -233,48 +269,36 @@ const sysinfo_log = async (filename) => { try {
 		maxmin_ramShared.add(d.ram_shared);
 		maxmin_ramBuffer.add(d.ram_buffer);
 		maxmin_swapFree.add(d.swap_free);
+		maxmin_ramUsed.add(d.ram_used);
+		maxmin_swapUsed.add(d.swap_used);
 
 		path_cpu += ' '+i+','+ (100-d.load);
 		path_cpu5 += ' '+i+','+ (100-d.load5);
-		path_ramFree += ' '+i+','+ (d.ram_free/data_pagesize); // Reduce svg size, don't use byte number (too large), use block size
-		path_ramBuffer += ' '+i+','+ (d.ram_buffer/data_pagesize + d.ram_free/data_pagesize) ;
-		path_ramShared += ' '+i+','+ (d.ram_shared/data_pagesize + d.ram_buffer/data_pagesize + d.ram_free/data_pagesize); // Stack display
-		path_swapFree += ' '+i+','+ d.swap_free/data_pagesize;
+		path_ramFree += ' '+i+','+ (d.ram_free/data_blocksize); // Reduce svg size, don't use byte number (too large), use block size
+		path_ramBuffer += ' '+i+','+ (d.ram_buffer/data_blocksize + d.ram_free/data_blocksize) ;
+		path_ramShared += ' '+i+','+ (d.ram_shared/data_blocksize + d.ram_buffer/data_blocksize + d.ram_free/data_blocksize); // Stack display
+		path_swapFree += ' '+i+','+ d.swap_free/data_blocksize;
 	}
-	const data_last = data[data.length-1];
+	const data_last = sysinfo_data[sysinfo_data.length-1];
 	
-	_('#waveform_text').replaceChildren(
+	_('#waveform_text_overview').replaceChildren(
 		dom({_: 'p', textContent: 'CPU: Current '+data_last.load+'% ('+maxmin_cpu.min+'% min '+maxmin_cpu.max+'% max) - Avg5 '+data_last.load5+'% ('+maxmin_cpu5.min+'% min '+maxmin_cpu5.max+'% max) - Process '+data_last.process, style: 'color: red'}),
-		dom({_: 'p', textContent: 'RAM: Free '+data_last.ram_free/1024/1024+'MB ('+maxmin_ramFree.min/1024/1024+'MB min '+maxmin_ramFree.max/1024/1024+'MB max) - Buffer '+data_last.ram_buffer/1024/1024+'MB ('+maxmin_ramBuffer.min/1024/1024+'MB min '+maxmin_ramBuffer.max/1024/1024+'MB max) - Shared '+data_last.ram_shared/1024/1024+'MB ('+maxmin_ramShared.min/1024/1024+'MB min '+maxmin_ramShared.max/1024/1024+'MB max)', style: 'color: darkgreen'}),
-		dom({_: 'p', textContent: 'Swap: Free '+data_last.swap_free/1024/1024+'MB ('+maxmin_swapFree.min/1024/1024+'MB min '+maxmin_swapFree.max/1024/1024+'MB max)', style: 'color: blue'}),
-		dom({_: 'p', textContent: 'Uptime'+data_last.uptime+' - '+header.block_total+' samples'}),
+		dom({_: 'p', textContent: 'RAM: Free '+data_last.ram_free/1024/1024+'MB ('+maxmin_ramFree.min/1024/1024+'MB min '+maxmin_ramFree.max/1024/1024+'MB max) - Buffer '+data_last.ram_buffer/1024/1024+'MB ('+maxmin_ramBuffer.min/1024/1024+'MB min '+maxmin_ramBuffer.max/1024/1024+'MB max) - Shared '+data_last.ram_shared/1024/1024+'MB ('+maxmin_ramShared.min/1024/1024+'MB min '+maxmin_ramShared.max/1024/1024+'MB max) - Used '+data_last.ram_used/1024/1024+'MB ('+maxmin_ramUsed.min/1024/1024+'MB min '+maxmin_ramUsed.max/1024/1024+'MB max)', style: 'color: darkgreen'}),
+		dom({_: 'p', textContent: 'Swap: Free '+data_last.swap_free/1024/1024+'MB ('+maxmin_swapFree.min/1024/1024+'MB min '+maxmin_swapFree.max/1024/1024+'MB max) - Used '+data_last.swap_used/1024/1024+'MB ('+maxmin_swapUsed.min/1024/1024+'MB min '+maxmin_swapUsed.max/1024/1024+'MB max)', style: 'color: blue'}),
+		dom({_: 'p', textContent: 'Uptime '+uptimeHuman(data_last.uptime)[0]+' - '+header.data_total+' samples'}),
 	);
-
-	const svg_new = (width, height) => {
-		const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-		svg.setAttribute('preserveAspectRatio', 'none');
-		svg.setAttribute('viewBox', '0 0 '+width+ ' '+height);
-		return svg;
-	};
-	const poly_new = (type, points, color='transparent', fill='transparent') => {
-		const poly = document.createElementNS('http://www.w3.org/2000/svg', type);
-		poly.setAttribute('points', points);
-		poly.setAttribute('stroke', color);
-		poly.setAttribute('fill', fill);
-		return poly;
-	};
 
 	const svg_cpu = svg_new(svg_width, 100);
 	svg_cpu.appendChild(poly_new('polyline', path_cpu, 'rgb(255, 0, 0)'));
 	svg_cpu.appendChild(poly_new('polyline', path_cpu5, 'rgb(127, 63, 63)'));
 
-	const svg_ram = svg_new(svg_width, header.ram_total/data_pagesize);
-	svg_ram.appendChild(poly_new('polygon', svg_width+',0 0,0 0,'+header.ram_total/data_pagesize+' '+svg_width+','+header.ram_total/data_pagesize, '#030', '#030'));
+	const svg_ram = svg_new(svg_width, header.ram_total/data_blocksize);
+	svg_ram.appendChild(poly_new('polygon', svg_width+',0 0,0 0,'+header.ram_total/data_blocksize+' '+svg_width+','+header.ram_total/data_blocksize, '#030', '#030'));
 	svg_ram.appendChild(poly_new('polygon', svg_width+',0 0,0' + path_ramShared, 'transparent', 'darkgreen'));
 	svg_ram.appendChild(poly_new('polygon', svg_width+',0 0,0' + path_ramBuffer, 'transparent', 'green'));
 	svg_ram.appendChild(poly_new('polygon', svg_width+',0 0,0' + path_ramFree, 'transparent', 'lightgreen'));
 
-	const svg_swap = svg_new(svg_width, header.swap_total/data_pagesize);
+	const svg_swap = svg_new(svg_width, header.swap_total/data_blocksize);
 	svg_swap.appendChild(poly_new('polyline', path_swapFree, 'rgb(0, 0, 255)'));
 
 	const svg_grid = svg_new(svg_width, 100);
@@ -283,6 +307,29 @@ const sysinfo_log = async (filename) => { try {
 		svg_grid.appendChild(poly_new('polyline', svg_width+','+y+' 0,'+y, i == 5 ? 'rgba(128,128,128,0.75)' : 'rgba(128,128,128,0.45)'));
 	}
 
-	_('#waveform').replaceChildren(svg_ram, svg_grid, svg_cpu, svg_swap);
+	sysinfo_pointer_svg = svg_new(svg_width, 100);
+
+	_('#waveform').replaceChildren(svg_ram, svg_grid, svg_cpu, svg_swap, sysinfo_pointer_svg);
+	_('#waveform').dispatchEvent(new Event('mousemove'));
 } catch (e) { dialog_error(0, 'System info log failed: ' + e); throw e; } };
+
+_('#waveform').onmousemove = event => {
+	const cursor = event.layerX ?? _('#waveform').dataset.cursor ?? 0;
+	_('#waveform').dataset.cursor = cursor;
+	const x = cursor / _('#waveform').getBoundingClientRect().width;
+
+	const data_ptr = sysinfo_data[Math.floor(x * sysinfo_data.length)];
+	_('#waveform_text_pointer').replaceChildren(
+		dom({_: 'span', textContent: 'CPU: '+data_ptr.load+'% - ('+data_ptr.load5+'%) - Process '+data_ptr.process, style: 'color: red'}),
+		dom({_: 'span', textContent: ' | RAM: Free '+data_ptr.ram_free/1024/1024+'MB - Buffer '+data_ptr.ram_buffer/1024/1024+'MB - Shared '+data_ptr.ram_shared/1024/1024+'MB - Used '+data_ptr.ram_used/1024/1024+'MB', style: 'color: darkgreen'}),
+		dom({_: 'span', textContent: ' | Swap: Free '+data_ptr.swap_free/1024/1024+'MB - Used '+data_ptr.swap_used/1024/1024+'MB', style: 'color: blue'}),
+		dom({_: 'span', textContent: ' | Uptime '+uptimeHuman(data_ptr.uptime)[0]+' ('+uptimeHuman(sysinfo_data[sysinfo_data.length-1].uptime-data_ptr.uptime)[0]+' ago)'}),
+	);
+
+	const svg_width = sysinfo_pointer_svg.viewBox.baseVal.width, svg_height = sysinfo_pointer_svg.viewBox.baseVal.height;
+	const poly_x = x * svg_width, poly_y = svg_height;
+	sysinfo_pointer_svg.replaceChildren(poly_new('polyline', poly_x+',0 '+poly_x+','+poly_y, '#FFF'));
+};
+//_('#waveform').onmouseenter = event => { _('#waveform_text_pointer').style.display = 'block'; };
+//_('#waveform').onmouseout = event => { _('#waveform_text_pointer').style.display = 'none'; };
 </script>
